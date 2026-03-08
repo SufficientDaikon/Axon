@@ -1,0 +1,6 @@
+// Example 2: Tensor Operations with Shape Checking
+fn matrix_multiply_example() {
+    let A: Tensor<Float32, [128, 256]> = randn([128, 256]);
+    let B: Tensor<Float32, [256, 512]> = randn([256, 512]);
+    let C = A @ B;
+}

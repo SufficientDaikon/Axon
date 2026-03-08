@@ -1,0 +1,8 @@
+// Example 6: Explicit Device Management
+fn gpu_example() {
+    let cpu_tensor = randn([1024, 1024]);
+    let gpu_tensor = cpu_tensor.to_gpu();
+    let result = gpu_tensor @ gpu_tensor;
+    let cpu_result = result.to_cpu();
+    println("{}", cpu_result);
+}

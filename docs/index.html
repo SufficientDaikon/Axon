@@ -1,0 +1,2448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Axon Programming Language — Rust meets AI/ML</title>
+    <meta
+      name="description"
+      content="Axon: A systems programming language with first-class tensors, compile-time shape checking, and AI-agent-friendly syntax."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ===================================================================
+   DESIGN TOKENS
+   =================================================================== */
+      :root {
+        /* Core palette */
+        --bg-primary: #0a0e1a;
+        --bg-secondary: #0f1525;
+        --bg-tertiary: #151d30;
+        --bg-card: #131b2e;
+        --bg-card-hover: #1a2440;
+        --bg-code: #0d1117;
+        --bg-nav: rgba(10, 14, 26, 0.85);
+
+        /* Accent colors */
+        --accent-cyan: #00e5ff;
+        --accent-purple: #a855f7;
+        --accent-blue: #3b82f6;
+        --accent-pink: #ec4899;
+        --accent-green: #22d3ee;
+        --accent-orange: #f59e0b;
+        --accent-emerald: #10b981;
+
+        /* Gradients */
+        --gradient-hero: linear-gradient(
+          135deg,
+          #0a0e1a 0%,
+          #1a1040 40%,
+          #0f1525 100%
+        );
+        --gradient-accent: linear-gradient(135deg, #00e5ff, #a855f7);
+        --gradient-card: linear-gradient(
+          135deg,
+          rgba(0, 229, 255, 0.05),
+          rgba(168, 85, 247, 0.05)
+        );
+        --gradient-border: linear-gradient(
+          135deg,
+          rgba(0, 229, 255, 0.3),
+          rgba(168, 85, 247, 0.3)
+        );
+        --glow-cyan: 0 0 30px rgba(0, 229, 255, 0.15);
+        --glow-purple: 0 0 30px rgba(168, 85, 247, 0.15);
+
+        /* Text */
+        --text-primary: #e8ecf4;
+        --text-secondary: #8892a8;
+        --text-muted: #5a6480;
+        --text-bright: #ffffff;
+
+        /* Borders */
+        --border-default: rgba(255, 255, 255, 0.06);
+        --border-bright: rgba(255, 255, 255, 0.12);
+
+        /* Syntax highlighting */
+        --syn-keyword: #c678dd;
+        --syn-type: #e5c07b;
+        --syn-function: #61afef;
+        --syn-string: #98c379;
+        --syn-number: #d19a66;
+        --syn-comment: #5c6370;
+        --syn-operator: #56b6c2;
+        --syn-punct: #abb2bf;
+        --syn-param: #e06c75;
+
+        /* Layout */
+        --max-width: 1200px;
+        --nav-height: 64px;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+
+        /* Transitions */
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* ===================================================================
+   RESET & BASE
+   =================================================================== */
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: calc(var(--nav-height) + 24px);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.7;
+        overflow-x: hidden;
+      }
+
+      ::selection {
+        background: rgba(0, 229, 255, 0.25);
+        color: var(--text-bright);
+      }
+
+      a {
+        color: var(--accent-cyan);
+        text-decoration: none;
+        transition: color 0.2s var(--ease-out);
+      }
+      a:hover {
+        color: var(--text-bright);
+      }
+
+      code,
+      pre {
+        font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+      }
+
+      img {
+        max-width: 100%;
+        display: block;
+      }
+
+      /* ===================================================================
+   NAVIGATION
+   =================================================================== */
+      .nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        height: var(--nav-height);
+        background: var(--bg-nav);
+        backdrop-filter: blur(20px) saturate(1.5);
+        -webkit-backdrop-filter: blur(20px) saturate(1.5);
+        border-bottom: 1px solid var(--border-default);
+        transition: background 0.3s var(--ease-out);
+      }
+
+      .nav-inner {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 24px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 1.25rem;
+        color: var(--text-bright);
+        letter-spacing: -0.02em;
+      }
+
+      .nav-logo-icon {
+        width: 32px;
+        height: 32px;
+        background: var(--gradient-accent);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 900;
+        color: var(--bg-primary);
+        letter-spacing: -0.05em;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        list-style: none;
+      }
+
+      .nav-links a {
+        padding: 6px 14px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        border-radius: var(--radius-sm);
+        transition: all 0.2s var(--ease-out);
+      }
+
+      .nav-links a:hover {
+        color: var(--text-bright);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-cta {
+        background: rgba(0, 229, 255, 0.1) !important;
+        color: var(--accent-cyan) !important;
+        border: 1px solid rgba(0, 229, 255, 0.2);
+      }
+      .nav-cta:hover {
+        background: rgba(0, 229, 255, 0.2) !important;
+        color: var(--text-bright) !important;
+      }
+
+      .nav-mobile-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      /* ===================================================================
+   HERO
+   =================================================================== */
+      .hero {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--gradient-hero);
+        overflow: hidden;
+        padding: calc(var(--nav-height) + 40px) 24px 80px;
+      }
+
+      /* Animated background grid */
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+        mask-image: radial-gradient(
+          ellipse 70% 60% at 50% 50%,
+          black 20%,
+          transparent 100%
+        );
+        -webkit-mask-image: radial-gradient(
+          ellipse 70% 60% at 50% 50%,
+          black 20%,
+          transparent 100%
+        );
+      }
+
+      /* Glow orbs */
+      .hero-glow {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(100px);
+        pointer-events: none;
+        animation: float 8s ease-in-out infinite;
+      }
+      .hero-glow-1 {
+        width: 500px;
+        height: 500px;
+        background: rgba(0, 229, 255, 0.08);
+        top: -10%;
+        left: -5%;
+        animation-delay: 0s;
+      }
+      .hero-glow-2 {
+        width: 400px;
+        height: 400px;
+        background: rgba(168, 85, 247, 0.08);
+        bottom: -5%;
+        right: -5%;
+        animation-delay: -4s;
+      }
+      .hero-glow-3 {
+        width: 300px;
+        height: 300px;
+        background: rgba(59, 130, 246, 0.06);
+        top: 40%;
+        left: 50%;
+        animation-delay: -2s;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translate(0, 0) scale(1);
+        }
+        33% {
+          transform: translate(20px, -15px) scale(1.05);
+        }
+        66% {
+          transform: translate(-15px, 10px) scale(0.95);
+        }
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        text-align: center;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px 6px 8px;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        border-radius: 100px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent-emerald);
+        margin-bottom: 28px;
+        letter-spacing: 0.01em;
+      }
+
+      .hero-badge-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--accent-emerald);
+        border-radius: 50%;
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+        }
+        50% {
+          opacity: 0.7;
+          box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+        }
+      }
+
+      .hero-title {
+        font-size: clamp(3rem, 7vw, 5rem);
+        font-weight: 900;
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+        color: var(--text-bright);
+        margin-bottom: 20px;
+      }
+
+      .hero-title-gradient {
+        background: var(--gradient-accent);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .hero-tagline {
+        font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+        color: var(--text-secondary);
+        line-height: 1.65;
+        max-width: 680px;
+        margin: 0 auto 40px;
+        font-weight: 400;
+      }
+
+      .hero-tagline strong {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      .hero-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 28px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        border: none;
+        cursor: pointer;
+        transition: all 0.25s var(--ease-out);
+        font-family: inherit;
+        letter-spacing: -0.01em;
+      }
+
+      .btn-primary {
+        background: var(--gradient-accent);
+        color: var(--bg-primary);
+        box-shadow: 0 4px 24px rgba(0, 229, 255, 0.2);
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(0, 229, 255, 0.35);
+        color: var(--bg-primary);
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        border: 1px solid var(--border-bright);
+      }
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+        color: var(--text-bright);
+      }
+
+      /* Scrolling code preview in hero */
+      .hero-code-preview {
+        margin-top: 56px;
+        position: relative;
+      }
+
+      .hero-code-preview::before {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border-radius: var(--radius-lg);
+        background: var(--gradient-border);
+        z-index: -1;
+      }
+
+      .hero-code-window {
+        background: var(--bg-code);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+      }
+
+      .hero-code-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid var(--border-default);
+      }
+
+      .hero-code-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .hero-code-dot:nth-child(1) {
+        background: #ff5f57;
+      }
+      .hero-code-dot:nth-child(2) {
+        background: #febc2e;
+      }
+      .hero-code-dot:nth-child(3) {
+        background: #28c840;
+      }
+
+      .hero-code-filename {
+        margin-left: 12px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .hero-code-body {
+        padding: 24px;
+        overflow-x: auto;
+      }
+
+      .hero-code-body pre {
+        font-size: 0.875rem;
+        line-height: 1.75;
+        tab-size: 4;
+      }
+
+      /* ===================================================================
+   SECTIONS
+   =================================================================== */
+      .section {
+        padding: 100px 24px;
+        position: relative;
+      }
+
+      .section-alt {
+        background: var(--bg-secondary);
+      }
+
+      .container {
+        max-width: var(--max-width);
+        margin: 0 auto;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 64px;
+      }
+
+      .section-label {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent-cyan);
+        margin-bottom: 12px;
+      }
+
+      .section-title {
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -0.03em;
+        color: var(--text-bright);
+        margin-bottom: 16px;
+      }
+
+      .section-desc {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        max-width: 640px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      /* ===================================================================
+   WHAT IS AXON
+   =================================================================== */
+      .intro-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        align-items: center;
+      }
+
+      .intro-text h2 {
+        font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: var(--text-bright);
+        margin-bottom: 20px;
+        line-height: 1.15;
+      }
+
+      .intro-text p {
+        font-size: 1.05rem;
+        color: var(--text-secondary);
+        line-height: 1.8;
+        margin-bottom: 16px;
+      }
+
+      .intro-features {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      .intro-features li {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        line-height: 1.6;
+      }
+
+      .intro-features li::before {
+        content: "▸";
+        color: var(--accent-cyan);
+        font-weight: 700;
+        font-size: 1rem;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .intro-visual {
+        position: relative;
+      }
+
+      .intro-stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .intro-stat {
+        background: var(--bg-card);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        padding: 24px;
+        text-align: center;
+        transition: all 0.3s var(--ease-out);
+      }
+      .intro-stat:hover {
+        border-color: rgba(0, 229, 255, 0.2);
+        background: var(--bg-card-hover);
+        transform: translateY(-2px);
+      }
+
+      .intro-stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        margin-bottom: 4px;
+      }
+
+      .intro-stat-value.cyan {
+        color: var(--accent-cyan);
+      }
+      .intro-stat-value.purple {
+        color: var(--accent-purple);
+      }
+      .intro-stat-value.blue {
+        color: var(--accent-blue);
+      }
+      .intro-stat-value.green {
+        color: var(--accent-emerald);
+      }
+
+      .intro-stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      /* ===================================================================
+   CODE EXAMPLES
+   =================================================================== */
+      .examples-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+      }
+
+      .example-tab {
+        padding: 10px 20px;
+        border: 1px solid var(--border-default);
+        background: transparent;
+        color: var(--text-secondary);
+        font-family: inherit;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s var(--ease-out);
+      }
+      .example-tab:hover {
+        color: var(--text-primary);
+        border-color: var(--border-bright);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .example-tab.active {
+        background: rgba(0, 229, 255, 0.1);
+        border-color: rgba(0, 229, 255, 0.3);
+        color: var(--accent-cyan);
+      }
+
+      .example-panel {
+        display: none;
+      }
+      .example-panel.active {
+        display: block;
+      }
+
+      .code-window {
+        background: var(--bg-code);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-default);
+        overflow: hidden;
+        max-width: 820px;
+        margin: 0 auto;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+      }
+
+      .code-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--border-default);
+      }
+
+      .code-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .code-dot:nth-child(1) {
+        background: #ff5f57;
+      }
+      .code-dot:nth-child(2) {
+        background: #febc2e;
+      }
+      .code-dot:nth-child(3) {
+        background: #28c840;
+      }
+
+      .code-filename {
+        margin-left: 12px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .code-body {
+        padding: 24px;
+        overflow-x: auto;
+      }
+
+      .code-body pre {
+        font-size: 0.85rem;
+        line-height: 1.8;
+        tab-size: 4;
+      }
+
+      .code-body .line-num {
+        display: inline-block;
+        width: 2.5em;
+        text-align: right;
+        margin-right: 1.5em;
+        color: var(--text-muted);
+        user-select: none;
+        opacity: 0.5;
+      }
+
+      /* Syntax tokens */
+      .kw {
+        color: var(--syn-keyword);
+      }
+      .typ {
+        color: var(--syn-type);
+      }
+      .fn {
+        color: var(--syn-function);
+      }
+      .str {
+        color: var(--syn-string);
+      }
+      .num {
+        color: var(--syn-number);
+      }
+      .cmt {
+        color: var(--syn-comment);
+        font-style: italic;
+      }
+      .op {
+        color: var(--syn-operator);
+      }
+      .p {
+        color: var(--syn-punct);
+      }
+      .pr {
+        color: var(--syn-param);
+      }
+
+      /* ===================================================================
+   DESIGN DECISIONS (CARDS)
+   =================================================================== */
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        padding: 32px 28px;
+        transition: all 0.35s var(--ease-out);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--gradient-accent);
+        opacity: 0;
+        transition: opacity 0.35s var(--ease-out);
+      }
+
+      .card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(0, 229, 255, 0.15);
+        background: var(--bg-card-hover);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+      .card:hover::before {
+        opacity: 1;
+      }
+
+      .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 20px;
+      }
+
+      .card-icon.cyan {
+        background: rgba(0, 229, 255, 0.1);
+        color: var(--accent-cyan);
+      }
+      .card-icon.purple {
+        background: rgba(168, 85, 247, 0.1);
+        color: var(--accent-purple);
+      }
+      .card-icon.blue {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-blue);
+      }
+      .card-icon.pink {
+        background: rgba(236, 72, 153, 0.1);
+        color: var(--accent-pink);
+      }
+      .card-icon.orange {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent-orange);
+      }
+      .card-icon.green {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-emerald);
+      }
+
+      .card h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        margin-bottom: 10px;
+        letter-spacing: -0.01em;
+      }
+
+      .card p {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        line-height: 1.7;
+      }
+
+      .card code {
+        font-size: 0.8rem;
+        background: rgba(0, 229, 255, 0.08);
+        color: var(--accent-cyan);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      /* ===================================================================
+   FEATURES TABLE
+   =================================================================== */
+      .features-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        max-width: 900px;
+        margin: 0 auto;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        background: var(--bg-card);
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border-default);
+        transition: background 0.2s var(--ease-out);
+      }
+      .feature-item:hover {
+        background: rgba(255, 255, 255, 0.02);
+      }
+
+      .feature-item:nth-child(odd) {
+        border-right: 1px solid var(--border-default);
+      }
+
+      /* remove bottom border on last row */
+      .feature-item:nth-last-child(-n + 2) {
+        border-bottom: none;
+      }
+
+      .feature-check {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(0, 229, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 0.7rem;
+        color: var(--accent-cyan);
+      }
+
+      .feature-text {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-primary);
+      }
+
+      /* ===================================================================
+   IMPLEMENTATION STATUS / ROADMAP
+   =================================================================== */
+      .roadmap {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+
+      .roadmap-item {
+        display: flex;
+        gap: 24px;
+        position: relative;
+        padding-bottom: 32px;
+      }
+
+      .roadmap-item:last-child {
+        padding-bottom: 0;
+      }
+
+      .roadmap-line {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex-shrink: 0;
+        width: 40px;
+      }
+
+      .roadmap-dot {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        z-index: 1;
+        font-weight: 600;
+      }
+
+      .roadmap-dot.done {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--accent-emerald);
+        border: 2px solid rgba(16, 185, 129, 0.4);
+      }
+
+      .roadmap-dot.current {
+        background: rgba(0, 229, 255, 0.15);
+        color: var(--accent-cyan);
+        border: 2px solid rgba(0, 229, 255, 0.4);
+        box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+        animation: pulse-ring 2s ease-in-out infinite;
+      }
+
+      .roadmap-dot.future {
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-muted);
+        border: 2px solid var(--border-default);
+      }
+
+      @keyframes pulse-ring {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(0, 229, 255, 0);
+        }
+      }
+
+      .roadmap-stem {
+        flex: 1;
+        width: 2px;
+        margin-top: 8px;
+      }
+
+      .roadmap-stem.done {
+        background: rgba(16, 185, 129, 0.3);
+      }
+      .roadmap-stem.current {
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 229, 255, 0.3),
+          var(--border-default)
+        );
+      }
+      .roadmap-stem.future {
+        background: var(--border-default);
+      }
+
+      .roadmap-content {
+        padding-top: 6px;
+        flex: 1;
+      }
+
+      .roadmap-content h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        margin-bottom: 4px;
+        letter-spacing: -0.01em;
+      }
+
+      .roadmap-content p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }
+
+      .roadmap-tag {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 3px 10px;
+        border-radius: 100px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+      .roadmap-tag.complete {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-emerald);
+      }
+      .roadmap-tag.next {
+        background: rgba(0, 229, 255, 0.1);
+        color: var(--accent-cyan);
+      }
+
+      /* ===================================================================
+   SPEC SUMMARY — STATS BAR
+   =================================================================== */
+      .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1px;
+        background: var(--border-default);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      .stat-item {
+        background: var(--bg-card);
+        padding: 32px 16px;
+        text-align: center;
+        transition: background 0.2s var(--ease-out);
+      }
+      .stat-item:hover {
+        background: var(--bg-card-hover);
+      }
+
+      .stat-number {
+        font-size: 2.25rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        background: var(--gradient-accent);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 6px;
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        line-height: 1.4;
+      }
+
+      /* ===================================================================
+   ARCHITECTURE PIPELINE
+   =================================================================== */
+      .pipeline {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        flex-wrap: wrap;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .pipeline-stage {
+        background: var(--bg-card);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        padding: 20px 16px;
+        text-align: center;
+        min-width: 120px;
+        transition: all 0.3s var(--ease-out);
+        position: relative;
+      }
+
+      .pipeline-stage:hover {
+        transform: translateY(-3px);
+        border-color: rgba(0, 229, 255, 0.2);
+        box-shadow: var(--glow-cyan);
+      }
+
+      .pipeline-stage.active {
+        border-color: rgba(0, 229, 255, 0.3);
+        background: rgba(0, 229, 255, 0.05);
+      }
+
+      .pipeline-stage.active .pipeline-stage-icon {
+        color: var(--accent-cyan);
+      }
+
+      .pipeline-stage-icon {
+        font-size: 1.5rem;
+        margin-bottom: 8px;
+        display: block;
+      }
+
+      .pipeline-stage-name {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        margin-bottom: 2px;
+      }
+
+      .pipeline-stage-detail {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+      }
+
+      .pipeline-arrow {
+        font-size: 1.2rem;
+        color: var(--text-muted);
+        padding: 0 6px;
+        flex-shrink: 0;
+      }
+
+      /* ===================================================================
+   CLI USAGE
+   =================================================================== */
+      .cli-block {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      .cli-window {
+        background: var(--bg-code);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+      }
+
+      .cli-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--border-default);
+      }
+
+      .cli-bar-title {
+        margin-left: 12px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .cli-body {
+        padding: 24px;
+      }
+
+      .cli-body pre {
+        font-size: 0.85rem;
+        line-height: 2;
+      }
+
+      .cli-prompt {
+        color: var(--accent-emerald);
+      }
+      .cli-cmd {
+        color: var(--accent-cyan);
+        font-weight: 500;
+      }
+      .cli-arg {
+        color: var(--text-primary);
+      }
+      .cli-flag {
+        color: var(--accent-purple);
+      }
+      .cli-cmt {
+        color: var(--text-muted);
+        font-style: italic;
+      }
+
+      /* ===================================================================
+   FOOTER
+   =================================================================== */
+      .footer {
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-default);
+        padding: 60px 24px 40px;
+      }
+
+      .footer-inner {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 40px;
+        flex-wrap: wrap;
+      }
+
+      .footer-brand {
+        max-width: 340px;
+      }
+
+      .footer-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 1.25rem;
+        color: var(--text-bright);
+        margin-bottom: 12px;
+        letter-spacing: -0.02em;
+      }
+
+      .footer-logo-icon {
+        width: 28px;
+        height: 28px;
+        background: var(--gradient-accent);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 900;
+        color: var(--bg-primary);
+      }
+
+      .footer-brand p {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      .footer-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 12px;
+        font-size: 0.8rem;
+        color: var(--accent-emerald);
+        font-weight: 500;
+      }
+
+      .footer-status-dot {
+        width: 6px;
+        height: 6px;
+        background: var(--accent-emerald);
+        border-radius: 50%;
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      .footer-links-group h4 {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+      }
+
+      .footer-links-group ul {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .footer-links-group a {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        transition: color 0.2s var(--ease-out);
+      }
+      .footer-links-group a:hover {
+        color: var(--accent-cyan);
+      }
+
+      .footer-bottom {
+        max-width: var(--max-width);
+        margin: 40px auto 0;
+        padding-top: 24px;
+        border-top: 1px solid var(--border-default);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .footer-copyright {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      .footer-made {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+
+      /* ===================================================================
+   RESPONSIVE
+   =================================================================== */
+      @media (max-width: 1024px) {
+        .cards-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .stats-bar {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .pipeline {
+          gap: 8px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+        .nav-mobile-toggle {
+          display: block;
+        }
+
+        .nav-links.open {
+          display: flex;
+          flex-direction: column;
+          position: absolute;
+          top: var(--nav-height);
+          left: 0;
+          right: 0;
+          background: var(--bg-primary);
+          border-bottom: 1px solid var(--border-default);
+          padding: 16px;
+          gap: 4px;
+        }
+        .nav-links.open a {
+          padding: 12px 16px;
+          width: 100%;
+        }
+
+        .hero {
+          padding-top: calc(var(--nav-height) + 24px);
+          min-height: auto;
+          padding-bottom: 60px;
+        }
+
+        .intro-grid {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+
+        .cards-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .features-list {
+          grid-template-columns: 1fr;
+        }
+        .feature-item:nth-child(odd) {
+          border-right: none;
+        }
+        .feature-item:nth-last-child(1) {
+          border-bottom: none;
+        }
+        .feature-item:nth-last-child(2) {
+          border-bottom: 1px solid var(--border-default);
+        }
+
+        .stats-bar {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .pipeline {
+          flex-direction: column;
+          gap: 4px;
+        }
+        .pipeline-arrow {
+          transform: rotate(90deg);
+          padding: 4px 0;
+        }
+
+        .footer-inner {
+          flex-direction: column;
+        }
+
+        .section {
+          padding: 64px 20px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .stats-bar {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .hero-actions {
+          flex-direction: column;
+          align-items: center;
+        }
+        .btn {
+          width: 100%;
+          max-width: 280px;
+          justify-content: center;
+        }
+        .examples-tabs {
+          gap: 6px;
+        }
+        .example-tab {
+          padding: 8px 14px;
+          font-size: 0.8rem;
+        }
+      }
+
+      /* ===================================================================
+   SCROLLBAR
+   =================================================================== */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg-primary);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* ===================================================================
+   ANIMATIONS
+   =================================================================== */
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-in {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.6s var(--ease-out),
+          transform 0.6s var(--ease-out);
+      }
+      .animate-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ================================================================
+     NAVIGATION
+     ================================================================ -->
+    <nav class="nav" id="nav">
+      <div class="nav-inner">
+        <a href="#hero" class="nav-logo">
+          <span class="nav-logo-icon">Ax</span>
+          Axon
+        </a>
+        <ul class="nav-links" id="navLinks">
+          <li><a href="#about">About</a></li>
+          <li><a href="#examples">Examples</a></li>
+          <li><a href="#design">Design</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#roadmap">Roadmap</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#cli" class="nav-cta">Get Started</a></li>
+        </ul>
+        <button
+          class="nav-mobile-toggle"
+          id="navToggle"
+          aria-label="Toggle navigation"
+        >
+          ☰
+        </button>
+      </div>
+    </nav>
+
+    <!-- ================================================================
+     HERO
+     ================================================================ -->
+    <section class="hero" id="hero">
+      <div class="hero-glow hero-glow-1"></div>
+      <div class="hero-glow hero-glow-2"></div>
+      <div class="hero-glow hero-glow-3"></div>
+
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          Phase 2 Complete — Lexer, Parser &amp; AST
+        </div>
+
+        <h1 class="hero-title">
+          The <span class="hero-title-gradient">Axon</span><br />Programming
+          Language
+        </h1>
+
+        <p class="hero-tagline">
+          <strong>Rust meets AI/ML</strong> — with first-class tensors,
+          compile-time shape checking, and AI&#8209;agent&#8209;friendly syntax
+        </p>
+
+        <div class="hero-actions">
+          <a href="#examples" class="btn btn-primary">See Code Examples</a>
+          <a href="#roadmap" class="btn btn-secondary">View Roadmap</a>
+        </div>
+
+        <!-- Hero code preview -->
+        <div class="hero-code-preview">
+          <div class="hero-code-window">
+            <div class="hero-code-bar">
+              <span class="hero-code-dot"></span>
+              <span class="hero-code-dot"></span>
+              <span class="hero-code-dot"></span>
+              <span class="hero-code-filename">neural_net.axon</span>
+            </div>
+            <div class="hero-code-body">
+              <pre><span class="kw">struct</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+    <span class="pr">fc1</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">784</span>, <span class="num">256</span><span class="p">&gt;</span>,
+    <span class="pr">fc2</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">256</span>, <span class="num">128</span><span class="p">&gt;</span>,
+    <span class="pr">fc3</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">128</span>, <span class="num">10</span><span class="p">&gt;</span>,
+<span class="p">}</span>
+
+<span class="kw">impl</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+    <span class="kw">fn</span> <span class="fn">forward</span><span class="p">(</span><span class="op">&amp;</span><span class="kw">self</span>, <span class="pr">x</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">784</span>]<span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">10</span>]<span class="p">&gt;</span> <span class="p">{</span>
+        <span class="kw">let</span> <span class="pr">h1</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc1</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">x</span><span class="p">)</span><span class="p">)</span>;
+        <span class="kw">let</span> <span class="pr">h2</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc2</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h1</span><span class="p">)</span><span class="p">)</span>;
+        <span class="kw">return</span> <span class="kw">self</span>.<span class="pr">fc3</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h2</span><span class="p">)</span>;
+    <span class="p">}</span>
+<span class="p">}</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     WHAT IS AXON
+     ================================================================ -->
+    <section class="section" id="about">
+      <div class="container">
+        <div class="intro-grid">
+          <div class="intro-text animate-in">
+            <span class="section-label">About the Language</span>
+            <h2>What is Axon?</h2>
+            <p>
+              Axon is a new systems programming language
+              <strong
+                >purpose-built for machine learning and AI workloads</strong
+              >. It bridges the gap between the safety and performance of
+              systems languages and the ergonomics demanded by modern ML
+              workflows.
+            </p>
+            <p>
+              From data loading through training to deployment — Axon provides a
+              unified, compiled, and verifiable pipeline with zero compromises
+              on performance.
+            </p>
+            <ul class="intro-features">
+              <li>
+                <strong>Rust-inspired memory safety</strong> through ownership
+                and borrowing — zero runtime cost
+              </li>
+              <li>
+                <strong>First-class tensor types</strong> with compile-time
+                shape verification
+              </li>
+              <li>
+                <strong>Native GPU compilation</strong> via LLVM/MLIR backend
+              </li>
+              <li>
+                <strong>AI-agent-friendly syntax</strong> — strict, verbose,
+                unambiguous, with machine-readable errors
+              </li>
+              <li>
+                <strong>Full ML pipeline support</strong> from data loading
+                through training to deployment
+              </li>
+            </ul>
+          </div>
+
+          <div class="intro-visual animate-in">
+            <div class="intro-stat-grid">
+              <div class="intro-stat">
+                <div class="intro-stat-value cyan">72</div>
+                <div class="intro-stat-label">Functional Reqs</div>
+              </div>
+              <div class="intro-stat">
+                <div class="intro-stat-value purple">28</div>
+                <div class="intro-stat-label">Non-Functional Reqs</div>
+              </div>
+              <div class="intro-stat">
+                <div class="intro-stat-value blue">102</div>
+                <div class="intro-stat-label">Tests Passing</div>
+              </div>
+              <div class="intro-stat">
+                <div class="intro-stat-value green">984</div>
+                <div class="intro-stat-label">Lines of Spec</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     CODE EXAMPLES
+     ================================================================ -->
+    <section class="section section-alt" id="examples">
+      <div class="container">
+        <div class="section-header animate-in">
+          <span class="section-label">Code Examples</span>
+          <h2 class="section-title">See Axon in Action</h2>
+          <p class="section-desc">
+            Clean, expressive syntax that feels familiar to Rust developers —
+            with first-class tensor operations and ML primitives built right in.
+          </p>
+        </div>
+
+        <div class="examples-tabs" role="tablist">
+          <button
+            class="example-tab active"
+            data-tab="ex1"
+            role="tab"
+            aria-selected="true"
+          >
+            Hello World
+          </button>
+          <button
+            class="example-tab"
+            data-tab="ex2"
+            role="tab"
+            aria-selected="false"
+          >
+            Tensor Ops
+          </button>
+          <button
+            class="example-tab"
+            data-tab="ex3"
+            role="tab"
+            aria-selected="false"
+          >
+            Neural Network
+          </button>
+          <button
+            class="example-tab"
+            data-tab="ex4"
+            role="tab"
+            aria-selected="false"
+          >
+            Training Loop
+          </button>
+        </div>
+
+        <!-- Example 1: Hello World -->
+        <div class="example-panel active" id="ex1" role="tabpanel">
+          <div class="code-window">
+            <div class="code-bar">
+              <span class="code-dot"></span><span class="code-dot"></span
+              ><span class="code-dot"></span>
+              <span class="code-filename">hello.axon</span>
+            </div>
+            <div class="code-body">
+              <pre><span class="kw">fn</span> <span class="fn">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="fn">println</span><span class="p">(</span><span class="str">"Hello, Axon!"</span><span class="p">)</span>;
+<span class="p">}</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Example 2: Tensor Operations -->
+        <div class="example-panel" id="ex2" role="tabpanel">
+          <div class="code-window">
+            <div class="code-bar">
+              <span class="code-dot"></span><span class="code-dot"></span
+              ><span class="code-dot"></span>
+              <span class="code-filename">tensors.axon</span>
+            </div>
+            <div class="code-body">
+              <pre><span class="kw">fn</span> <span class="fn">matrix_multiply_example</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kw">let</span> <span class="pr">A</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="num">128</span>, <span class="num">256</span>]<span class="p">&gt;</span> <span class="op">=</span> <span class="fn">randn</span><span class="p">(</span>[<span class="num">128</span>, <span class="num">256</span>]<span class="p">)</span>;
+    <span class="kw">let</span> <span class="pr">B</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="num">256</span>, <span class="num">512</span>]<span class="p">&gt;</span> <span class="op">=</span> <span class="fn">randn</span><span class="p">(</span>[<span class="num">256</span>, <span class="num">512</span>]<span class="p">)</span>;
+    <span class="kw">let</span> <span class="pr">C</span> <span class="op">=</span> <span class="pr">A</span> <span class="op">@</span> <span class="pr">B</span>;  <span class="cmt">// Compiler infers: Tensor&lt;Float32, [128, 512]&gt;</span>
+<span class="p">}</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Example 3: Neural Network -->
+        <div class="example-panel" id="ex3" role="tabpanel">
+          <div class="code-window">
+            <div class="code-bar">
+              <span class="code-dot"></span><span class="code-dot"></span
+              ><span class="code-dot"></span>
+              <span class="code-filename">model.axon</span>
+            </div>
+            <div class="code-body">
+              <pre><span class="kw">struct</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+    <span class="pr">fc1</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">784</span>, <span class="num">256</span><span class="p">&gt;</span>,
+    <span class="pr">fc2</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">256</span>, <span class="num">128</span><span class="p">&gt;</span>,
+    <span class="pr">fc3</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">128</span>, <span class="num">10</span><span class="p">&gt;</span>,
+<span class="p">}</span>
+
+<span class="kw">impl</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+    <span class="kw">fn</span> <span class="fn">forward</span><span class="p">(</span><span class="op">&amp;</span><span class="kw">self</span>, <span class="pr">x</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">784</span>]<span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">10</span>]<span class="p">&gt;</span> <span class="p">{</span>
+        <span class="kw">let</span> <span class="pr">h1</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc1</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">x</span><span class="p">)</span><span class="p">)</span>;
+        <span class="kw">let</span> <span class="pr">h2</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc2</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h1</span><span class="p">)</span><span class="p">)</span>;
+        <span class="kw">return</span> <span class="kw">self</span>.<span class="pr">fc3</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h2</span><span class="p">)</span>;
+    <span class="p">}</span>
+<span class="p">}</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Example 4: Training Loop -->
+        <div class="example-panel" id="ex4" role="tabpanel">
+          <div class="code-window">
+            <div class="code-bar">
+              <span class="code-dot"></span><span class="code-dot"></span
+              ><span class="code-dot"></span>
+              <span class="code-filename">train.axon</span>
+            </div>
+            <div class="code-body">
+              <pre><span class="kw">fn</span> <span class="fn">train_epoch</span><span class="p">(</span>
+    <span class="pr">model</span>: <span class="op">&amp;</span><span class="kw">mut</span> <span class="typ">NeuralNet</span>,
+    <span class="pr">data</span>: <span class="typ">DataLoader</span>,
+    <span class="pr">optimizer</span>: <span class="op">&amp;</span><span class="kw">mut</span> <span class="typ">Adam</span>,
+<span class="p">)</span> <span class="op">-&gt;</span> <span class="typ">Float32</span> <span class="p">{</span>
+    <span class="kw">let</span> <span class="kw">mut</span> <span class="pr">total_loss</span> <span class="op">=</span> <span class="num">0.0</span>;
+    <span class="kw">for</span> <span class="pr">batch</span> <span class="kw">in</span> <span class="pr">data</span> <span class="p">{</span>
+        <span class="kw">let</span> <span class="p">(</span><span class="pr">inputs</span>, <span class="pr">targets</span><span class="p">)</span> <span class="op">=</span> <span class="pr">batch</span>;
+        <span class="kw">let</span> <span class="pr">predictions</span> <span class="op">=</span> <span class="pr">model</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">inputs</span><span class="p">)</span>;
+        <span class="kw">let</span> <span class="pr">loss</span> <span class="op">=</span> <span class="fn">cross_entropy</span><span class="p">(</span><span class="pr">predictions</span>, <span class="pr">targets</span><span class="p">)</span>;
+        <span class="pr">total_loss</span> <span class="op">+=</span> <span class="pr">loss</span>.<span class="fn">item</span><span class="p">()</span>;
+        <span class="pr">loss</span>.<span class="fn">backward</span><span class="p">()</span>;
+        <span class="pr">optimizer</span>.<span class="fn">step</span><span class="p">()</span>;
+        <span class="pr">optimizer</span>.<span class="fn">zero_grad</span><span class="p">()</span>;
+    <span class="p">}</span>
+    <span class="kw">return</span> <span class="pr">total_loss</span> <span class="op">/</span> <span class="pr">data</span>.<span class="fn">len</span><span class="p">()</span> <span class="kw">as</span> <span class="typ">Float32</span>;
+<span class="p">}</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     KEY DESIGN DECISIONS
+     ================================================================ -->
+    <section class="section" id="design">
+      <div class="container">
+        <div class="section-header animate-in">
+          <span class="section-label">Philosophy</span>
+          <h2 class="section-title">Key Design Decisions</h2>
+          <p class="section-desc">
+            Every choice in Axon serves one goal: make ML workloads safe, fast,
+            and verifiable — from compile time to deployment.
+          </p>
+        </div>
+
+        <div class="cards-grid">
+          <div class="card animate-in">
+            <div class="card-icon cyan">🔒</div>
+            <h3>Ownership Model</h3>
+            <p>
+              Rust-style ownership &amp; borrowing. No garbage collector. Memory
+              is freed deterministically when the owner goes out of scope — zero
+              runtime overhead.
+            </p>
+          </div>
+
+          <div class="card animate-in">
+            <div class="card-icon purple">📐</div>
+            <h3>Compile-Time Shape Checking</h3>
+            <p>
+              <code>Tensor&lt;Float32, [batch, 784]&gt;</code> catches dimension
+              mismatches before runtime. Dynamic dimensions supported with
+              <code>?</code>.
+            </p>
+          </div>
+
+          <div class="card animate-in">
+            <div class="card-icon blue">⚡</div>
+            <h3>LLVM/MLIR Backend</h3>
+            <p>
+              Same compiler stack as Rust and Mojo. Compiles to native machine
+              code + GPU kernels. C-level performance with zero compromises.
+            </p>
+          </div>
+
+          <div class="card animate-in">
+            <div class="card-icon pink">🤖</div>
+            <h3>AI-Agent First</h3>
+            <p>
+              Strict, unambiguous syntax designed for machine consumption.
+              Machine-readable JSON error output. Structured error codes with
+              fix suggestions.
+            </p>
+          </div>
+
+          <div class="card animate-in">
+            <div class="card-icon orange">🎯</div>
+            <h3>Smart GPU Dispatch</h3>
+            <p>
+              The compiler automatically decides CPU vs GPU based on operation
+              size. Explicit control available with <code>@gpu</code> /
+              <code>@cpu</code> annotations.
+            </p>
+          </div>
+
+          <div class="card animate-in">
+            <div class="card-icon green">🛡️</div>
+            <h3>No Exceptions, No Null</h3>
+            <p>
+              <code>Result&lt;T, E&gt;</code> for errors,
+              <code>Option&lt;T&gt;</code> for optionality. If it compiles, it
+              works. Algebraic error handling throughout.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     LANGUAGE FEATURES
+     ================================================================ -->
+    <section class="section section-alt" id="features">
+      <div class="container">
+        <div class="section-header animate-in">
+          <span class="section-label">Capabilities</span>
+          <h2 class="section-title">Language Features</h2>
+          <p class="section-desc">
+            A carefully curated feature set — everything you need for
+            high-performance ML, nothing you don't.
+          </p>
+        </div>
+
+        <div class="features-list animate-in">
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text"
+              >Static strong type system with inference</span
+            >
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text"
+              >First-class tensor types with shape annotations</span
+            >
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text"
+              >Ownership &amp; borrowing (Rust-style)</span
+            >
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text"
+              >Pattern matching with <code>match</code></span
+            >
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text">Generics with trait bounds</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text">Async/await for I/O</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text">FFI to C and Python</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text"
+              ><code>@</code> operator for matrix multiply</span
+            >
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text">Broadcasting for tensor operations</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text"
+              >Autograd / automatic differentiation</span
+            >
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text">ONNX model export</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-check">✓</span>
+            <span class="feature-text">Native GPU kernel compilation</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     IMPLEMENTATION ROADMAP
+     ================================================================ -->
+    <section class="section" id="roadmap">
+      <div class="container">
+        <div class="section-header animate-in">
+          <span class="section-label">Progress</span>
+          <h2 class="section-title">Implementation Roadmap</h2>
+          <p class="section-desc">
+            Tracking progress from language design through production release.
+            Phases 0–2 are complete with 102 tests passing.
+          </p>
+        </div>
+
+        <div class="roadmap animate-in">
+          <!-- Phase 0 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot done">✓</div>
+              <div class="roadmap-stem done"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>
+                Phase 0: Language Design Study
+                <span class="roadmap-tag complete">Complete</span>
+              </h3>
+              <p>
+                Research into Rust, Mojo, Julia, and PyTorch internals.
+                Identified key design principles and trade-offs for an ML-first
+                systems language.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 1 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot done">✓</div>
+              <div class="roadmap-stem done"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>
+                Phase 1: Language Specification
+                <span class="roadmap-tag complete">Complete</span>
+              </h3>
+              <p>
+                Comprehensive spec with 72 functional requirements, 28
+                non-functional requirements, 12 user stories, and 984 lines of
+                specification.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 2 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot done">✓</div>
+              <div class="roadmap-stem current"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>
+                Phase 2: Lexer + Parser + AST
+                <span class="roadmap-tag complete">Complete</span>
+              </h3>
+              <p>
+                Full lexer with all token types, recursive-descent parser, and
+                complete AST representation. 102 tests passing across all
+                modules.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 3 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot current">→</div>
+              <div class="roadmap-stem future"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>
+                Phase 3: Type Checker + Borrow Checker
+                <span class="roadmap-tag next">Next</span>
+              </h3>
+              <p>
+                Semantic analysis pass with full type inference, tensor shape
+                verification, ownership tracking, and lifetime analysis.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 4 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot future">4</div>
+              <div class="roadmap-stem future"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>Phase 4: LLVM/MLIR Code Generation</h3>
+              <p>
+                Lower typed AST to LLVM IR and MLIR dialects. Native binary
+                output with GPU kernel compilation support.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 5 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot future">5</div>
+              <div class="roadmap-stem future"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>Phase 5: Standard Library</h3>
+              <p>
+                Core data structures, I/O, math primitives, tensor operations,
+                and data loading utilities.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 6 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot future">6</div>
+              <div class="roadmap-stem future"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>Phase 6: AI Framework</h3>
+              <p>
+                Autograd engine, neural network layers, optimizers, loss
+                functions, and ONNX export — all built into the language.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 7 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot future">7</div>
+              <div class="roadmap-stem future"></div>
+            </div>
+            <div class="roadmap-content">
+              <h3>Phase 7: Tooling</h3>
+              <p>
+                Language Server Protocol (LSP), package manager, debugger, REPL,
+                and IDE integration.
+              </p>
+            </div>
+          </div>
+
+          <!-- Phase 8 -->
+          <div class="roadmap-item">
+            <div class="roadmap-line">
+              <div class="roadmap-dot future">8</div>
+            </div>
+            <div class="roadmap-content">
+              <h3>Phase 8: Hardening &amp; Release</h3>
+              <p>
+                Benchmarks, fuzzing, security audit, documentation polish, and
+                public release.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     SPEC SUMMARY — STATS BAR
+     ================================================================ -->
+    <section class="section section-alt" id="spec">
+      <div class="container">
+        <div class="section-header animate-in">
+          <span class="section-label">Specification</span>
+          <h2 class="section-title">Spec at a Glance</h2>
+          <p class="section-desc">
+            Axon's specification is thorough and implementation-ready — every
+            corner of the language is documented before a single line of code is
+            written.
+          </p>
+        </div>
+
+        <div class="stats-bar animate-in">
+          <div class="stat-item">
+            <div class="stat-number">72</div>
+            <div class="stat-label">Functional<br />Requirements</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">28</div>
+            <div class="stat-label">Non-Functional<br />Requirements</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">12</div>
+            <div class="stat-label">User<br />Stories</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">10</div>
+            <div class="stat-label">Success<br />Criteria</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">8</div>
+            <div class="stat-label">Syntax<br />Examples</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">984</div>
+            <div class="stat-label">Lines of<br />Specification</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     ARCHITECTURE
+     ================================================================ -->
+    <section class="section" id="architecture">
+      <div class="container">
+        <div class="section-header animate-in">
+          <span class="section-label">Internals</span>
+          <h2 class="section-title">Compiler Architecture</h2>
+          <p class="section-desc">
+            A classic multi-pass compiler pipeline — from source text to native
+            binaries and GPU kernels.
+          </p>
+        </div>
+
+        <div class="pipeline animate-in">
+          <div class="pipeline-stage active">
+            <span class="pipeline-stage-icon">📄</span>
+            <div class="pipeline-stage-name">Source</div>
+            <div class="pipeline-stage-detail">.axon files</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+
+          <div class="pipeline-stage active">
+            <span class="pipeline-stage-icon">🔤</span>
+            <div class="pipeline-stage-name">Lexer</div>
+            <div class="pipeline-stage-detail">Tokens</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+
+          <div class="pipeline-stage active">
+            <span class="pipeline-stage-icon">🌳</span>
+            <div class="pipeline-stage-name">Parser</div>
+            <div class="pipeline-stage-detail">AST</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-icon">🔍</span>
+            <div class="pipeline-stage-name">Type Check</div>
+            <div class="pipeline-stage-detail">Typed AST</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-icon">🔗</span>
+            <div class="pipeline-stage-name">Borrow Check</div>
+            <div class="pipeline-stage-detail">Verified AST</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-icon">⚙️</span>
+            <div class="pipeline-stage-name">LLVM IR</div>
+            <div class="pipeline-stage-detail">Intermediate</div>
+          </div>
+          <div class="pipeline-arrow">→</div>
+
+          <div class="pipeline-stage">
+            <span class="pipeline-stage-icon">🚀</span>
+            <div class="pipeline-stage-name">Output</div>
+            <div class="pipeline-stage-detail">Binary + GPU</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     CLI USAGE
+     ================================================================ -->
+    <section class="section section-alt" id="cli">
+      <div class="container">
+        <div class="section-header animate-in">
+          <span class="section-label">Getting Started</span>
+          <h2 class="section-title">CLI Usage</h2>
+          <p class="section-desc">
+            The <code>axonc</code> compiler supports parsing, lexing, and
+            AI-agent-friendly JSON error output.
+          </p>
+        </div>
+
+        <div class="cli-block animate-in">
+          <div class="cli-window">
+            <div class="cli-bar">
+              <span class="code-dot"></span><span class="code-dot"></span
+              ><span class="code-dot"></span>
+              <span class="cli-bar-title">terminal</span>
+            </div>
+            <div class="cli-body">
+              <pre><span class="cli-cmt"># Parse a source file and print the AST</span>
+<span class="cli-prompt">$</span> <span class="cli-cmd">axonc</span> <span class="cli-arg">parse</span> <span class="cli-arg">hello.axon</span>
+
+<span class="cli-cmt"># Tokenize a source file and print all tokens</span>
+<span class="cli-prompt">$</span> <span class="cli-cmd">axonc</span> <span class="cli-arg">lex</span> <span class="cli-arg">hello.axon</span>
+
+<span class="cli-cmt"># JSON error output — designed for AI agents &amp; tooling</span>
+<span class="cli-prompt">$</span> <span class="cli-cmd">axonc</span> <span class="cli-arg">parse</span> <span class="cli-flag">--error-format=json</span> <span class="cli-arg">hello.axon</span>
+
+<span class="cli-cmt"># Run all compiler tests</span>
+<span class="cli-prompt">$</span> <span class="cli-cmd">cargo</span> <span class="cli-arg">test</span>
+<span class="str">running 102 tests ... ok</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+     FOOTER
+     ================================================================ -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <span class="footer-logo-icon">Ax</span>
+            Axon
+          </div>
+          <p>
+            A systems programming language purpose-built for machine learning
+            and AI workloads. Under active development.
+          </p>
+          <div class="footer-status">
+            <span class="footer-status-dot"></span>
+            Under active development
+          </div>
+        </div>
+
+        <div class="footer-links-group">
+          <h4>Project</h4>
+          <ul>
+            <li><a href="#" title="Coming soon">GitHub Repository</a></li>
+            <li><a href="#" title="Coming soon">Specification Document</a></li>
+            <li><a href="#" title="Coming soon">Contributing Guide</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-group">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#examples">Code Examples</a></li>
+            <li><a href="#roadmap">Roadmap</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#cli">CLI Reference</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-group">
+          <h4>Language</h4>
+          <ul>
+            <li><a href="#about">About Axon</a></li>
+            <li><a href="#design">Design Decisions</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#spec">Specification</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-copyright">
+          © 2025 Axon Programming Language. All rights reserved.
+        </div>
+        <div class="footer-made">Built with ❤️ for the ML community</div>
+      </div>
+    </footer>
+
+    <!-- ================================================================
+     JAVASCRIPT
+     ================================================================ -->
+    <script>
+      (function () {
+        "use strict";
+
+        // ── Tab Switching ────────────────────────────────────────────
+        const tabs = document.querySelectorAll(".example-tab");
+        const panels = document.querySelectorAll(".example-panel");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            tabs.forEach((t) => {
+              t.classList.remove("active");
+              t.setAttribute("aria-selected", "false");
+            });
+            panels.forEach((p) => p.classList.remove("active"));
+            tab.classList.add("active");
+            tab.setAttribute("aria-selected", "true");
+            document.getElementById(tab.dataset.tab).classList.add("active");
+          });
+        });
+
+        // ── Mobile Nav Toggle ────────────────────────────────────────
+        const navToggle = document.getElementById("navToggle");
+        const navLinks = document.getElementById("navLinks");
+
+        navToggle.addEventListener("click", () => {
+          navLinks.classList.toggle("open");
+          navToggle.textContent = navLinks.classList.contains("open")
+            ? "✕"
+            : "☰";
+        });
+
+        // Close mobile nav on link click
+        navLinks.querySelectorAll("a").forEach((link) => {
+          link.addEventListener("click", () => {
+            navLinks.classList.remove("open");
+            navToggle.textContent = "☰";
+          });
+        });
+
+        // ── Scroll Animations (Intersection Observer) ───────────────
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("visible");
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.1, rootMargin: "0px 0px -40px 0px" },
+        );
+
+        document
+          .querySelectorAll(".animate-in")
+          .forEach((el) => observer.observe(el));
+
+        // ── Nav background on scroll ─────────────────────────────────
+        const nav = document.getElementById("nav");
+        let lastScroll = 0;
+
+        window.addEventListener(
+          "scroll",
+          () => {
+            const scrollY = window.scrollY;
+            if (scrollY > 80) {
+              nav.style.background = "rgba(10, 14, 26, 0.95)";
+              nav.style.borderBottomColor = "rgba(255,255,255,0.08)";
+            } else {
+              nav.style.background = "rgba(10, 14, 26, 0.85)";
+              nav.style.borderBottomColor = "rgba(255,255,255,0.06)";
+            }
+            lastScroll = scrollY;
+          },
+          { passive: true },
+        );
+
+        // ── Smooth active section highlighting ───────────────────────
+        const sections = document.querySelectorAll("section[id]");
+        const navAnchors = document.querySelectorAll(".nav-links a");
+
+        const sectionObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                const id = entry.target.id;
+                navAnchors.forEach((a) => {
+                  a.style.color =
+                    a.getAttribute("href") === "#" + id
+                      ? "var(--text-bright)"
+                      : "";
+                });
+              }
+            });
+          },
+          { threshold: 0.3 },
+        );
+
+        sections.forEach((s) => sectionObserver.observe(s));
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+// Example 7: Error Handling with Result
+fn load_model(path: String) -> Result<NeuralNet, IOError> {
+    let file = File::open(path)?;
+    let model = deserialize(file)?;
+    return Ok(model);
+}
+
+fn main() {
+    match load_model("model.axon") {
+        Ok(model) => {
+            println("Model loaded successfully");
+        },
+        Err(e) => {
+            println("Failed to load model: {}", e);
+        },
+    }
+}

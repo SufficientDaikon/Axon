@@ -1,0 +1,18 @@
+[package]
+name = "axonc"
+version = "0.1.0"
+edition = "2021"
+description = "The Axon programming language compiler - an ML/AI-first systems language"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+
+[[bin]]
+name = "axonc"
+path = "src/main.rs"
+
+[lib]
+name = "axonc"
+path = "src/lib.rs"

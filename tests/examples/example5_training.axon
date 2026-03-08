@@ -1,0 +1,16 @@
+// Example 5: Training Loop with Autograd
+fn train_epoch(model: &mut NeuralNet, data: DataLoader, optimizer: &mut Adam) -> Float32 {
+    let mut total_loss = 0.0;
+
+    for batch in data {
+        let (inputs, targets) = batch;
+        let predictions = model.forward(inputs);
+        let loss = cross_entropy(predictions, targets);
+        total_loss += loss.item();
+        loss.backward();
+        optimizer.step();
+        optimizer.zero_grad();
+    }
+
+    return total_loss / data.len() as Float32;
+}
