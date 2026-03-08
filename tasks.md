@@ -1,8 +1,8 @@
-# Axon Compiler Phase 2 — Task Tracking
+# Axon Compiler — Task Tracking
 
-## Project: Axon Programming Language Compiler Frontend
+## Project: Axon Programming Language Compiler
 
-## Phase: 2 — Lexer, Parser, AST
+## Current Phase: 3 — Type Checker + Borrow Checker
 
 ---
 
@@ -95,10 +95,70 @@
 - [x] T068 [Test] Edge case tests (empty program, deeply nested, etc.) — `tests/integration_tests.rs`
 - [x] T069 [Test] Example .axon files for all 8 spec examples — `tests/examples/*.axon`
 
+### Phase 3a: Type Infrastructure
+
+- [x] T070 Define `Type` enum and `TypeId` interner — `src/types.rs`
+- [x] T071 Define `PrimKind` for all built-in primitives — `src/types.rs`
+- [x] T072 Define `TensorType` with shape representation — `src/types.rs`
+- [x] T073 Implement `TypeInterner` arena — `src/types.rs`
+
+### Phase 3b: Symbol Table
+
+- [x] T074 Implement `Scope`, `SymbolTable`, `SymbolInfo` — `src/symbol.rs`
+- [x] T075 Implement scope push/pop/define/lookup — `src/symbol.rs`
+- [x] T076 Name resolution pass: collect top-level items — `src/symbol.rs`
+- [x] T077 Name resolution pass: resolve use/import paths — `src/symbol.rs`
+- [x] T078 Name resolution pass: resolve all identifiers and types — `src/symbol.rs`
+
+### Phase 3c: Type Checker
+
+- [x] T079 Implement constraint-based inference engine (TypeVar, unification) — `src/typeck.rs`
+- [x] T080 Type check expressions (literals, binary ops, unary ops, calls) — `src/typeck.rs`
+- [x] T081 Type check statements (let, return, while, for, assignment) — `src/typeck.rs`
+- [x] T082 Type check items (functions, structs, enums, impls, traits) — `src/typeck.rs`
+- [x] T083 Implement generic instantiation and bound checking — `src/typeck.rs`
+- [x] T084 Implement trait resolution (inherent + trait impls) — `src/typeck.rs`
+- [x] T085 Implement pattern type checking (match exhaustiveness basic) — `src/typeck.rs`
+- [x] T086 Type coercion rules (&mut→&, auto-borrow) — `src/typeck.rs`
+
+### Phase 3d: Shape Checker
+
+- [x] T087 Implement shape unification (Known, Dynamic, Variable) — `src/shapes.rs`
+- [x] T088 Implement matmul shape rule (inner dims match) — `src/shapes.rs`
+- [x] T089 Implement elementwise broadcast rules — `src/shapes.rs`
+- [x] T090 Implement reshape/transpose shape rules — `src/shapes.rs`
+- [x] T091 Insert runtime shape checks for dynamic dims — `src/shapes.rs`
+
+### Phase 3e: Borrow Checker
+
+- [x] T092 Build control flow graph from typed AST — `src/borrow.rs`
+- [x] T093 Compute variable liveness — `src/borrow.rs`
+- [x] T094 Track borrows and moves — `src/borrow.rs`
+- [x] T095 Enforce exclusivity (no &mut + & overlap) — `src/borrow.rs`
+- [x] T096 Enforce move semantics (use-after-move detection) — `src/borrow.rs`
+- [x] T097 Lifetime inference and validation — `src/borrow.rs`
+- [x] T098 Device-aware borrow rules (@cpu/@gpu) — `src/borrow.rs`
+
+### Phase 3f: Typed AST & Integration
+
+- [x] T099 Define TAST node types — `src/tast.rs`
+- [x] T100 Build TAST from AST + type info — `src/tast.rs`
+- [x] T101 Integrate into `lib.rs` pipeline — `src/lib.rs`
+- [x] T102 CLI `axonc check` command — `src/main.rs`
+
+### Phase 3g: Testing
+
+- [x] T103 Unit tests for type unification — `src/typeck.rs`
+- [x] T104 Unit tests for shape checking — `src/shapes.rs`
+- [x] T105 Unit tests for borrow checking — `src/borrow.rs`
+- [x] T106 Integration tests for full programs — `tests/type_tests.rs`
+- [x] T107 Error message tests for all E-codes — `tests/type_tests.rs`
+- [x] T108 Edge case tests (recursive types, complex generics) — `tests/type_tests.rs`
+
 ---
 
 ## Summary
 
-- **Total Tasks**: 69
-- **Completed**: 69
+- **Total Tasks**: 108
+- **Completed**: 108
 - **Remaining**: 0
