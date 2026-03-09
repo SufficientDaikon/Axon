@@ -1,0 +1,14 @@
+// Test: while loop that prints each iteration index
+// expect: 0
+// expect: 1
+// expect: 2
+// expect: 3
+// expect: 4
+
+fn main() {
+    let mut i: Int64 = 0;
+    while i < 5 {
+        println(i);
+        i = i + 1;
+    }
+}

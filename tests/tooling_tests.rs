@@ -446,6 +446,7 @@ mod lsp_tests {
             definition_provider: true,
             document_formatting_provider: true,
             document_symbol_provider: true,
+            signature_help_provider: None,
         };
         let json = serde_json::to_string(&caps).unwrap();
         assert!(json.contains("\"textDocumentSync\":1"));

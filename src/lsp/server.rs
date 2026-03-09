@@ -158,6 +158,11 @@ impl LspServer {
                     self.handle_formatting(id, params);
                 }
             }
+            "textDocument/signatureHelp" => {
+                if let Some(id) = id {
+                    self.handle_signature_help(id, params);
+                }
+            }
             _ => {
                 // Unknown method — respond with MethodNotFound for requests
                 if let Some(id) = id {

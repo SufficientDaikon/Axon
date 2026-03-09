@@ -1,0 +1,25 @@
+// Test: recursive fibonacci with printed results
+// expect: 0
+// expect: 1
+// expect: 1
+// expect: 2
+// expect: 3
+// expect: 5
+// expect: 8
+
+fn fib(n: Int64) -> Int64 {
+    if n < 2 {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+fn main() {
+    println(fib(0));
+    println(fib(1));
+    println(fib(2));
+    println(fib(3));
+    println(fib(4));
+    println(fib(5));
+    println(fib(6));
+}

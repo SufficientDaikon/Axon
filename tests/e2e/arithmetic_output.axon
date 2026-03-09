@@ -1,0 +1,13 @@
+// Test: compute arithmetic expressions and print results
+// expect: 30
+// expect: 6
+// expect: 36
+
+fn main() {
+    let x: Int64 = 10 + 20;
+    println(x);
+    let y: Int64 = 10 - 4;
+    println(y);
+    let z: Int64 = x + y;
+    println(z);
+}

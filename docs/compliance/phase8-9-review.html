@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axon Compiler — Phase 8–9 Compliance Report</title>
+<style>
+  :root {
+    --pass: #22c55e; --pass-bg: #dcfce7;
+    --partial: #f59e0b; --partial-bg: #fef3c7;
+    --fail: #ef4444; --fail-bg: #fee2e2;
+    --missing: #94a3b8; --missing-bg: #f1f5f9;
+    --info: #3b82f6; --info-bg: #dbeafe;
+    --bg: #ffffff; --fg: #1e293b; --muted: #64748b;
+    --border: #e2e8f0; --accent: #6366f1;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color:var(--fg); background:var(--bg); line-height:1.6; }
+  .container { max-width:1100px; margin:0 auto; padding:2rem 1.5rem; }
+  h1 { font-size:1.75rem; margin-bottom:.25rem; color:var(--accent); }
+  h2 { font-size:1.35rem; margin:2rem 0 .75rem; padding-bottom:.35rem; border-bottom:2px solid var(--accent); color:var(--accent); }
+  h3 { font-size:1.1rem; margin:1.25rem 0 .5rem; color:var(--fg); }
+  .subtitle { color:var(--muted); font-size:.95rem; margin-bottom:1.5rem; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:12px; font-weight:600; font-size:.78rem; color:#fff; text-transform:uppercase; letter-spacing:.03em; }
+  .badge-pass { background:var(--pass); } .badge-partial { background:var(--partial); }
+  .badge-fail { background:var(--fail); } .badge-missing { background:var(--missing); }
+  .badge-info { background:var(--info); }
+
+  /* Executive Summary Cards */
+  .cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:1rem; margin:1rem 0 2rem; }
+  .card { border:1px solid var(--border); border-radius:10px; padding:1.1rem 1.3rem; text-align:center; }
+  .card .val { font-size:2.2rem; font-weight:700; line-height:1.15; }
+  .card .lbl { font-size:.82rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .card-green .val { color:var(--pass); } .card-amber .val { color:var(--partial); }
+  .card-red .val { color:var(--fail); } .card-gray .val { color:var(--muted); }
+  .card-accent .val { color:var(--accent); }
+
+  /* Verdict */
+  .verdict { padding:1rem 1.5rem; border-radius:10px; margin:1.5rem 0; font-size:1.05rem; font-weight:600; }
+  .verdict-revision { background:#fef2f2; border:2px solid var(--fail); color:#991b1b; }
+  .verdict-conditions { background:var(--partial-bg); border:2px solid var(--partial); color:#92400e; }
+  .verdict-approved { background:var(--pass-bg); border:2px solid var(--pass); color:#166534; }
+
+  /* Tables */
+  table { width:100%; border-collapse:collapse; margin:.75rem 0 1.25rem; font-size:.88rem; }
+  th, td { padding:8px 12px; text-align:left; border:1px solid var(--border); }
+  th { background:#f8fafc; font-weight:600; white-space:nowrap; }
+  tr:nth-child(even) { background:#fafbfc; }
+  td code, th code { background:#f1f5f9; padding:1px 5px; border-radius:3px; font-size:.83rem; }
+
+  /* Findings */
+  .finding { border-left:4px solid var(--border); padding:.6rem 1rem; margin:.5rem 0; border-radius:0 6px 6px 0; background:#f8fafc; }
+  .finding-critical { border-left-color:var(--fail); background:var(--fail-bg); }
+  .finding-major { border-left-color:var(--partial); background:var(--partial-bg); }
+  .finding-minor { border-left-color:var(--info); background:var(--info-bg); }
+  .finding-info { border-left-color:var(--missing); background:var(--missing-bg); }
+  .finding strong { display:block; margin-bottom:.25rem; }
+  .finding code { background:rgba(0,0,0,.06); padding:1px 4px; border-radius:3px; font-size:.83rem; }
+
+  /* Collapsible */
+  details { margin:.5rem 0; }
+  summary { cursor:pointer; font-weight:600; padding:.4rem 0; color:var(--accent); }
+  summary:hover { text-decoration:underline; }
+
+  /* Progress bar */
+  .progress-bar { height:22px; background:var(--border); border-radius:11px; overflow:hidden; margin:.5rem 0; }
+  .progress-fill { height:100%; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; color:#fff; min-width:40px; }
+
+  /* Status dots in tables */
+  .st { font-size:1.1rem; text-align:center; }
+
+  @media print {
+    body { font-size:11pt; }
+    .container { max-width:100%; padding:0; }
+    details[open] > summary { page-break-after:avoid; }
+    table { page-break-inside:auto; }
+    tr { page-break-inside:avoid; }
+    h2 { page-break-after:avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ─── HEADER ───────────────────────────────────────────── -->
+<h1>Axon Compiler — Phase 8–9 Compliance Report</h1>
+<p class="subtitle">
+  Generated: <strong>2025-07-18</strong> &nbsp;|&nbsp;
+  Reviewer: Specification Compliance Auditor &nbsp;|&nbsp;
+  Specs: <code>docs/specs/phase8-hardening.md</code>, <code>docs/specs/phase9-e2e-compilation.md</code>
+</p>
+
+<!-- ─── EXECUTIVE SUMMARY ────────────────────────────────── -->
+<h2>1 &middot; Executive Summary</h2>
+
+<div class="cards">
+  <div class="card card-amber">
+    <div class="val">67%</div>
+    <div class="lbl">Overall Compliance</div>
+  </div>
+  <div class="card card-green">
+    <div class="val">23</div>
+    <div class="lbl">Pass ✅</div>
+  </div>
+  <div class="card card-amber">
+    <div class="val">12</div>
+    <div class="lbl">Partial ⚠️</div>
+  </div>
+  <div class="card card-red">
+    <div class="val">12</div>
+    <div class="lbl">Fail / Missing ❌</div>
+  </div>
+  <div class="card card-accent">
+    <div class="val">878</div>
+    <div class="lbl">Tests Passing</div>
+  </div>
+</div>
+
+<div class="verdict verdict-revision">
+  ⛔ VERDICT: NEEDS REVISION — Significant gaps remain in Phase 9 (IR correctness bugs unfixed, print() builtin missing, E2E tests only check exit-code not stdout). Phase 8 is largely complete with moderate gaps in fuzz/security tooling.
+</div>
+
+<!-- Phase-level bars -->
+<h3>Phase 8 — Hardening &amp; Release</h3>
+<div class="progress-bar"><div class="progress-fill" style="width:78%;background:var(--partial);">78%</div></div>
+
+<h3>Phase 9 — E2E Compilation</h3>
+<div class="progress-bar"><div class="progress-fill" style="width:57%;background:var(--fail);">57%</div></div>
+
+<!-- ─── PHASE 8 REQUIREMENTS MATRIX ─────────────────────── -->
+<h2>2 &middot; Phase 8 — Requirements Traceability</h2>
+
+<h3>2.1 &nbsp; Phase 8a — Benchmarks (T246–T250)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T246</td><td>Compiler benchmark suite</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><code>benches/compiler_bench.rs</code> exists with lex/parse/typecheck/pipeline benchmarks using <code>std::time::Instant</code>. Spec requires <strong>criterion.rs</strong> — not used. Tests run as <code>#[test]</code> not as Criterion benchmarks. No JSON output or regression detection.</td>
+</tr>
+<tr>
+  <td>T247</td><td>Runtime benchmark suite</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><code>benches/runtime/</code> directory exists but contents are stubs. Spec requires .axon programs for matmul, MLP, CNN, transformer, etc. — none present as executable benchmarks.</td>
+</tr>
+<tr>
+  <td>T248</td><td>Baseline comparisons</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><code>benches/baselines/</code> directory exists. No evidence of PyTorch/NumPy/C comparison baselines verified against spec requirements.</td>
+</tr>
+<tr>
+  <td>T249</td><td>Benchmark reporting tool</td>
+  <td class="st"><span class="badge badge-fail">MISSING</span></td>
+  <td>Spec requires <code>benches/report/generate_report.py</code> with comparison tables and charts. No such tool found. Benchmark results are printed to stdout only.</td>
+</tr>
+<tr>
+  <td>T250</td><td>Optimize hot paths</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td>No evidence of specific optimization work driven by benchmarks. task.md marks this complete but no performance notes in code.</td>
+</tr>
+</table>
+
+<h3>2.2 &nbsp; Phase 8b — Fuzz Testing (T251–T255)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T251</td><td>cargo-fuzz infrastructure</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>fuzz/</code> directory exists but contains only a README and <code>.txt</code> descriptions in <code>fuzz/targets/</code>. <strong>No actual <code>fuzz_targets/</code> directory, no <code>Cargo.toml</code> for cargo-fuzz, no libFuzzer integration.</strong> The README explicitly states: <em>"cargo-fuzz Targets (Future)"</em>.</td>
+</tr>
+<tr>
+  <td>T252</td><td>Fuzz targets for lexer/parser/typeck</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>fuzz/targets/*.txt</code> are text descriptions, not <code>.rs</code> fuzz targets. Spec requires <code>fuzz_target!(|data: &amp;[u8]| { ... })</code> macro-based targets. None exist.</td>
+</tr>
+<tr>
+  <td>T253</td><td>Robustness / structured fuzzer</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>tests/fuzz_tests.rs</code> contains 53 lightweight robustness tests covering empty input, all ASCII chars, keywords, malformed syntax, long identifiers, deep nesting, random programs, etc. Good coverage of "no panic" property.</td>
+</tr>
+<tr>
+  <td>T254</td><td>48h fuzz campaigns</td>
+  <td class="st"><span class="badge badge-fail">MISSING</span></td>
+  <td>No evidence of extended fuzzing campaigns. No crash corpus. Spec requires "zero unhandled panics after 48h continuous fuzzing per target."</td>
+</tr>
+<tr>
+  <td>T255</td><td>Document fuzz approach</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>fuzz/README.md</code> is comprehensive: explains lightweight fuzz tests, future cargo-fuzz plans, property-based testing roadmap, and reporting process.</td>
+</tr>
+</table>
+
+<h3>2.3 &nbsp; Phase 8c — Security Audit (T256–T260)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T256</td><td>Audit all <code>unsafe</code> blocks</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>docs/internals/security-audit.md</code> confirms <strong>zero <code>unsafe</code> blocks</strong> in compiler source. Thorough audit with risk assessment. Clean result since compiler is 100% safe Rust.</td>
+</tr>
+<tr>
+  <td>T257</td><td>Run Miri</td>
+  <td class="st"><span class="badge badge-fail">MISSING</span></td>
+  <td>No evidence of Miri runs. Security audit doc does not mention Miri. Not in CI pipeline.</td>
+</tr>
+<tr>
+  <td>T258</td><td>Run sanitizers on compiled Axon programs</td>
+  <td class="st"><span class="badge badge-fail">MISSING</span></td>
+  <td>No ASan/MSan/TSan runs documented or automated. Not in CI.</td>
+</tr>
+<tr>
+  <td>T259</td><td><code>cargo audit</code></td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td>Security audit doc mentions dependency auditing as a process. Not integrated into CI (<code>.github/workflows/ci.yml</code> has no <code>cargo audit</code> step).</td>
+</tr>
+<tr>
+  <td>T260</td><td>Threat model for package registry</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td>Threat model included in <code>docs/internals/security-audit.md</code>. Covers FFI boundaries, command injection, path traversal, and package registry risks.</td>
+</tr>
+</table>
+
+<h3>2.4 &nbsp; Phase 8d — Documentation (T261–T269)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr><td>T261</td><td>Getting-started guide</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/guide/getting-started.md</code> ✓</td></tr>
+<tr><td>T262</td><td>Language tour</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/guide/language-tour.md</code> ✓</td></tr>
+<tr><td>T263</td><td>Tensor &amp; GPU guides</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/guide/tensors.md</code>, <code>docs/guide/gpu-programming.md</code> ✓</td></tr>
+<tr>
+  <td>T264</td><td>ML tutorials (1–6)</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td>4 of 6 tutorials present: 01-hello-tensor, 02-linear-regression, 03-mnist-classifier, 04-transformer. <strong>Missing:</strong> 05-training-loop, 06-deployment.</td>
+</tr>
+<tr><td>T265</td><td>Stdlib API reference</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>Doc generator in <code>src/doc.rs</code>, integrated into CLI <code>axonc doc</code>.</td></tr>
+<tr><td>T266</td><td>Compiler error reference</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/reference/compiler-errors.md</code> ✓</td></tr>
+<tr>
+  <td>T267</td><td>Migration guides (Python, PyTorch, Rust)</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><code>from-python.md</code> and <code>from-pytorch.md</code> present. <strong>Missing:</strong> <code>from-rust.md</code> (specified in Phase 8 doc structure §5.1).</td>
+</tr>
+<tr><td>T268</td><td>README &amp; CHANGELOG</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>README.md</code> and <code>CHANGELOG.md</code> comprehensive. CHANGELOG covers all Phases 0–7 features.</td></tr>
+<tr><td>T269</td><td>Architecture &amp; contributing docs</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/internals/architecture.md</code>, <code>docs/internals/contributing.md</code> ✓</td></tr>
+</table>
+
+<h3>2.5 &nbsp; Phase 8e — Release Engineering (T270–T274)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T270</td><td>CI/CD pipeline</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>.github/workflows/ci.yml</code> — lint (fmt + clippy), test (3-OS matrix), benchmark, docs stages. Runs on push/PR to main.</td>
+</tr>
+<tr>
+  <td>T271</td><td>Release binaries</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td>Release job covers: <code>x86_64-unknown-linux-gnu</code>, <code>x86_64-apple-darwin</code>, <code>aarch64-apple-darwin</code>, <code>x86_64-pc-windows-msvc</code>. Builds on tag. Uploads artifacts. <strong>Missing <code>aarch64</code> Linux</strong> — minor gap from spec table (5 targets).</td>
+</tr>
+<tr><td>T272</td><td>Install scripts</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>scripts/install.sh</code>, <code>scripts/install.ps1</code> ✓</td></tr>
+<tr><td>T273</td><td>CHANGELOG</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>Comprehensive <code>CHANGELOG.md</code> covering all features. Follows Keep a Changelog format.</td></tr>
+<tr><td>T274</td><td>Release workflow</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>Tag-triggered release job with cross-platform matrix. No binary signing (spec mentions sign binary).</td></tr>
+</table>
+
+<h3>2.6 &nbsp; Phase 8f — Compliance (T275–T277)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr><td>T275</td><td>FR compliance matrix</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/compliance/fr-matrix.md</code> ✓</td></tr>
+<tr><td>T276</td><td>NFR compliance matrix</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/compliance/nfr-matrix.md</code> ✓</td></tr>
+<tr><td>T277</td><td>Final compliance report</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/compliance/report.md</code> ✓</td></tr>
+</table>
+
+<!-- ─── PHASE 9 REQUIREMENTS MATRIX ─────────────────────── -->
+<h2>3 &middot; Phase 9 — Requirements Traceability</h2>
+
+<h3>3.1 &nbsp; Phase 9a — Build Pipeline Wiring (T278–T283)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T278</td><td><code>compile_and_link()</code> orchestrator</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>src/codegen/llvm.rs:1314–1392</code>. Creates temp dir, writes <code>.ll</code>, generates <code>axon_runtime.c</code>, compiles runtime, links IR+runtime, cleans up. Uses E5001–E5005 error codes. 15 E2E tests prove it works.</td>
+</tr>
+<tr>
+  <td>T279</td><td><code>detect_c_compiler()</code></td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>src/codegen/llvm.rs:1394–1423</code>. Probes clang→gcc→cc. On Windows: checks LLVM install path + cl.exe. Returns E5001 if none found. <em>Minor deviation:</em> returns <code>String</code> not a <code>CCompiler</code> enum — acceptable simplification.</td>
+</tr>
+<tr>
+  <td>T280</td><td>Update <code>run_build</code></td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>src/main.rs:393</code> calls <code>compile_and_link()</code>. <code>--emit-llvm</code> and <code>--emit-mir</code> paths unchanged.</td>
+</tr>
+<tr>
+  <td>T281</td><td><code>--keep-temps</code> flag</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>src/main.rs:118–119</code>: <code>#[arg(long = "keep-temps")] keep_temps: bool</code>. Passed through to <code>compile_and_link()</code>. Temp dir preserved when <code>true</code>, deleted otherwise (<code>llvm.rs:1387–1389</code>).</td>
+</tr>
+<tr>
+  <td>T282</td><td>Validate <code>main</code> function</td>
+  <td class="st"><span class="badge badge-fail">MISSING</span></td>
+  <td><strong>No validation for E5009 (missing main) or E5010 (bad main signature).</strong> Code emits the main wrapper if a <code>main</code> function exists (<code>llvm.rs:67</code>) but does not emit structured errors when it's absent. A program without <code>fn main()</code> compiles to IR with no entry point and fails at link time with a clang error, not a helpful Axon message.</td>
+</tr>
+<tr>
+  <td>T283</td><td>C-ABI <code>main</code> wrapper</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>llvm.rs:67–75</code> emits <code>define i32 @main() { call void @_axon_main(); ret i32 0 }</code>. User main renamed to <code>@_axon_main</code> via <code>emit_function_signature</code> (line 270). Verified working — all 15 E2E tests exit with code 0.</td>
+</tr>
+</table>
+
+<h3>3.2 &nbsp; Phase 9b — LLVM IR Correctness Fixes (T284–T295)</h3>
+<p style="color:var(--fail);font-weight:600;">⚠ This is the weakest area. 7 of 12 bugs identified in the spec remain unfixed.</p>
+<table>
+<tr><th>Task</th><th>Bug</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T284</td><td>Function call callee resolution</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>llvm.rs:430–433</code>: <code>Terminator::Call</code> checks <code>MirConstant::String(name)</code> and emits <code>@{name}</code>. MIR builder uses <code>function_map</code> (<code>mir.rs:941–948</code>). Recursive and cross-function calls work — verified by <code>e2e_fibonacci</code>, <code>e2e_mutual_recursion</code>.</td>
+</tr>
+<tr>
+  <td>T285</td>
+  <td>String literal length not passed to <code>print_str</code></td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>llvm.rs:1083–1091</code>: <code>emit_constant</code> for <code>MirConstant::String</code> only returns a <code>i8*</code> GEP pointer. <strong>Length is never emitted as a second argument.</strong> The <code>axon_print_str</code> declaration expects <code>(i8*, i64)</code> but only gets <code>i8*</code>. This means any call to <code>print_str</code> would read garbage for length or crash. No E2E test exercises string printing.</td>
+</tr>
+<tr>
+  <td>T286</td>
+  <td><code>Rvalue::Aggregate</code> type = UNIT</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>llvm.rs:1167</code>: <code>type_of_rvalue</code> still returns <code>TypeId::UNIT</code> for all <code>Rvalue::Aggregate</code>. Comment: "simplified". This causes struct/tuple assignments to be silently dropped in <code>emit_assign</code> (line 314: <code>ty_str == "{}"</code> guard). <strong>Struct literals are broken.</strong></td>
+</tr>
+<tr>
+  <td>T287</td>
+  <td><code>emit_place_store</code> ignores projections</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>llvm.rs:1054–1064</code>: For projected places, falls through to storing at base local. Comment: "Simplified: store to base local." <strong>Struct field writes and array element writes are no-ops.</strong></td>
+</tr>
+<tr>
+  <td>T288</td>
+  <td><code>emit_place_load</code> field type tracking</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><code>llvm.rs:1001–1042</code>: GEP chains ARE emitted for <code>Field</code>, <code>Index</code>, and <code>Deref</code> projections. <strong>However,</strong> after a <code>Field</code> projection, <code>current_ty_str</code> is hardcoded to <code>"i8*"</code> (line 1015), making subsequent loads use wrong types. Nested field access (<code>a.b.c</code>) will produce incorrect IR.</td>
+</tr>
+<tr>
+  <td>T289</td>
+  <td>Enum aggregate: tag-only, no payload</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>llvm.rs:901–910</code>: <code>emit_aggregate</code> for <code>AggregateKind::Enum</code> only inserts the tag byte. Comment: "Payload would require knowing the enum layout; simplified here." <strong>Enum variants with data are broken.</strong></td>
+</tr>
+<tr>
+  <td>T290</td>
+  <td>Float constant format</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>llvm.rs:1070–1073</code>: Correctly uses hex float format <code>0x{:016X}</code>. E.g. <code>3.14</code> → <code>0x40091EB851EB851F</code>. LLVM accepts this universally.</td>
+</tr>
+<tr>
+  <td>T291</td>
+  <td><code>Rvalue::Len</code> always returns 0</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>llvm.rs:525–531</code>: Still emits <code>add i64 0, 0</code>. Comment: "simplified: return 0". <strong>Array and string length are always zero.</strong></td>
+</tr>
+<tr>
+  <td>T292</td>
+  <td><code>type_of_rvalue(Ref)</code> returns INT64</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>llvm.rs:1166</code>: <code>Rvalue::Ref { .. } =&gt; TypeId::INT64</code>. Comment: "simplified". <strong>References have wrong type in IR.</strong></td>
+</tr>
+<tr>
+  <td>T293</td>
+  <td><code>print_bool</code> ABI mismatch (i1 vs i8)</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td>IR declaration changed to <code>i8</code> (<code>runtime.rs:112</code>), C function uses <code>int8_t</code> (<code>runtime.rs:220</code>) — both match. <strong>However:</strong> no explicit <code>zext i1 → i8</code> before call site. Boolean values flow as <code>i1</code> through codegen. Relies on implicit promotion in some ABIs — may cause issues on strict LLVM verification.</td>
+</tr>
+<tr>
+  <td>T294</td>
+  <td><code>print()</code> / <code>println()</code> builtin</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><strong>Not implemented.</strong> Type checker (<code>typeck.rs</code>) has zero references to "print" — it does not recognize <code>print()</code> or <code>println()</code> as builtins. MIR builder registers <code>"print" → "axon_print"</code> in <code>function_map</code> (<code>mir.rs:282</code>) but <code>axon_print</code> is not a real runtime function. None of the 11 E2E tests call <code>print()</code>. <strong>This blocks the primary exit criterion:</strong> <code>axonc build hello.axon && ./hello</code> printing "Hello, World!".</td>
+</tr>
+<tr>
+  <td>T295</td>
+  <td>MIR function name resolution</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>mir.rs:245</code>: <code>function_map</code> field. <code>mir.rs:264–284</code>: <code>populate_function_map()</code> with first-pass over all items. <code>mir.rs:939–956</code>: <code>lower_fn_call()</code> checks <code>function_map</code>. Works for user functions, recursive calls, and builtin names.</td>
+</tr>
+</table>
+
+<h3>3.3 &nbsp; Phase 9c — C Runtime Completion (T296–T299)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T296</td><td>TensorHeader struct &amp; proper tensor allocation</td>
+  <td class="st"><span class="badge badge-fail">FAIL</span></td>
+  <td><code>runtime.rs:172–178</code>: <code>axon_tensor_alloc</code> still a stub — ignores dtype, no <code>TensorHeader</code> struct, no shape array copy, returns raw <code>malloc()</code>. <code>axon_tensor_free</code> just calls <code>free()</code> — no shape array cleanup. <code>axon_tensor_shape_check</code> always returns 1 (line 185–187).</td>
+</tr>
+<tr>
+  <td>T297</td><td><code>axon_device_transfer</code> error reporting</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>runtime.rs:190–197</code>: Panics with clear message on non-CPU device. CPU-to-CPU returns input unchanged. ✓</td>
+</tr>
+<tr>
+  <td>T298</td><td><code>axon_print_char</code> and <code>axon_print_i32</code></td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td>Both implemented: <code>axon_print_char</code> (line 235–241), <code>axon_print_i32</code> (line 230–233). Declarations in IR (lines 114–116). Also includes <code>axon_print_f32</code> (bonus).</td>
+</tr>
+<tr>
+  <td>T299</td><td><code>fflush(stdout)</code> in print functions</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td>All print functions include <code>fflush(stdout)</code>. Additionally, a constructor sets <code>setvbuf(stdout, NULL, _IONBF, 0)</code> at startup (lines 138–151). Cross-platform: uses <code>__attribute__((constructor))</code> on Unix, <code>.CRT$XCU</code> on MSVC.</td>
+</tr>
+</table>
+
+<h3>3.4 &nbsp; Phase 9d — E2E Test Harness (T300–T302)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T300</td><td>E2E test harness</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><code>tests/e2e_tests.rs</code>: <code>compile_and_run()</code> (line 11) runs full pipeline, executes binary, returns output. <code>assert_compiles_and_runs()</code> (line 52) checks exit code 0. <strong>Missing:</strong> (1) No timeout — spec requires 5s timeout for infinite-loop detection. (2) No <code>#[cfg_attr]</code> for conditional skip when clang unavailable. (3) Tests only check exit code, not stdout content.</td>
+</tr>
+<tr>
+  <td>T301</td><td>E2E test programs (15)</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><strong>11 of 15 required programs exist</strong> in <code>tests/e2e/</code>:<br>
+  ✅ empty_main, function_call, if_else, while_loop, fibonacci (recursion), multi_function, arithmetic, nested_if, let_binding, composed_calls, mutual_recursion<br>
+  ❌ <strong>Missing:</strong> hello.axon (needs <code>print()</code>), structs.axon (needs struct codegen fixes), enums.axon (needs enum payload fix), unary_ops.axon, comparisons.axon, type_casts.axon, tuples.axon, strings.axon<br>
+  <strong>Also:</strong> None of the existing programs have <code>// expect:</code> comments — all test only exit code, not output correctness.</td>
+</tr>
+<tr>
+  <td>T302</td><td>Wire E2E tests to <code>cargo test</code></td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td>Individual <code>#[test]</code> functions for all 11 .axon files + 4 inline tests = 15 tests total, all passing. <strong>Missing:</strong> (1) No <code>// expect:</code> parsing. (2) No stdout assertions. (3) No catch-all directory scanner. Tests verify "compiles and exits 0" but not output correctness.</td>
+</tr>
+</table>
+
+<h3>3.5 &nbsp; Phase 9e — Cross-Platform &amp; Error Handling (T303–T305)</h3>
+<table>
+<tr><th>Task</th><th>Requirement</th><th>Status</th><th>Evidence / Notes</th></tr>
+<tr>
+  <td>T303</td><td>Windows MSVC linking</td>
+  <td class="st"><span class="badge badge-pass">PASS</span></td>
+  <td><code>detect_c_compiler()</code> checks cl.exe on Windows (<code>llvm.rs:1413–1421</code>). <code>-lm</code> removed for Windows (<code>llvm.rs:1372–1374</code>). Target triple set to <code>x86_64-pc-windows-msvc</code> (<code>llvm.rs:1200</code>). E2E tests pass on Windows (verified locally).</td>
+</tr>
+<tr>
+  <td>T304</td><td>Structured clang error forwarding</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td>Error messages include clang stderr (<code>llvm.rs:1357, 1382</code>) with E5002/E5003 prefixes. <strong>Missing:</strong> No parsing of clang output for "undefined reference", no platform-specific installation instructions, errors are plain strings not <code>CompileError</code> structs.</td>
+</tr>
+<tr>
+  <td>T305</td><td>Runtime panic with source location</td>
+  <td class="st"><span class="badge badge-partial">PARTIAL</span></td>
+  <td><code>axon_panic(msg, file, line)</code> C function works (<code>runtime.rs:199–202</code>). <strong>However:</strong> Assert terminator passes hardcoded <code>"axon_module.axon"</code> and <code>line 0</code> (<code>llvm.rs:493–503</code>). Real source file name and line number are NOT propagated from spans. The MIR <code>Terminator::Assert</code> has no <code>file</code> or <code>line</code> fields (spec requires adding them at <code>mir.rs</code>).</td>
+</tr>
+</table>
+
+<!-- ─── EXIT CRITERIA ────────────────────────────────────── -->
+<h2>4 &middot; Exit Criteria Verification</h2>
+
+<h3>Phase 8 Acceptance Criteria</h3>
+<table>
+<tr><th>Criterion</th><th>Status</th><th>Evidence</th></tr>
+<tr><td>All benchmarks meet target thresholds</td><td class="st"><span class="badge badge-partial">PARTIAL</span></td><td>Benchmarks exist but don't use criterion; no regression detection; targets not formally validated.</td></tr>
+<tr><td>Zero crashes after 48h fuzzing per target</td><td class="st"><span class="badge badge-fail">MISSING</span></td><td>No cargo-fuzz targets, no 48h campaigns conducted.</td></tr>
+<tr><td>All <code>unsafe</code> blocks audited</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>Audit confirms zero unsafe blocks in compiler source.</td></tr>
+<tr><td>Documentation covers all features</td><td class="st"><span class="badge badge-partial">PARTIAL</span></td><td>Comprehensive but missing 2 tutorials, 1 migration guide.</td></tr>
+<tr><td>Release binaries work on all 5 platforms</td><td class="st"><span class="badge badge-partial">PARTIAL</span></td><td>CI covers 4 of 5 targets (missing linux-aarch64).</td></tr>
+<tr><td>CI pipeline runs green</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>CI pipeline configured with lint, test, bench, docs, release stages.</td></tr>
+<tr><td>All 72 FR verified</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/compliance/fr-matrix.md</code> exists with full FR coverage.</td></tr>
+<tr><td>All 28 NFR verified</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>docs/compliance/nfr-matrix.md</code> exists.</td></tr>
+<tr><td>Install via all methods</td><td class="st"><span class="badge badge-partial">PARTIAL</span></td><td>Install scripts exist (sh, ps1). No Homebrew formula, winget manifest, or cargo publish verified.</td></tr>
+<tr><td>CHANGELOG documents all features</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>CHANGELOG.md is comprehensive, covering Phases 0–7.</td></tr>
+</table>
+
+<h3>Phase 9 Exit Criteria</h3>
+<table>
+<tr><th>Criterion</th><th>Status</th><th>Evidence</th></tr>
+<tr><td><code>axonc build hello.axon && ./hello</code> prints "Hello, World!"</td><td class="st"><span class="badge badge-fail">FAIL</span></td><td><strong>No <code>print()</code> builtin</strong> — cannot print output. <code>hello.axon</code> doesn't exist.</td></tr>
+<tr><td><code>axonc build fib.axon && ./fib</code> prints "55"</td><td class="st"><span class="badge badge-fail">FAIL</span></td><td>fib.axon computes correctly but <strong>produces no output</strong> (no print call). Exit code is 0.</td></tr>
+<tr><td>All 15 E2E tests compile, run, produce correct output</td><td class="st"><span class="badge badge-partial">PARTIAL</span></td><td>11/15 programs exist. All 15 tests pass exit-code check. <strong>Output not verified.</strong></td></tr>
+<tr><td><code>cargo test</code> passes (863+ tests)</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><strong>878 tests passing</strong>, 0 failures across all test suites (verified).</td></tr>
+<tr><td>Build works on 2+ platforms</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>Windows verified locally. CI covers Linux, macOS, Windows.</td></tr>
+<tr><td>Missing clang → E5001</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>detect_c_compiler()</code> returns <code>"E5001: No C compiler found"</code> when no compiler available.</td></tr>
+<tr><td>Runtime assertions print file+line+message</td><td class="st"><span class="badge badge-partial">PARTIAL</span></td><td>Format is correct (<code>axon panic at file:line: msg</code>) but file is hardcoded to <code>"axon_module.axon"</code> and line is always <code>0</code>.</td></tr>
+<tr><td>No intermediate files left after success</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>compile_and_link()</code> removes <code>.axon_build/</code> dir on success. Verified by E2E tests.</td></tr>
+<tr><td><code>--emit-llvm</code> works</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>main.rs:361–372</code> writes <code>.ll</code> file when flag set.</td></tr>
+<tr><td><code>--emit-mir</code> works</td><td class="st"><span class="badge badge-pass">PASS</span></td><td><code>main.rs:337–340</code> prints MIR when flag set.</td></tr>
+<tr><td><code>--emit-obj</code> links with runtime</td><td class="st"><span class="badge badge-partial">PARTIAL</span></td><td><code>--emit-obj</code> works but uses old <code>compile_ir_to_object()</code> which doesn't include the runtime. Object won't link standalone.</td></tr>
+<tr><td>No regressions in codegen tests</td><td class="st"><span class="badge badge-pass">PASS</span></td><td>44 codegen tests pass. No failures.</td></tr>
+</table>
+
+<!-- ─── FINDINGS ──────────────────────────────────────────── -->
+<h2>5 &middot; Findings &amp; Recommendations</h2>
+
+<h3>🔴 Critical (3)</h3>
+
+<div class="finding finding-critical">
+  <strong>C-01: <code>print()</code> / <code>println()</code> builtin not implemented (T294)</strong>
+  Files: <code>src/typeck.rs</code>, <code>src/mir.rs</code>, <code>src/codegen/llvm.rs</code><br>
+  The spec's #1 exit criterion is <em>"<code>./hello</code> prints Hello, World!"</em>. Without a <code>print()</code> builtin, no Axon program can produce output. The type checker has zero recognition of <code>print</code>, and MIR maps it to the non-existent <code>axon_print</code>. This is the single most important missing feature.
+  <br><strong>Recommendation:</strong> Implement type-dispatched <code>print(expr)</code> in typeck → MIR → codegen as described in T294. Must handle Int64→<code>axon_print_i64</code>, Float64→<code>axon_print_f64</code>, Bool→<code>axon_print_bool</code>, String→<code>axon_print_str(ptr, len)</code>. Add <code>println()</code> variant that appends <code>axon_print_newline()</code>.
+</div>
+
+<div class="finding finding-critical">
+  <strong>C-02: 7 of 12 LLVM IR codegen bugs remain unfixed (T285–T292)</strong>
+  Files: <code>src/codegen/llvm.rs</code><br>
+  The spec identifies 12 specific correctness bugs. Only 5 are fixed (T284, T290, T293/partial, T295, T283). The remaining 7 affect: string length passing (T285), struct/tuple aggregate types (T286), projected stores (T287), enum payloads (T289), array/string length (T291), reference types (T292), and projected load types (T288/partial). These bugs block struct, enum, tuple, string, and reference features end-to-end.
+  <br><strong>Recommendation:</strong> Address in priority order: T285 (string length) → T286 (aggregate types) → T287 (projected stores) → T288 (projected load types) → T289 (enum payloads) → T291 (Len) → T292 (Ref type).
+</div>
+
+<div class="finding finding-critical">
+  <strong>C-03: E2E tests verify exit code only, not output correctness (T300–T302)</strong>
+  Files: <code>tests/e2e_tests.rs</code>, <code>tests/e2e/*.axon</code><br>
+  All 15 E2E tests only assert <code>exit code == 0</code>. No test checks stdout content against expected output. No <code>// expect:</code> header comments in .axon files. A program that computes wrong results but doesn't crash will pass. This creates false confidence — the spec requires <code>stdout == expected</code> assertion for every test.
+  <br><strong>Recommendation:</strong> Add <code>// expect: &lt;line&gt;</code> comments to all .axon files. Modify <code>compile_and_run()</code> to capture stdout. Add <code>assert_output(source, expected_stdout)</code> helper. Once <code>print()</code> works, add print calls to all test programs and verify output.
+</div>
+
+<h3>🟠 Major (4)</h3>
+
+<div class="finding finding-major">
+  <strong>M-01: No cargo-fuzz integration (T251–T252, T254)</strong>
+  Files: <code>fuzz/</code><br>
+  The spec requires libFuzzer-based targets. Only text descriptions and lightweight test-based fuzzing exist. No 48h campaigns, no crash corpus, no regression suite for CI. The <code>fuzz/README.md</code> explicitly acknowledges this as "Future."
+  <br><strong>Recommendation:</strong> Add <code>fuzz/Cargo.toml</code>, create <code>fuzz/fuzz_targets/lexer_fuzz.rs</code> etc. with <code>fuzz_target!</code> macro. Run at least one 48h campaign per target and save the corpus.
+</div>
+
+<div class="finding finding-major">
+  <strong>M-02: Missing <code>main</code> function validation — E5009/E5010 (T282)</strong>
+  Files: <code>src/codegen/llvm.rs</code> or <code>src/main.rs</code><br>
+  Programs without <code>fn main()</code> fail with an opaque clang linker error instead of a helpful <code>E5009</code> message. <code>fn main(x: Int64)</code> is not caught.
+  <br><strong>Recommendation:</strong> After type checking, scan <code>TypedProgram.items</code> for a function named "main". Emit E5009 if absent, E5010 if params ≠ 0 or return type ≠ Unit/Int64.
+</div>
+
+<div class="finding finding-major">
+  <strong>M-03: TensorHeader stub in C runtime (T296)</strong>
+  Files: <code>src/codegen/runtime.rs</code><br>
+  Tensor allocation is a stub that ignores dtype sizes, has no <code>TensorHeader</code> struct, and <code>shape_check</code> always returns true. While tensor E2E is out of scope for Phase 9's scalar focus, this was explicitly specified in T296.
+  <br><strong>Recommendation:</strong> Implement the <code>TensorHeader</code> struct as specified. Proper allocation with element-size awareness. Shape comparison in <code>axon_tensor_shape_check</code>.
+</div>
+
+<div class="finding finding-major">
+  <strong>M-04: 4 of 15 required E2E test programs missing (T301)</strong>
+  Files: <code>tests/e2e/</code><br>
+  Missing: <code>structs.axon</code>, <code>enums.axon</code>, <code>tuples.axon</code>, <code>strings.axon</code> (and others for unary ops, comparisons, type casts). These are blocked by unfixed codegen bugs (T286, T287, T289).
+  <br><strong>Recommendation:</strong> After fixing codegen bugs, add the missing test programs with <code>// expect:</code> annotations.
+</div>
+
+<h3>🔵 Minor (5)</h3>
+
+<div class="finding finding-minor">
+  <strong>m-01: Benchmarks don't use criterion.rs</strong>
+  <code>benches/compiler_bench.rs</code> uses <code>std::time::Instant</code> in <code>#[test]</code> functions instead of criterion's statistical benchmarking. No JSON output, no regression detection.
+  <br><strong>Recommendation:</strong> Migrate to criterion.rs with <code>criterion_group!</code> and <code>criterion_main!</code> macros.
+</div>
+
+<div class="finding finding-minor">
+  <strong>m-02: Runtime panic source location hardcoded (T305)</strong>
+  Assert terminator passes <code>"axon_module.axon"</code> and line <code>0</code> instead of real file/line.
+  <br><strong>Recommendation:</strong> Add <code>file: String</code> and <code>line: u32</code> to <code>Terminator::Assert</code>. Propagate from <code>Span</code> in MIR builder.
+</div>
+
+<div class="finding finding-minor">
+  <strong>m-03: Missing tutorials 05, 06 and from-rust.md migration guide</strong>
+  <code>docs/tutorial/</code> has 4/6 tutorials. <code>docs/migration/</code> missing <code>from-rust.md</code>.
+  <br><strong>Recommendation:</strong> Write 05-training-loop.md, 06-deployment.md, and from-rust.md.
+</div>
+
+<div class="finding finding-minor">
+  <strong>m-04: <code>--emit-obj</code> doesn't include runtime linkage</strong>
+  Uses old <code>compile_ir_to_object()</code> which only compiles IR. Resulting <code>.o</code> has unresolved runtime symbols.
+  <br><strong>Recommendation:</strong> Either also compile runtime.c to .o alongside, or document that the user must link <code>axon_runtime.o</code> manually.
+</div>
+
+<div class="finding finding-minor">
+  <strong>m-05: No Miri, no sanitizers, no <code>cargo audit</code> in CI</strong>
+  Spec requires Miri runs (T257), sanitizers (T258), and dependency auditing in CI (T259).
+  <br><strong>Recommendation:</strong> Add <code>cargo +nightly miri test</code>, <code>cargo audit</code> steps to CI. Consider ASan for compiled test programs.
+</div>
+
+<!-- ─── CODE QUALITY ─────────────────────────────────────── -->
+<h2>6 &middot; Code Quality Assessment</h2>
+
+<h3>Strengths</h3>
+<table>
+<tr><th>Area</th><th>Assessment</th></tr>
+<tr><td>Architecture</td><td>Clean pipeline: source → lex → parse → typecheck → MIR → LLVM IR → binary. Each pass is a separate module.</td></tr>
+<tr><td>Test coverage</td><td>878 tests across 11 test suites. Robustness tests (53) ensure no panics on arbitrary input.</td></tr>
+<tr><td>MIR builder</td><td><code>function_map</code> with two-pass (collect→lower) is correct and handles recursion well. Operand type inference works for scalars.</td></tr>
+<tr><td>C runtime</td><td>Well-structured with platform conditionals, <code>fflush</code>, unbuffered stdout init, proper <code>axon_panic</code> with file/line.</td></tr>
+<tr><td>Build pipeline</td><td><code>compile_and_link()</code> is solid: temp dir management, multi-compiler detection, platform adaptation, clean error codes.</td></tr>
+<tr><td>Documentation</td><td>Guides, tutorials, error reference, migration guides, security audit, CHANGELOG — all high quality.</td></tr>
+<tr><td>CI/CD</td><td>Multi-platform CI (Linux/macOS/Windows), lint+test+bench+docs+release stages.</td></tr>
+</table>
+
+<h3>Concerns</h3>
+<table>
+<tr><th>Area</th><th>Assessment</th></tr>
+<tr><td>"Simplified" comments</td><td>Multiple codegen functions have <code>// simplified</code> comments marking incomplete logic. These are the unfixed bugs — they create a false impression of intentional design vs. known defects.</td></tr>
+<tr><td>Tasks.md accuracy</td><td><code>tasks.md</code> reports 277/277 tasks complete (Phases 1–8) but Phase 9 tasks (T278–T305) are not tracked. The summary claims "Remaining: 0" which is misleading given Phase 9 is partially implemented.</td></tr>
+<tr><td>Compiler warnings</td><td>7 compiler warnings (unused imports, dead code). Minor but should be cleaned up for release quality.</td></tr>
+<tr><td>E2E test robustness</td><td>No timeout mechanism. Infinite loops in test programs would hang CI indefinitely.</td></tr>
+</table>
+
+<!-- ─── DEVIATION LOG ────────────────────────────────────── -->
+<h2>7 &middot; Deviation Log</h2>
+<table>
+<tr><th>#</th><th>Spec Requirement</th><th>Actual Implementation</th><th>Justified?</th></tr>
+<tr><td>D-01</td><td><code>CCompiler</code> enum for detection (T279)</td><td>Returns <code>String</code> compiler name</td><td>✅ Acceptable simplification — functionality equivalent.</td></tr>
+<tr><td>D-02</td><td>criterion.rs for benchmarks</td><td><code>std::time::Instant</code> in test harness</td><td>⚠️ Partially justified — works for basic measurement. Lacks statistical rigor.</td></tr>
+<tr><td>D-03</td><td>cargo-fuzz with libFuzzer targets</td><td>Lightweight test-based fuzzing</td><td>⚠️ Lower quality but provides some coverage. Should be upgraded.</td></tr>
+<tr><td>D-04</td><td>15 E2E test programs</td><td>11 programs (no structs/enums/tuples/strings)</td><td>❌ Not justified — blocked by unfixed codegen bugs. Should have been flagged as blocked, not omitted.</td></tr>
+<tr><td>D-05</td><td>E2E tests assert stdout output</td><td>Tests assert only exit code 0</td><td>❌ Not justified — fundamentally weakens test guarantees.</td></tr>
+<tr><td>D-06</td><td>Miri runs for compiler verification</td><td>Documentation-only security audit</td><td>⚠️ Low risk given zero unsafe blocks. Miri would catch UB in safe code too.</td></tr>
+<tr><td>D-07</td><td>Phase 9 tasks tracked in tasks.md</td><td>Not tracked — tasks.md ends at T277</td><td>❌ Tracking gap. Phase 9 work is partially done but not visible in task tracker.</td></tr>
+</table>
+
+<!-- ─── SCORING SUMMARY ──────────────────────────────────── -->
+<h2>8 &middot; Scoring Summary</h2>
+
+<table>
+<tr><th>Phase</th><th>Sub-Phase</th><th>Tasks</th><th>Pass</th><th>Partial</th><th>Fail/Missing</th><th>Score</th></tr>
+<tr><td rowspan="6"><strong>Phase 8</strong></td><td>8a — Benchmarks</td><td>5</td><td>0</td><td>4</td><td>1</td><td>40%</td></tr>
+<tr><td>8b — Fuzz Testing</td><td>5</td><td>2</td><td>0</td><td>3</td><td>40%</td></tr>
+<tr><td>8c — Security</td><td>5</td><td>2</td><td>1</td><td>2</td><td>50%</td></tr>
+<tr><td>8d — Documentation</td><td>9</td><td>7</td><td>2</td><td>0</td><td>89%</td></tr>
+<tr><td>8e — Release Eng.</td><td>5</td><td>5</td><td>0</td><td>0</td><td>100%</td></tr>
+<tr><td>8f — Compliance</td><td>3</td><td>3</td><td>0</td><td>0</td><td>100%</td></tr>
+<tr style="background:#f0f0ff;font-weight:600;"><td colspan="2">Phase 8 Total</td><td>32</td><td>19</td><td>7</td><td>6</td><td><strong>78%</strong></td></tr>
+<tr><td rowspan="5"><strong>Phase 9</strong></td><td>9a — Pipeline</td><td>6</td><td>5</td><td>0</td><td>1</td><td>83%</td></tr>
+<tr><td>9b — IR Fixes</td><td>12</td><td>4</td><td>2</td><td>6</td><td>42%</td></tr>
+<tr><td>9c — Runtime</td><td>4</td><td>3</td><td>0</td><td>1</td><td>75%</td></tr>
+<tr><td>9d — E2E Tests</td><td>3</td><td>0</td><td>3</td><td>0</td><td>50%</td></tr>
+<tr><td>9e — Platform</td><td>3</td><td>1</td><td>2</td><td>0</td><td>67%</td></tr>
+<tr style="background:#fff0f0;font-weight:600;"><td colspan="2">Phase 9 Total</td><td>28</td><td>13</td><td>7</td><td>8</td><td><strong>57%</strong></td></tr>
+<tr style="background:#f8f8ff;font-weight:700;"><td colspan="2">COMBINED</td><td>60</td><td>32</td><td>14</td><td>14</td><td><strong>67%</strong></td></tr>
+</table>
+
+<div style="margin-top:1rem;">
+  <div class="progress-bar" style="height:30px;">
+    <div class="progress-fill" style="width:67%;background:linear-gradient(90deg,var(--pass) 53%,var(--partial) 53% 77%,var(--fail) 77%);">
+      <span style="position:relative;z-index:1;">67% — NEEDS REVISION</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── VERDICT ───────────────────────────────────────────── -->
+<h2>9 &middot; Verdict &amp; Recommendation</h2>
+
+<div class="verdict verdict-revision">
+  <div style="font-size:1.3rem;margin-bottom:.5rem;">⛔ NEEDS REVISION</div>
+  <p style="font-weight:400;font-size:.95rem;">
+    <strong>Phase 8 (78%)</strong> is close to approval — documentation, release engineering, and compliance are excellent. The gaps are in tooling quality (no real fuzz targets, no Miri/sanitizers). These are low-risk for alpha release.
+  </p>
+  <p style="font-weight:400;font-size:.95rem;margin-top:.5rem;">
+    <strong>Phase 9 (57%)</strong> needs significant work. The build pipeline (<code>compile_and_link</code>, main wrapper, C runtime) is solid and E2E tests prove basic programs compile and run. However, the <strong>primary goal — <code>./hello</code> printing output</strong> — cannot be achieved because <code>print()</code> is not implemented. 7 of 12 identified codegen bugs remain unfixed, blocking structs, enums, tuples, and strings. E2E tests provide false confidence by checking only exit codes.
+  </p>
+</div>
+
+<h3>Top 3 Actions Required</h3>
+<table>
+<tr><th>#</th><th>Action</th><th>Impact</th><th>Effort</th></tr>
+<tr><td>1</td><td>Implement <code>print()</code> / <code>println()</code> builtin (T294) in typeck → MIR → codegen</td><td>🔴 Unblocks the #1 exit criterion and all output-producing programs</td><td>Medium</td></tr>
+<tr><td>2</td><td>Fix string length passing (T285), aggregate types (T286), and projected stores (T287)</td><td>🔴 Unblocks struct, tuple, and string test programs</td><td>Medium</td></tr>
+<tr><td>3</td><td>Add <code>// expect:</code> stdout verification to E2E tests (T300–T302)</td><td>🔴 Transforms exit-code-only tests into real correctness tests</td><td>Low</td></tr>
+</table>
+
+<hr style="margin:2rem 0;border:none;border-top:1px solid var(--border);">
+<p style="color:var(--muted);font-size:.82rem;text-align:center;">
+  Axon Compiler Phase 8–9 Compliance Report &middot; Generated 2025-07-18 &middot; 878 tests passing &middot; 60 requirements evaluated
+</p>
+
+</div>
+</body>
+</html>

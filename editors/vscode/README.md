@@ -59,3 +59,19 @@ npm run compile
 ```
 
 To test locally, press `F5` in VS Code to launch an Extension Development Host.
+
+## Debugging Axon Programs
+
+A sample `launch.json` is provided in `.vscode/launch.json` with three configurations:
+
+1. **Axon: Run Current File** — Run the active `.axon` file
+2. **Axon: Debug Current File (LLVM)** — Build with debug info and debug via LLDB (requires [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb))
+3. **Axon: Check Current File** — Type-check only (no build)
+
+Copy `.vscode/launch.json` to your project's `.vscode/` directory to use these configurations.
+
+## Planned Features
+
+- **Code Lens** — Inline "Run | Debug | Test" actions above functions (coming soon)
+- **DAP Debugger** — Native debug adapter for Axon (see `axonc debug`)
+- **Semantic Tokens** — Richer syntax highlighting using type information

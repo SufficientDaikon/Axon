@@ -1,14 +1,16 @@
-//! MLIR Backend for GPU Code Generation (Phase 4c)
+//! MLIR Backend for GPU Code Generation
 //!
-//! This module will lower @gpu-annotated functions to MLIR dialects
-//! for compilation to CUDA/ROCm/Vulkan targets.
+//! **Status: Deferred to Phase 12 (GPU Backend)**
 //!
-//! Architecture:
-//! - Axon TAST → Linalg dialect (tensor operations)
-//! - Linalg → MemRef dialect (bufferization)
-//! - MemRef → GPU dialect → NVVM/ROCDL/SPIR-V
+//! This module provides the GPU compilation interface and target abstractions.
+//! The actual MLIR-based code generation is intentionally deferred:
 //!
-//! Status: Stub — requires MLIR installation for full implementation.
+//! - Phase 12 will implement full MLIR lowering for @gpu-annotated functions
+//! - The pipeline will be: Axon TAST → Linalg dialect → MemRef → GPU dialect → NVVM/ROCDL/SPIR-V
+//! - This requires an MLIR installation and is not needed for CPU-only compilation
+//!
+//! For now, the `compile_gpu` function returns a descriptive error directing users
+//! to use `--gpu none` for CPU-only compilation. This is by design, not a bug.
 
 use serde::Serialize;
 
@@ -42,13 +44,13 @@ impl GpuTarget {
     }
 }
 
-/// Placeholder for MLIR codegen.
-/// Returns an error explaining MLIR is not yet available.
+/// Placeholder for MLIR codegen (deferred to Phase 12).
+/// Returns an error explaining GPU compilation is not yet available.
 pub fn compile_gpu(_mir: &crate::mir::MirProgram, target: &GpuTarget) -> Result<Vec<u8>, String> {
     Err(format!(
-        "MLIR backend for {} is not yet implemented. \
-         GPU code generation requires MLIR installation. \
-         Use --gpu=none or omit @gpu annotations for CPU-only compilation.",
+        "GPU compilation via MLIR is planned for Phase 12. \
+         Target '{}' is not yet supported. \
+         Use --gpu none for CPU-only compilation.",
         target.as_str()
     ))
 }
@@ -78,7 +80,7 @@ mod tests {
         let mir = crate::mir::MirProgram { functions: vec![], statics: vec![] };
         let result = compile_gpu(&mir, &GpuTarget::Cuda);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not yet implemented"));
+        assert!(result.unwrap_err().contains("planned for Phase 12"));
     }
 
     #[test]

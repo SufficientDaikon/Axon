@@ -10,6 +10,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4", features = ["derive"] }
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
 [[bin]]
 name = "axonc"
 path = "src/main.rs"
@@ -25,3 +28,7 @@ path = "tests/e2e_tests.rs"
 [[test]]
 name = "compiler_bench"
 path = "benches/compiler_bench.rs"
+
+[[bench]]
+name = "criterion_bench"
+harness = false

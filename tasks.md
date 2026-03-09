@@ -354,6 +354,19 @@
 - [x] T234 Implement doc comment parser — `src/doc.rs`
 - [x] T235 Implement HTML documentation generator — `src/doc.rs`
 
+### Phase 5-7 Compliance Fixes
+
+- [x] T236 [M-001] Add 14 Iterator default methods (map, filter, fold, collect, zip, enumerate, take, skip, count, any, all, find, chain, flat_map) — `src/stdlib/prelude.rs`
+- [x] T237 [M-004] Add 7 missing Tensor methods (item, to_vec, eq, lt, gt, sum_dim, mean_dim) — `src/stdlib/tensor.rs`
+- [x] T238 [M-005] Add 4 ML-specific lint rules (W5011 large_tensor_literal, W5012 unused_gradient, W5013 no_grad_in_eval, W5014 deprecated_activation) — `src/lint.rs`
+- [x] T239 [M-002] Improve REPL expression evaluation to show inferred types — `src/repl.rs`
+- [x] T240 [N-002] Implement REPL :save command — `src/repl.rs`
+- [x] T241 [N-003] Add package manager stub commands (publish, search, update, bench) — `src/pkg/commands.rs`, `src/main.rs`
+- [x] T242 [C-001] Create debugger DAP skeleton with Debugger struct and stub methods — `src/debugger.rs`, `src/lib.rs`, `src/main.rs`
+- [x] T243 [LSP] Add textDocument/signatureHelp handler — `src/lsp/handlers.rs`, `src/lsp/protocol.rs`, `src/lsp/server.rs`
+- [x] T244 [N-001] Fix formatter @cpu/@gpu syntax (was #[cpu]/#[gpu]) — `src/fmt.rs`
+- [x] T245 [N-004] Add VS Code extension launch.json configs and code lens TODO — `editors/vscode/`
+
 ### Phase 7f: VS Code Extension
 
 - [x] T236 Create TextMate grammar for .axon files — `editors/vscode/syntaxes/`
@@ -426,6 +439,32 @@
 
 ## Summary
 
-- **Total Tasks**: 277
-- **Completed**: 277
+- **Total Tasks**: 288
+- **Completed**: 288
 - **Remaining**: 0
+
+---
+
+### Feature: print/println Builtins (T278–T288)
+
+- [x] T278 [P] [US1] Register `print`/`println` in stdlib symbol table — `src/stdlib/io.rs`
+- [x] T279 [P] [US1] Special-case `print`/`println` in `check_fn_call` — `src/typeck.rs`
+- [x] T280 [P] [US1] Add `print`/`println` return type override in TAST builder — `src/tast.rs`
+- [x] T281 [P] [US2] Remove incorrect function_map entries — `src/mir.rs`
+- [x] T282 [P] [US2] Implement `lower_print_call` with type-specific dispatch — `src/mir.rs`
+- [x] T283 [P] [US3] Fix `axon_print_bool` declaration from `i8` to `i1` — `src/codegen/runtime.rs`
+- [x] T284 [P] [US3] Fix string constant type annotation in Call args — `src/codegen/llvm.rs`
+- [x] T285 [P] [US4] Add typeck tests for print/println — `src/typeck.rs`
+- [x] T286 [P] [US4] Add E2E test .axon files — `tests/e2e/print_*.axon`, `tests/e2e/println_*.axon`
+- [x] T287 [P] [US4] Add E2E test harness with `// expect:` support — `tests/e2e_tests.rs`
+- [x] T288 [P] [US4] Update stdlib tests for new print semantics — `tests/stdlib_tests.rs`
+
+### Bugfix: LLVM IR Codegen (7 bugs from compliance review)
+
+- [x] BUG-T285 [P] [Codegen] String constant: emit {i8*, i64, i64} struct with length — `src/codegen/llvm.rs`
+- [x] BUG-T286 [P] [Codegen] type_of_rvalue returns actual type for Aggregate — `src/codegen/llvm.rs`
+- [x] BUG-T287 [P] [Codegen] emit_place_store: GEP chains for field projections — `src/codegen/llvm.rs`
+- [x] BUG-T288 [P] [Codegen] emit_place_load: resolve field types through projections — `src/codegen/llvm.rs`
+- [x] BUG-T289 [P] [Codegen] Enum aggregate: insert payload fields after tag — `src/codegen/llvm.rs`
+- [x] BUG-T291 [P] [Codegen] Rvalue::Len: return actual array/tensor/string length — `src/codegen/llvm.rs`
+- [x] BUG-T292 [P] [Codegen] Rvalue::Ref: return reference TypeId, not INT64 — `src/codegen/llvm.rs`

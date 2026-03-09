@@ -49,7 +49,8 @@ impl<'a> LlvmCodegen<'a> {
     // ── Public entry point ─────────────────────────────────────
 
     /// Generate complete LLVM IR module from MIR program.
-    pub fn generate(&mut self, program: &MirProgram) -> String {
+    /// Returns an error if no `main` function is found.
+    pub fn generate(&mut self, program: &MirProgram) -> Result<String, String> {
         self.output.clear();
         self.string_literals.clear();
 
@@ -72,12 +73,14 @@ impl<'a> LlvmCodegen<'a> {
             self.output.push_str("  call void @_axon_main()\n");
             self.output.push_str("  ret i32 0\n");
             self.output.push_str("}\n");
+        } else {
+            return Err("E5009: no `main` function found. Every Axon executable must have a `fn main() { ... }`".to_string());
         }
 
         // Emit accumulated string literals at the end of the module.
         self.emit_string_literals();
 
-        self.output.clone()
+        Ok(self.output.clone())
     }
 
     // ── Module-level ───────────────────────────────────────────
@@ -435,8 +438,21 @@ impl<'a> LlvmCodegen<'a> {
                     .iter()
                     .map(|a| {
                         let val = self.emit_operand(a, func);
-                        let ty = self.type_of_operand(a, func);
-                        let ty_str = self.llvm_alloca_type(ty);
+                        // String constants now emit as { i8*, i64, i64 } structs.
+                        // For runtime print functions that expect raw (i8*, i64),
+                        // extract the pointer from the struct.
+                        let ty_str = if matches!(a, Operand::Constant(MirConstant::String(_))) {
+                            // Extract the i8* pointer from the string struct for call args
+                            let ptr = self.fresh_name();
+                            self.output.push_str(&format!(
+                                "  {} = extractvalue {{ i8*, i64, i64 }} {}, 0\n",
+                                ptr, val
+                            ));
+                            return format!("i8* {}", ptr);
+                        } else {
+                            let ty = self.type_of_operand(a, func);
+                            self.llvm_alloca_type(ty)
+                        };
                         format!("{} {}", ty_str, val)
                     })
                     .collect();
@@ -523,12 +539,78 @@ impl<'a> LlvmCodegen<'a> {
                 target_ty,
             } => self.emit_cast(operand, *target_ty, func),
             Rvalue::Len { place } => {
-                // Load length from an array/string (simplified: return 0)
-                let _val = self.emit_place(place);
-                let name = self.fresh_name();
-                self.output
-                    .push_str(&format!("  {} = add i64 0, 0\n", name));
-                name
+                // Return the compile-time known length for arrays, or load from metadata
+                let ty = self.local_type(func, place.local);
+                let resolved = self.interner.resolve(ty);
+                match resolved {
+                    Type::Array { size, .. } => {
+                        // Known-size array: return the compile-time constant
+                        let name = self.fresh_name();
+                        self.output
+                            .push_str(&format!("  {} = add i64 0, {}\n", name, size));
+                        name
+                    }
+                    Type::Tensor(tensor_ty) => {
+                        // For tensors, compute the total length from shape dimensions
+                        // Use the first dimension if available at compile time
+                        let mut known_len: Option<i64> = None;
+                        if !tensor_ty.shape.is_empty() {
+                            let mut product: i64 = 1;
+                            let mut all_known = true;
+                            for dim in &tensor_ty.shape {
+                                if let crate::types::ShapeDimResolved::Known(n) = dim {
+                                    product *= n;
+                                } else {
+                                    all_known = false;
+                                    break;
+                                }
+                            }
+                            if all_known {
+                                known_len = Some(product);
+                            }
+                        }
+                        if let Some(len) = known_len {
+                            let name = self.fresh_name();
+                            self.output
+                                .push_str(&format!("  {} = add i64 0, {}\n", name, len));
+                            name
+                        } else {
+                            // Dynamic tensor: load ndim from the tensor header
+                            let place_name = self.emit_place(place);
+                            let ndim_ptr = self.fresh_name();
+                            let ty_str = self.llvm_alloca_type(ty);
+                            self.output.push_str(&format!(
+                                "  {} = getelementptr {}, {}* {}, i32 0, i32 2\n",
+                                ndim_ptr, ty_str, ty_str, place_name
+                            ));
+                            let ndim_val = self.fresh_name();
+                            self.output.push_str(&format!(
+                                "  {} = load i64, i64* {}\n",
+                                ndim_val, ndim_ptr
+                            ));
+                            ndim_val
+                        }
+                    }
+                    Type::Primitive(PrimKind::String) => {
+                        // String length: extract from { i8*, i64, i64 } struct
+                        let _place_name = self.emit_place(place);
+                        let val = self.emit_place_load(place, func);
+                        let len_name = self.fresh_name();
+                        self.output.push_str(&format!(
+                            "  {} = extractvalue {{ i8*, i64, i64 }} {}, 1\n",
+                            len_name, val
+                        ));
+                        len_name
+                    }
+                    _ => {
+                        // Fallback: return 0
+                        let _val = self.emit_place(place);
+                        let name = self.fresh_name();
+                        self.output
+                            .push_str(&format!("  {} = add i64 0, 0\n", name));
+                        name
+                    }
+                }
             }
             Rvalue::TensorOp { kind, operands } => self.emit_tensor_op(kind, operands, func),
             Rvalue::Discriminant { place } => {
@@ -898,15 +980,41 @@ impl<'a> LlvmCodegen<'a> {
                 }
                 current_name
             }
-            AggregateKind::Enum(_, variant_idx) => {
-                // Insert tag then payload
+            AggregateKind::Enum(name, variant_idx) => {
+                // Determine the full enum LLVM type
+                let enum_ty_id = self.find_enum_type(name);
+                let enum_ty_str = self.llvm_alloca_type(enum_ty_id);
+
+                // Insert tag at index 0
                 let name_tag = self.fresh_name();
                 self.output.push_str(&format!(
-                    "  {} = insertvalue {{ i8 }} undef, i8 {}, 0\n",
-                    name_tag, variant_idx
+                    "  {} = insertvalue {} undef, i8 {}, 0\n",
+                    name_tag, enum_ty_str, variant_idx
                 ));
-                // Payload would require knowing the enum layout; simplified here
-                name_tag
+
+                if fields.is_empty() {
+                    // Unit variant — just the tag
+                    name_tag
+                } else {
+                    // Payload variant: insert each payload field at subsequent indices
+                    // For enum layout { i8, [N x i8] }, we need to bitcast payload fields
+                    // into the byte array. For simplicity, use insertvalue on the payload area.
+                    let mut current_name = name_tag;
+                    for (i, field) in fields.iter().enumerate() {
+                        let val = self.emit_operand(field, func);
+                        let field_ty = self.llvm_alloca_type(self.type_of_operand(field, func));
+                        let next = self.fresh_name();
+                        // Payload fields go at index 1, 2, ... in the enum struct
+                        // For { i8, [N x i8] } layout, we insertvalue into the byte array
+                        // For simpler enums, insert directly
+                        self.output.push_str(&format!(
+                            "  {} = insertvalue {} {}, {} {}, {}\n",
+                            next, enum_ty_str, current_name, field_ty, val, i + 1
+                        ));
+                        current_name = next;
+                    }
+                    current_name
+                }
             }
         }
     }
@@ -1001,6 +1109,7 @@ impl<'a> LlvmCodegen<'a> {
         } else {
             // Handle projections with GEP
             let mut current_ptr = self.local_name(place.local);
+            let mut current_ty_id = ty;
             let mut current_ty_str = ty_str.clone();
             for proj in &place.projections {
                 match proj {
@@ -1011,17 +1120,24 @@ impl<'a> LlvmCodegen<'a> {
                             gep, current_ty_str, current_ty_str, current_ptr, idx
                         ));
                         current_ptr = gep;
-                        // Simplified: we'd need to track the field type
-                        current_ty_str = "i8*".to_string();
+                        // Resolve the actual field type
+                        current_ty_id = self.field_type_of(current_ty_id, *idx);
+                        current_ty_str = self.llvm_alloca_type(current_ty_id);
                     }
                     Projection::Index(idx_op) => {
                         let idx_val = self.emit_operand(idx_op, func);
                         let gep = self.fresh_name();
                         self.output.push_str(&format!(
-                            "  {} = getelementptr {}, {}* {}, i64 {}\n",
+                            "  {} = getelementptr {}, {}* {}, i64 0, i64 {}\n",
                             gep, current_ty_str, current_ty_str, current_ptr, idx_val
                         ));
                         current_ptr = gep;
+                        // Resolve element type
+                        let resolved = self.interner.resolve(current_ty_id);
+                        if let Type::Array { elem, .. } = resolved {
+                            current_ty_id = *elem;
+                            current_ty_str = self.llvm_alloca_type(current_ty_id);
+                        }
                     }
                     Projection::Deref => {
                         let loaded = self.fresh_name();
@@ -1030,6 +1146,12 @@ impl<'a> LlvmCodegen<'a> {
                             loaded, current_ty_str, current_ty_str, current_ptr
                         ));
                         current_ptr = loaded;
+                        // Resolve deref type
+                        let resolved = self.interner.resolve(current_ty_id);
+                        if let Type::Reference { inner, .. } = resolved {
+                            current_ty_id = *inner;
+                            current_ty_str = self.llvm_alloca_type(current_ty_id);
+                        }
                     }
                 }
             }
@@ -1052,16 +1174,88 @@ impl<'a> LlvmCodegen<'a> {
                 self.local_name(place.local)
             ));
         } else {
-            // For projected stores, use GEP to find the target address.
-            // Simplified: store to base local.
+            // For projected stores, use GEP chain to find the target field address.
+            let base_ty = self.local_type_from_cache(place.local);
+            let mut current_ptr = self.local_name(place.local);
+            let mut current_ty_id = base_ty;
+            let mut current_ty_str = self.llvm_alloca_type(base_ty);
+
+            for proj in &place.projections {
+                match proj {
+                    Projection::Field(idx) => {
+                        let gep = self.fresh_name();
+                        self.output.push_str(&format!(
+                            "  {} = getelementptr {}, {}* {}, i32 0, i32 {}\n",
+                            gep, current_ty_str, current_ty_str, current_ptr, idx
+                        ));
+                        current_ptr = gep;
+                        // Resolve the field type
+                        current_ty_id = self.field_type_of(current_ty_id, *idx);
+                        current_ty_str = self.llvm_alloca_type(current_ty_id);
+                    }
+                    Projection::Index(idx_op) => {
+                        // For arrays, we need to GEP into the array element
+                        // We need a mutable borrow of self for emit_operand_no_func
+                        let idx_val = self.emit_operand_index(idx_op);
+                        let gep = self.fresh_name();
+                        self.output.push_str(&format!(
+                            "  {} = getelementptr {}, {}* {}, i64 0, i64 {}\n",
+                            gep, current_ty_str, current_ty_str, current_ptr, idx_val
+                        ));
+                        current_ptr = gep;
+                        // Resolve element type for arrays
+                        let resolved = self.interner.resolve(current_ty_id);
+                        if let Type::Array { elem, .. } = resolved {
+                            current_ty_id = *elem;
+                            current_ty_str = self.llvm_alloca_type(current_ty_id);
+                        }
+                    }
+                    Projection::Deref => {
+                        let loaded = self.fresh_name();
+                        self.output.push_str(&format!(
+                            "  {} = load {}*, {}** {}\n",
+                            loaded, current_ty_str, current_ty_str, current_ptr
+                        ));
+                        current_ptr = loaded;
+                    }
+                }
+            }
+            // Store the value at the final address
             self.output.push_str(&format!(
                 "  store {} {}, {}* {}\n",
                 ty_str,
                 value,
                 ty_str,
-                self.local_name(place.local)
+                current_ptr
             ));
         }
+    }
+
+    /// Emit an operand value for index projections (without needing func context).
+    /// This handles the common cases: constant integers and place loads using cached locals.
+    fn emit_operand_index(&mut self, operand: &Operand) -> String {
+        match operand {
+            Operand::Constant(c) => self.emit_constant(c),
+            Operand::Place(place) => {
+                // Use cached local types for place loads in store context
+                let ty = self.local_type_from_cache(place.local);
+                let ty_str = self.llvm_alloca_type(ty);
+                let name = self.fresh_name();
+                self.output.push_str(&format!(
+                    "  {} = load {}, {}* {}\n",
+                    name, ty_str, ty_str, self.local_name(place.local)
+                ));
+                name
+            }
+        }
+    }
+
+    /// Look up a local's type from the cached current function locals.
+    fn local_type_from_cache(&self, local: LocalId) -> TypeId {
+        self.current_func_locals
+            .get(local.0 as usize)
+            .map(|l| l.ty)
+            .unwrap_or(TypeId::UNIT)
     }
 
     fn emit_constant(&mut self, constant: &MirConstant) -> String {
@@ -1083,12 +1277,29 @@ impl<'a> LlvmCodegen<'a> {
             MirConstant::String(s) => {
                 let global = self.intern_string(s);
                 let len = s.len() + 1;
-                let name = self.fresh_name();
+                let ptr_name = self.fresh_name();
                 self.output.push_str(&format!(
                     "  {} = getelementptr [{} x i8], [{} x i8]* {}, i32 0, i32 0\n",
-                    name, len, len, global
+                    ptr_name, len, len, global
                 ));
-                name
+                // Build a { i8*, i64, i64 } struct with (ptr, len, capacity)
+                let str_len = s.len() as i64;
+                let s1 = self.fresh_name();
+                self.output.push_str(&format!(
+                    "  {} = insertvalue {{ i8*, i64, i64 }} undef, i8* {}, 0\n",
+                    s1, ptr_name
+                ));
+                let s2 = self.fresh_name();
+                self.output.push_str(&format!(
+                    "  {} = insertvalue {{ i8*, i64, i64 }} {}, i64 {}, 1\n",
+                    s2, s1, str_len
+                ));
+                let s3 = self.fresh_name();
+                self.output.push_str(&format!(
+                    "  {} = insertvalue {{ i8*, i64, i64 }} {}, i64 {}, 2\n",
+                    s3, s2, str_len
+                ));
+                s3
             }
             MirConstant::Unit => "undef".to_string(),
         }
@@ -1138,7 +1349,14 @@ impl<'a> LlvmCodegen<'a> {
     /// Determine the TypeId of an operand within the context of a function.
     fn type_of_operand(&self, operand: &Operand, func: &MirFunction) -> TypeId {
         match operand {
-            Operand::Place(place) => self.local_type(func, place.local),
+            Operand::Place(place) => {
+                if place.projections.is_empty() {
+                    self.local_type(func, place.local)
+                } else {
+                    // Resolve type through projections
+                    self.type_of_place(place, func)
+                }
+            }
             Operand::Constant(c) => match c {
                 MirConstant::Int(_) => TypeId::INT64,
                 MirConstant::Float(_) => TypeId::FLOAT64,
@@ -1163,8 +1381,45 @@ impl<'a> LlvmCodegen<'a> {
                 }
             }
             Rvalue::UnaryOp { operand, .. } => self.type_of_operand(operand, func),
-            Rvalue::Ref { .. } => TypeId::INT64, // simplified
-            Rvalue::Aggregate { .. } => TypeId::UNIT, // simplified
+            Rvalue::Ref { place, mutable } => {
+                // Reference type: look up the inner type and find/create a reference TypeId.
+                // Since we only need the LLVM type string, we look up the place's type
+                // and the llvm_type for Reference already produces "T*".
+                // However, type_of_rvalue returns TypeId so we search the interner.
+                let inner_ty = self.local_type(func, place.local);
+                self.find_or_approximate_ref_type(inner_ty, *mutable)
+            }
+            Rvalue::Aggregate { kind, fields } => {
+                // Determine the aggregate type from the kind and fields.
+                match kind {
+                    AggregateKind::Tuple => {
+                        // Build a tuple type from field types
+                        let field_tys: Vec<TypeId> = fields
+                            .iter()
+                            .map(|f| self.type_of_operand(f, func))
+                            .collect();
+                        // Search the interner for a matching tuple type
+                        self.find_tuple_type(&field_tys)
+                    }
+                    AggregateKind::Struct(name) => {
+                        // Search the interner for a struct with this name
+                        self.find_struct_type(name)
+                    }
+                    AggregateKind::Array => {
+                        // Build array type from fields
+                        if let Some(first) = fields.first() {
+                            let elem_ty = self.type_of_operand(first, func);
+                            self.find_array_type(elem_ty, fields.len())
+                        } else {
+                            TypeId::UNIT
+                        }
+                    }
+                    AggregateKind::Enum(name, _variant_idx) => {
+                        // Search the interner for an enum with this name
+                        self.find_enum_type(name)
+                    }
+                }
+            }
             Rvalue::Cast { target_ty, .. } => *target_ty,
             Rvalue::Len { .. } => TypeId::INT64,
             Rvalue::TensorOp { operands, .. } => {
@@ -1175,6 +1430,138 @@ impl<'a> LlvmCodegen<'a> {
                 }
             }
             Rvalue::Discriminant { .. } => TypeId::INT64,
+        }
+    }
+
+    /// Find or approximate a reference type in the interner.
+    /// Since we can't mutate the interner (we only have &), we search for an existing one.
+    /// If not found, we approximate: references are pointers in LLVM, so we return
+    /// a sentinel that maps to pointer type. We search the interner linearly.
+    fn find_or_approximate_ref_type(&self, inner: TypeId, mutable: bool) -> TypeId {
+        let target = Type::Reference { mutable, inner };
+        for i in 0..self.interner.len() {
+            let tid = TypeId(i as u32);
+            if *self.interner.resolve(tid) == target {
+                return tid;
+            }
+        }
+        // Also try the opposite mutability — LLVM type is the same (T*)
+        let target_alt = Type::Reference { mutable: !mutable, inner };
+        for i in 0..self.interner.len() {
+            let tid = TypeId(i as u32);
+            if *self.interner.resolve(tid) == target_alt {
+                return tid;
+            }
+        }
+        // Fallback: INT64 has same size as a pointer on 64-bit
+        TypeId::INT64
+    }
+
+    /// Find a tuple type in the interner matching the given field types.
+    fn find_tuple_type(&self, field_tys: &[TypeId]) -> TypeId {
+        let target = Type::Tuple(field_tys.to_vec());
+        for i in 0..self.interner.len() {
+            let tid = TypeId(i as u32);
+            if *self.interner.resolve(tid) == target {
+                return tid;
+            }
+        }
+        TypeId::UNIT
+    }
+
+    /// Find a struct type in the interner by name.
+    fn find_struct_type(&self, name: &str) -> TypeId {
+        for i in 0..self.interner.len() {
+            let tid = TypeId(i as u32);
+            if let Type::Struct { name: n, .. } = self.interner.resolve(tid) {
+                if n == name {
+                    return tid;
+                }
+            }
+        }
+        TypeId::UNIT
+    }
+
+    /// Find an enum type in the interner by name.
+    fn find_enum_type(&self, name: &str) -> TypeId {
+        for i in 0..self.interner.len() {
+            let tid = TypeId(i as u32);
+            if let Type::Enum { name: n, .. } = self.interner.resolve(tid) {
+                if n == name {
+                    return tid;
+                }
+            }
+        }
+        TypeId::UNIT
+    }
+
+    /// Find an array type in the interner.
+    fn find_array_type(&self, elem: TypeId, size: usize) -> TypeId {
+        let target = Type::Array { elem, size };
+        for i in 0..self.interner.len() {
+            let tid = TypeId(i as u32);
+            if *self.interner.resolve(tid) == target {
+                return tid;
+            }
+        }
+        TypeId::UNIT
+    }
+
+    /// Resolve the type of a place, including projections.
+    /// For a place like `local.field(2)`, returns the type of field 2 of the struct.
+    fn type_of_place(&self, place: &Place, func: &MirFunction) -> TypeId {
+        let mut current_ty = self.local_type(func, place.local);
+        for proj in &place.projections {
+            match proj {
+                Projection::Field(idx) => {
+                    current_ty = self.field_type_of(current_ty, *idx);
+                }
+                Projection::Index(_) => {
+                    // For arrays, indexing yields the element type
+                    let resolved = self.interner.resolve(current_ty);
+                    if let Type::Array { elem, .. } = resolved {
+                        current_ty = *elem;
+                    }
+                }
+                Projection::Deref => {
+                    // Deref a reference -> inner type
+                    let resolved = self.interner.resolve(current_ty);
+                    if let Type::Reference { inner, .. } = resolved {
+                        current_ty = *inner;
+                    }
+                }
+            }
+        }
+        current_ty
+    }
+
+    /// Get the type of field `idx` within a struct/tuple/enum type.
+    fn field_type_of(&self, ty: TypeId, idx: u32) -> TypeId {
+        let resolved = self.interner.resolve(ty);
+        match resolved {
+            Type::Struct { fields, .. } => {
+                if let Some((_, field_ty)) = fields.get(idx as usize) {
+                    *field_ty
+                } else {
+                    TypeId::INT64 // fallback
+                }
+            }
+            Type::Tuple(elems) => {
+                if let Some(elem_ty) = elems.get(idx as usize) {
+                    *elem_ty
+                } else {
+                    TypeId::INT64
+                }
+            }
+            Type::Enum { .. } => {
+                // Enum fields: index 0 is tag (i8), rest are payload
+                if idx == 0 {
+                    TypeId::INT64 // tag, approximated
+                } else {
+                    TypeId::INT64 // payload field, approximated
+                }
+            }
+            _ => TypeId::INT64,
         }
     }
 
@@ -1438,7 +1825,7 @@ mod tests {
         let mut builder = crate::mir::MirBuilder::new(&checker.interner);
         let mir = builder.build(&typed_program);
         let mut codegen = LlvmCodegen::new(&checker.interner, OptLevel::O0);
-        codegen.generate(&mir)
+        codegen.generate(&mir).expect("generate() failed — no main function?")
     }
 
     // 1. Type mapping: Int32
@@ -1495,7 +1882,7 @@ mod tests {
     // 7. Generate return constant
     #[test]
     fn test_generate_return_constant() {
-        let ir = generate_ir("fn answer() -> Int64 { return 42; }");
+        let ir = generate_ir("fn answer() -> Int64 { return 42; }\nfn main() { let x: Int64 = answer(); }");
         assert!(
             ir.contains("define"),
             "IR should contain define: {}",
@@ -1509,7 +1896,7 @@ mod tests {
     #[test]
     fn test_generate_binary_op() {
         let ir = generate_ir(
-            "fn test_add() -> Int64 { let x: Int64 = 1 + 2; return x; }",
+            "fn test_add() -> Int64 { let x: Int64 = 1 + 2; return x; }\nfn main() { let r: Int64 = test_add(); }",
         );
         assert!(ir.contains("add"), "IR should contain add instruction: {}", ir);
     }
@@ -1518,7 +1905,7 @@ mod tests {
     #[test]
     fn test_generate_if_else() {
         let ir = generate_ir(
-            "fn test_if(x: Bool) -> Int64 { if x { return 1; } else { return 2; } }",
+            "fn test_if(x: Bool) -> Int64 { if x { return 1; } else { return 2; } }\nfn main() { let r: Int64 = test_if(true); }",
         );
         assert!(ir.contains("br"), "IR should contain branch: {}", ir);
         assert!(
@@ -1532,7 +1919,7 @@ mod tests {
     #[test]
     fn test_generate_while_loop() {
         let ir = generate_ir(
-            "fn test_while() { let mut i: Int64 = 0; while i < 10 { i = i + 1; } }",
+            "fn test_while() { let mut i: Int64 = 0; while i < 10 { i = i + 1; } }\nfn main() { test_while(); }",
         );
         assert!(ir.contains("br"), "IR should contain branch: {}", ir);
         // Loop generates multiple basic blocks
@@ -1699,5 +2086,21 @@ mod tests {
         assert_eq!(s1, s2, "Same string should return same global name");
         let s3 = cg.intern_string("world");
         assert_ne!(s1, s3, "Different strings should get different names");
+    }
+
+    // E5009: Missing main function validation
+    #[test]
+    fn test_generate_no_main_returns_error() {
+        let source = "fn helper() -> Int64 { return 42; }";
+        let (typed_program, _errors) = crate::check_source(source, "test.axon");
+        let (checker, _) = crate::typeck::check(source, "test.axon");
+        let mut builder = crate::mir::MirBuilder::new(&checker.interner);
+        let mir = builder.build(&typed_program);
+        let mut codegen = LlvmCodegen::new(&checker.interner, OptLevel::O0);
+        let result = codegen.generate(&mir);
+        assert!(result.is_err(), "generate() should return Err when no main function");
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("E5009"), "Error should contain E5009 code: {}", err_msg);
+        assert!(err_msg.contains("main"), "Error should mention 'main': {}", err_msg);
     }
 }

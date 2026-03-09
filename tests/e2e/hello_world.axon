@@ -1,0 +1,6 @@
+// Test: basic println outputs the value followed by newline
+// expect: 42
+
+fn main() {
+    println(42);
+}

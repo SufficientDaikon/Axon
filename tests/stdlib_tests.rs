@@ -354,14 +354,16 @@ fn test_parse_json() {
 
 #[test]
 fn test_println_wrong_arg_type() {
-    // println expects String, 42 is Int64
-    check_err("fn main() { println(42); }");
+    // println now accepts any printable type (Int64, Float64, Bool, String)
+    // Previously it only accepted String, but the new print/println builtins
+    // dispatch to type-specific runtime functions.
+    check_ok("fn main() { println(42); }");
 }
 
 #[test]
 fn test_print_wrong_arg_type() {
-    // print expects String, true is Bool
-    check_err("fn main() { print(true); }");
+    // print now accepts any printable type (Int64, Float64, Bool, String)
+    check_ok("fn main() { print(true); }");
 }
 
 #[test]

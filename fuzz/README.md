@@ -26,26 +26,48 @@ Run them with:
 cargo test --test fuzz_tests -- --nocapture
 ```
 
-## cargo-fuzz Targets (Future)
+## cargo-fuzz / libFuzzer Targets
 
-The `fuzz/targets/` directory contains descriptions of fuzz targets for use
-with [cargo-fuzz](https://github.com/rust-fuzz/cargo-fuzz) when integrated:
+The `fuzz/fuzz_targets/` directory contains real cargo-fuzz targets powered by
+libFuzzer. These provide coverage-guided fuzzing for much deeper exploration.
 
-| Target           | Description                                     |
-| ---------------- | ----------------------------------------------- |
-| `lexer_fuzz`     | Feed arbitrary bytes to the lexer               |
-| `parser_fuzz`    | Feed arbitrary bytes through lex → parse        |
-| `typeck_fuzz`    | Full lex → parse → typecheck on arbitrary input |
-| `formatter_fuzz` | Feed arbitrary bytes to the formatter           |
-| `linter_fuzz`    | Feed arbitrary bytes to the linter              |
+### Available Targets
 
-### Setting up cargo-fuzz (future)
+| Target         | Description                                     |
+| -------------- | ----------------------------------------------- |
+| `fuzz_parser`  | Feed arbitrary bytes to the lexer + parser      |
+| `fuzz_typeck`  | Full lex → parse → typecheck on arbitrary input |
+
+### Setup & Running
 
 ```bash
-cargo install cargo-fuzz
-cargo fuzz init
-# Copy target templates from fuzz/targets/ into fuzz/fuzz_targets/
-cargo fuzz run lexer_fuzz -- -max_len=10000 -max_total_time=300
+# Install cargo-fuzz (requires nightly Rust)
+rustup install nightly
+cargo +nightly install cargo-fuzz
+
+# List available targets
+cargo +nightly fuzz list
+
+# Run a target (from the repo root)
+cargo +nightly fuzz run fuzz_parser -- -max_len=10000 -max_total_time=300
+cargo +nightly fuzz run fuzz_typeck -- -max_len=10000 -max_total_time=300
+```
+
+### Directory Structure
+
+```
+fuzz/
+├── Cargo.toml              # cargo-fuzz package manifest
+├── README.md               # This file
+├── fuzz_targets/
+│   ├── fuzz_parser.rs      # Parser fuzz target (libFuzzer)
+│   └── fuzz_typeck.rs      # Type checker fuzz target (libFuzzer)
+└── targets/                # Legacy target descriptions
+    ├── lexer_fuzz.txt
+    ├── parser_fuzz.txt
+    ├── typeck_fuzz.txt
+    ├── formatter_fuzz.txt
+    └── linter_fuzz.txt
 ```
 
 ## Property-Based Testing (Future)

@@ -1,0 +1,8 @@
+// Test: println with boolean values outputs "true" and "false"
+// expect: true
+// expect: false
+
+fn main() {
+    println(true);
+    println(false);
+}

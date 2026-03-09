@@ -10,6 +10,7 @@ pub fn register_io(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     register_traits(interner, symbols);
     register_file(interner, symbols);
     register_streams(interner, symbols);
+    register_print_builtins(interner, symbols);
     register_formatting(interner, symbols);
 }
 
@@ -117,6 +118,18 @@ fn register_streams(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     def_method(symbols, interner, "Stdout", "flush", vec![stdout_ty], TypeId::UNIT);
     def_method(symbols, interner, "Stderr", "write", vec![stderr_ty, TypeId::STRING], TypeId::UNIT);
     def_method(symbols, interner, "Stderr", "flush", vec![stderr_ty], TypeId::UNIT);
+}
+
+// -- Print builtins -----------------------------------------------------------
+
+fn register_print_builtins(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    // Register print and println as functions that accept a single argument.
+    // The actual argument type is checked specially in typeck::check_fn_call
+    // (any printable type is accepted: Int64, Float64, Bool, String).
+    // We register with Int64 here just to get them into the symbol table
+    // so that name resolution passes.
+    def_fn(symbols, interner, "print", vec![TypeId::INT64], TypeId::UNIT);
+    def_fn(symbols, interner, "println", vec![TypeId::INT64], TypeId::UNIT);
 }
 
 // -- Formatting helpers -------------------------------------------------------

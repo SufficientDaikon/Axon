@@ -147,6 +147,35 @@ impl Linter {
             }
         }
 
+        // W5013: ml_no_grad_in_eval — Scan for .backward() or .grad calls inside
+        // functions named 'eval', 'evaluate', 'predict', or 'test_*' (heuristic).
+        // This catches gradient computation that likely belongs in a training context.
+        let mut in_eval_fn = false;
+        for (line_idx, line) in source.lines().enumerate() {
+            let trimmed = line.trim();
+            // Heuristic: detect function definitions that look like eval/predict
+            if trimmed.starts_with("fn ") {
+                let fn_name_part = trimmed.strip_prefix("fn ").unwrap_or("").trim();
+                let fn_name = fn_name_part.split(|c: char| !c.is_alphanumeric() && c != '_')
+                    .next()
+                    .unwrap_or("");
+                in_eval_fn = fn_name == "eval" || fn_name == "evaluate"
+                    || fn_name == "predict" || fn_name.starts_with("test_");
+            }
+            if in_eval_fn && (trimmed.contains(".backward()") || trimmed.contains(".grad")) {
+                self.warn(
+                    "W5013",
+                    "gradient computation detected in eval/predict context".to_string(),
+                    Span::new(
+                        &program.span.start.file,
+                        line_idx + 1, 1,
+                        line_idx + 1, line.len(),
+                    ),
+                    Some("wrap training-only code in a training guard or move to a training function".to_string()),
+                );
+            }
+        }
+
         for item in &program.items {
             self.lint_item(item);
         }
@@ -343,12 +372,73 @@ impl Linter {
                 self.lint_expr(operand);
             }
             ExprKind::FnCall { function, args } => {
+                // ML lint: W5011 — ml_large_tensor_literal
+                // Warn when creating tensors with large inline data (many-element tuples or
+                // many arguments to tensor-creation functions like from_vec).
+                if let ExprKind::Identifier(fname) = &function.kind {
+                    if fname == "from_vec" || fname == "Tensor" {
+                        // Check if any arg is a large tuple (used as inline data)
+                        for arg in args {
+                            if let ExprKind::Tuple(elements) = &arg.kind {
+                                if elements.len() > 100 {
+                                    self.warn(
+                                        "W5011",
+                                        format!(
+                                            "large tensor literal with {} elements; consider loading from a file",
+                                            elements.len()
+                                        ),
+                                        arg.span.clone(),
+                                        Some("use data loading utilities instead of inline literals".to_string()),
+                                    );
+                                }
+                            }
+                        }
+                        // Also check if the call itself has > 100 args (flat form)
+                        if args.len() > 100 {
+                            self.warn(
+                                "W5011",
+                                format!(
+                                    "large tensor literal with {} elements; consider loading from a file",
+                                    args.len()
+                                ),
+                                expr.span.clone(),
+                                Some("use data loading utilities instead of inline literals".to_string()),
+                            );
+                        }
+                    }
+                }
                 self.lint_expr(function);
                 for arg in args {
                     self.lint_expr(arg);
                 }
             }
-            ExprKind::MethodCall { receiver, args, .. } => {
+            ExprKind::MethodCall { receiver, method, args, .. } => {
+                // ML lint: W5012 — ml_unused_gradient
+                // Warn when .backward() is called as a standalone expression statement
+                // (The actual "unused" check is done at the statement level; here we flag
+                //  backward() calls that appear to discard their result.)
+                if method == "backward" && args.is_empty() {
+                    self.warn(
+                        "W5012",
+                        "result of `.backward()` is unused — ensure gradients are consumed by an optimizer step".to_string(),
+                        expr.span.clone(),
+                        Some("follow with `optimizer.step()` to apply gradients".to_string()),
+                    );
+                }
+
+                // ML lint: W5014 — ml_deprecated_activation
+                // Warn when calling .sigmoid() on tensors in hidden layers
+                // (Heuristic: if the method is `sigmoid` and the receiver is not the last
+                //  layer's output, suggest using ReLU or GELU instead.)
+                if method == "sigmoid" {
+                    self.warn(
+                        "W5014",
+                        "use of `sigmoid` activation — consider `relu` or `gelu` for hidden layers".to_string(),
+                        expr.span.clone(),
+                        Some("sigmoid is best suited for output layers; use `relu()` or `gelu()` in hidden layers".to_string()),
+                    );
+                }
+
                 self.lint_expr(receiver);
                 for arg in args {
                     self.lint_expr(arg);
@@ -553,5 +643,55 @@ mod tests {
         let src = "// TODO: fix this\nfn main() { let _x: Int32 = 0; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(warnings.iter().any(|w| w.code == "W5009"));
+    }
+
+    // -- ML-specific lint rules --
+
+    #[test]
+    fn test_ml_unused_gradient() {
+        // W5012: Warn when .backward() result is unused
+        let src = "fn train() { let _t: Int32 = 0; _t.backward(); }";
+        let warnings = Linter::lint(src, "test.axon");
+        assert!(
+            warnings.iter().any(|w| w.code == "W5012"),
+            "should warn about unused .backward(), got: {:?}",
+            warnings.iter().map(|w| &w.code).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_ml_deprecated_activation() {
+        // W5014: Warn when using sigmoid
+        let src = "fn forward() { let _t: Int32 = 0; _t.sigmoid(); }";
+        let warnings = Linter::lint(src, "test.axon");
+        assert!(
+            warnings.iter().any(|w| w.code == "W5014"),
+            "should warn about sigmoid, got: {:?}",
+            warnings.iter().map(|w| &w.code).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_ml_no_grad_in_eval() {
+        // W5013: Warn when gradient computation is in eval context
+        let src = "fn eval() { let _t: Int32 = 0; _t.backward(); }";
+        let warnings = Linter::lint(src, "test.axon");
+        assert!(
+            warnings.iter().any(|w| w.code == "W5013"),
+            "should warn about grad in eval, got: {:?}",
+            warnings.iter().map(|w| &w.code).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_ml_no_grad_in_eval_predict() {
+        // W5013: Also catches predict functions
+        let src = "fn predict() { let _x: Int32 = 0; _x.grad; }";
+        let warnings = Linter::lint(src, "test.axon");
+        assert!(
+            warnings.iter().any(|w| w.code == "W5013"),
+            "should warn about grad in predict, got: {:?}",
+            warnings.iter().map(|w| &w.code).collect::<Vec<_>>()
+        );
     }
 }

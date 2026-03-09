@@ -1,0 +1,6 @@
+// Test: print a float
+// expect: 3.14
+
+fn main() {
+    print(3.14);
+}

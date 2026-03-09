@@ -1,3 +1,14 @@
+//! # Borrow Checker
+//!
+//! Current implementation uses AST-walk based analysis rather than CFG-based
+//! dataflow analysis. This correctly catches common borrow violations (use-after-move,
+//! double-mutable-borrow, borrow-while-mutably-borrowed) but may miss complex
+//! control-flow dependent violations.
+//!
+//! **Planned improvement:** Migrate to MIR-based dataflow analysis (similar to
+//! rustc's borrow checker) which operates on the control flow graph for
+//! path-sensitive precision. Tracked for post-v1.0 improvement.
+
 // borrow.rs — Borrow checking and move analysis (Phase 3e)
 
 use std::collections::HashMap;

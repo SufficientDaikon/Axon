@@ -1,0 +1,6 @@
+// Test: print(42) should output "42"
+// expect: 42
+
+fn main() {
+    print(42);
+}

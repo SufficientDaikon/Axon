@@ -1,0 +1,7 @@
+// Test: print(3); print(4) should output "34"
+// expect: 34
+
+fn main() {
+    print(3);
+    print(4);
+}

@@ -256,6 +256,36 @@ pub fn cmd_lint() -> Result<(), String> {
     Ok(())
 }
 
+pub fn cmd_publish() -> Result<(), String> {
+    // Stub: publish is not yet implemented.
+    println!("axon pkg publish: not yet implemented — coming in Phase 15.");
+    println!("This command will publish the current package to the Axon package registry.");
+    Ok(())
+}
+
+pub fn cmd_search(query: &str) -> Result<(), String> {
+    // Stub: search is not yet implemented.
+    println!("axon pkg search '{}': not yet implemented — coming in Phase 15.", query);
+    println!("This command will search the Axon package registry for matching packages.");
+    Ok(())
+}
+
+pub fn cmd_update() -> Result<(), String> {
+    // Stub: update is not yet implemented.
+    let _manifest = find_manifest()?;
+    println!("axon pkg update: not yet implemented — coming in Phase 15.");
+    println!("This command will update all dependencies to their latest compatible versions.");
+    Ok(())
+}
+
+pub fn cmd_bench() -> Result<(), String> {
+    // Stub: bench is not yet implemented.
+    let _manifest = find_manifest()?;
+    println!("axon pkg bench: not yet implemented — coming in Phase 15.");
+    println!("This command will run benchmarks defined in the benches/ directory.");
+    Ok(())
+}
+
 fn lint_dir(dir: &Path, total: &mut usize) -> Result<(), String> {
     let entries = fs::read_dir(dir)
         .map_err(|e| format!("failed to read directory {}: {}", dir.display(), e))?;

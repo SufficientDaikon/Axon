@@ -11,7 +11,7 @@ use std::fmt;
 use crate::ast::{AssignOp, Attribute, BinOp, Literal, UnaryOp};
 use crate::span::Span;
 use crate::tast::*;
-use crate::types::{Type, TypeId, TypeInterner};
+use crate::types::{PrimKind, Type, TypeId, TypeInterner};
 
 // ═══════════════════════════════════════════════════════════════
 // ID Types
@@ -278,9 +278,8 @@ impl<'a> MirBuilder<'a> {
         for item in &program.items {
             self.collect_function_names(item);
         }
-        // Built-in functions
-        self.function_map.insert("print".to_string(), "axon_print".to_string());
-        self.function_map.insert("println".to_string(), "axon_println".to_string());
+        // Note: print/println are handled specially in lower_fn_call
+        // and do not need function_map entries.
     }
 
     fn collect_function_names(&mut self, item: &TypedItem) {
@@ -935,6 +934,13 @@ impl<'a> MirBuilder<'a> {
         args: &[TypedExpr],
         ty: TypeId,
     ) -> Operand {
+        // ── Special case: print/println builtins ──────────────────────
+        if let TypedExprKind::Identifier(name) = &func.kind {
+            if name == "print" || name == "println" {
+                return self.lower_print_call(name == "println", args);
+            }
+        }
+
         // Resolve function name through function_map if it's an identifier
         let func_op = match &func.kind {
             TypedExprKind::Identifier(name) => {
@@ -974,6 +980,90 @@ impl<'a> MirBuilder<'a> {
             local: dest,
             projections: Vec::new(),
         })
+    }
+
+    /// Lower a `print(...)` or `println(...)` call into type-specific runtime calls.
+    ///
+    /// Maps:
+    ///   print(x: Int64)   → call axon_print_i64(x)
+    ///   print(x: Float64) → call axon_print_f64(x)
+    ///   print(x: Bool)    → call axon_print_bool(x)
+    ///   print(x: String)  → call axon_print_str(ptr, len)
+    ///   println(x)        → print(x) then call axon_print_newline()
+    fn lower_print_call(
+        &mut self,
+        is_println: bool,
+        args: &[TypedExpr],
+    ) -> Operand {
+        let arg = &args[0];
+        let arg_op = self.lower_expr(arg);
+        let arg_ty = arg.ty;
+
+        // Determine which runtime function to call based on argument type
+        let resolved_ty = self.interner.resolve(arg_ty).clone();
+        let (print_fn, call_args) = match &resolved_ty {
+            Type::Primitive(PrimKind::Float64) => {
+                ("axon_print_f64", vec![arg_op])
+            }
+            Type::Primitive(PrimKind::Float32) => {
+                ("axon_print_f32", vec![arg_op])
+            }
+            Type::Primitive(PrimKind::Bool) => {
+                ("axon_print_bool", vec![arg_op])
+            }
+            Type::Primitive(PrimKind::String) => {
+                // axon_print_str expects (ptr: *i8, len: i64).
+                // For string literals, extract the length from the TAST literal node.
+                let str_len = if let TypedExprKind::Literal(Literal::String(s)) = &arg.kind {
+                    s.len() as i64
+                } else {
+                    0 // Variable strings: length not yet supported
+                };
+                ("axon_print_str", vec![arg_op, Operand::Constant(MirConstant::Int(str_len))])
+            }
+            Type::Primitive(PrimKind::Char) => {
+                ("axon_print_char", vec![arg_op])
+            }
+            Type::Primitive(PrimKind::Int32 | PrimKind::UInt32) => {
+                ("axon_print_i32", vec![arg_op])
+            }
+            // Default: treat as i64 (covers Int64, UInt64, and other integer types)
+            _ => {
+                ("axon_print_i64", vec![arg_op])
+            }
+        };
+
+        // Emit the print call
+        let dest = self.new_temp(TypeId::UNIT);
+        let cont = self.new_block();
+        self.set_terminator(Terminator::Call {
+            func: Operand::Constant(MirConstant::String(print_fn.to_string())),
+            args: call_args,
+            destination: Place {
+                local: dest,
+                projections: Vec::new(),
+            },
+            target: cont,
+        });
+        self.switch_to_block(cont);
+
+        // For println, also emit a newline
+        if is_println {
+            let nl_dest = self.new_temp(TypeId::UNIT);
+            let nl_cont = self.new_block();
+            self.set_terminator(Terminator::Call {
+                func: Operand::Constant(MirConstant::String("axon_print_newline".to_string())),
+                args: vec![],
+                destination: Place {
+                    local: nl_dest,
+                    projections: Vec::new(),
+                },
+                target: nl_cont,
+            });
+            self.switch_to_block(nl_cont);
+        }
+
+        Operand::Constant(MirConstant::Unit)
     }
 
     fn lower_if_else(
@@ -1513,10 +1603,10 @@ impl fmt::Display for MirStmt {
                 write!(f, "drop({})", place)
             }
             MirStmt::StorageLive { local } => {
-                write!(f, "StorageLive(_{}))", local.0)
+                write!(f, "StorageLive(_{})", local.0)
             }
             MirStmt::StorageDead { local } => {
-                write!(f, "StorageDead(_{}))", local.0)
+                write!(f, "StorageDead(_{})", local.0)
             }
             MirStmt::Nop => write!(f, "nop"),
         }

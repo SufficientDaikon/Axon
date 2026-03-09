@@ -41,6 +41,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --test compiler_bench -- --nocapture
+      - run: cargo bench -- --output-format bencher | tee benchmark_results.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark_results.txt
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run security audit
+        run: cargo audit
+        continue-on-error: true  # Advisory-only for now
 
   docs:
     name: Documentation
@@ -50,10 +67,34 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo doc --no-deps
 
+  # ── Future: Miri & Sanitizers (Phase 15) ─────────────────────
+  # Uncomment when ready:
+  #
+  # miri:
+  #   name: Miri (undefined behavior detection)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@nightly
+  #       with:
+  #         components: miri
+  #     - run: cargo +nightly miri test
+  #
+  # sanitizers:
+  #   name: Address & Thread Sanitizers
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@nightly
+  #     - name: AddressSanitizer
+  #       run: RUSTFLAGS="-Zsanitizer=address" cargo +nightly test --target x86_64-unknown-linux-gnu
+  #     - name: ThreadSanitizer
+  #       run: RUSTFLAGS="-Zsanitizer=thread" cargo +nightly test --target x86_64-unknown-linux-gnu
+
   release:
     name: Release (${{ matrix.target }})
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [lint, test]
+    needs: [lint, test, audit]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

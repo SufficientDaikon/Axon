@@ -79,6 +79,12 @@ enum Commands {
     /// Start the Axon Language Server (LSP over stdio)
     Lsp {},
 
+    /// Launch the debugger for an Axon source file
+    Debug {
+        /// The source file to debug
+        file: String,
+    },
+
     /// Package manager commands
     Pkg {
         #[command(subcommand)]
@@ -150,6 +156,14 @@ enum PkgAction {
     Fmt,
     /// Lint source files
     Lint,
+    /// Publish package to the registry
+    Publish,
+    /// Search the package registry
+    Search { query: String },
+    /// Update dependencies to latest compatible versions
+    Update,
+    /// Run benchmarks
+    Bench,
 }
 
 fn main() {
@@ -186,6 +200,9 @@ fn main() {
         Commands::Lsp {} => {
             run_lsp();
         }
+        Commands::Debug { file } => {
+            run_debug(&file);
+        }
         Commands::Pkg { action } => {
             run_pkg(action);
         }
@@ -210,6 +227,10 @@ fn run_pkg(action: PkgAction) {
         PkgAction::Clean => axonc::pkg::commands::cmd_clean(),
         PkgAction::Fmt => axonc::pkg::commands::cmd_fmt(),
         PkgAction::Lint => axonc::pkg::commands::cmd_lint(),
+        PkgAction::Publish => axonc::pkg::commands::cmd_publish(),
+        PkgAction::Search { query } => axonc::pkg::commands::cmd_search(&query),
+        PkgAction::Update => axonc::pkg::commands::cmd_update(),
+        PkgAction::Bench => axonc::pkg::commands::cmd_bench(),
     };
 
     if let Err(e) = result {
@@ -339,6 +360,13 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
         return;
     }
 
+    // Validate that a main function exists (E5009)
+    let has_main = mir_program.functions.iter().any(|f| f.name == "main");
+    if !has_main {
+        eprintln!("error[E5009]: no `main` function found. Every Axon executable must have a `fn main() {{ ... }}`");
+        process::exit(1);
+    }
+
     // Check for GPU functions
     let gpu_target = axonc::codegen::mlir::GpuTarget::from_str(gpu).unwrap_or(axonc::codegen::mlir::GpuTarget::None);
     if gpu_target != axonc::codegen::mlir::GpuTarget::None && axonc::codegen::mlir::has_gpu_functions(&mir_program) {
@@ -352,7 +380,13 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
 
     // Generate LLVM IR
     let mut codegen = axonc::codegen::llvm::LlvmCodegen::new(&checker.interner, opt_level);
-    let llvm_ir = codegen.generate(&mir_program);
+    let llvm_ir = match codegen.generate(&mir_program) {
+        Ok(ir) => ir,
+        Err(e) => {
+            eprintln!("error[E5009]: {}", e);
+            process::exit(1);
+        }
+    };
 
     // Determine output path
     let default_output = file.trim_end_matches(".axon");
@@ -374,7 +408,22 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
     if emit_obj {
         // Compile to object file
         match axonc::codegen::llvm::compile_ir_to_object(&llvm_ir, output_path, opt_level) {
-            Ok(_) => println!("Wrote object file to {}.o", output_path),
+            Ok(_) => {
+                // Write companion runtime C source for manual linking
+                let rt_c_path = format!("{}.runtime.c", output_path);
+                let rt_source = axonc::codegen::runtime::generate_runtime_c_source();
+                match fs::write(&rt_c_path, &rt_source) {
+                    Ok(_) => {
+                        println!("Wrote object file to {}.o", output_path);
+                        println!("Wrote runtime to {}", rt_c_path);
+                        println!("Link with runtime: clang {}.o {} -o {}", output_path, rt_c_path, output_path);
+                    }
+                    Err(e) => {
+                        println!("Wrote object file to {}.o", output_path);
+                        eprintln!("warning: could not write runtime source '{}': {}", rt_c_path, e);
+                    }
+                }
+            }
             Err(e) => {
                 eprintln!("error: {}", e);
                 process::exit(1);
@@ -479,4 +528,12 @@ fn run_doc(file: &str, output: Option<&str>) {
 fn run_lsp() {
     let mut server = axonc::lsp::LspServer::new();
     server.run();
+}
+
+fn run_debug(_file: &str) {
+    eprintln!("Debugger support is coming in a future release.");
+    eprintln!("Use --emit-llvm and lldb/gdb for now:");
+    eprintln!("  axonc build --emit-llvm {}", _file);
+    eprintln!("  # Then debug the generated IR with your preferred debugger.");
+    // See src/debugger.rs for the planned DAP architecture.
 }

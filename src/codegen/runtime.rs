@@ -85,6 +85,22 @@ pub const RUNTIME_FUNCTIONS: &[RuntimeFunction] = &[
         llvm_name: "axon_print_char",
         description: "Print char to stdout: (codepoint: i32) -> void",
     },
+    // Reference counting (for future borrow checker integration)
+    RuntimeFunction {
+        name: "rc_inc",
+        llvm_name: "axon_rc_inc",
+        description: "Increment reference count: (ptr: *u8) -> void",
+    },
+    RuntimeFunction {
+        name: "rc_dec",
+        llvm_name: "axon_rc_dec",
+        description: "Decrement reference count (frees at zero): (ptr: *u8) -> void",
+    },
+    RuntimeFunction {
+        name: "rc_count",
+        llvm_name: "axon_rc_count",
+        description: "Get current reference count: (ptr: *u8) -> i64",
+    },
 ];
 
 /// Generate LLVM IR declarations for all runtime functions.
@@ -109,11 +125,17 @@ pub fn emit_runtime_declarations() -> String {
     ir.push_str("declare void @axon_print_i64(i64)\n");
     ir.push_str("declare void @axon_print_f64(double)\n");
     ir.push_str("declare void @axon_print_str(i8*, i64)\n");
-    ir.push_str("declare void @axon_print_bool(i8)\n");
+    ir.push_str("declare void @axon_print_bool(i1)\n");
     ir.push_str("declare void @axon_print_newline()\n");
     ir.push_str("declare void @axon_print_i32(i32)\n");
     ir.push_str("declare void @axon_print_f32(float)\n");
     ir.push_str("declare void @axon_print_char(i32)\n");
+
+    // Reference counting
+    ir.push_str("\n; Reference counting runtime\n");
+    ir.push_str("declare void @axon_rc_inc(i8*)\n");
+    ir.push_str("declare void @axon_rc_dec(i8*)\n");
+    ir.push_str("declare i64 @axon_rc_count(i8*)\n");
 
     // C stdlib (for printf-based I/O)
     ir.push_str("\n; C standard library\n");
@@ -169,13 +191,24 @@ void axon_dealloc(void* ptr, int64_t size, int64_t align) {
 #endif
 }
 
+size_t axon_dtype_size(uint8_t dtype) {
+    switch(dtype) {
+        case 0: return sizeof(float);     // f32
+        case 1: return sizeof(double);    // f64
+        case 2: return sizeof(int32_t);   // i32
+        case 3: return sizeof(int64_t);   // i64
+        case 4: return sizeof(uint8_t);   // bool/u8
+        default: return sizeof(float);
+    }
+}
+
 void* axon_tensor_alloc(int32_t dtype, int64_t* shape, int64_t ndim, int8_t device) {
-    (void)dtype; (void)shape; (void)ndim; (void)device;
-    // Stub: allocate a simple buffer
+    (void)device;
+    // Calculate total number of elements
     int64_t total = 1;
     for (int64_t i = 0; i < ndim; i++) total *= shape[i];
-    int64_t elem_size = (dtype <= 3) ? (1 << dtype) : 4;  // rough size estimate
-    return malloc(total * elem_size);
+    size_t elem_size = axon_dtype_size((uint8_t)dtype);
+    return malloc((size_t)total * elem_size);
 }
 
 void axon_tensor_free(void* tensor) {
@@ -218,7 +251,7 @@ void axon_print_str(const char* ptr, int64_t len) {
 }
 
 void axon_print_bool(int8_t value) {
-    printf("%s", value ? "true" : "false");
+    printf("%s", (value & 1) ? "true" : "false");
     fflush(stdout);
 }
 
@@ -245,6 +278,30 @@ void axon_print_f32(float value) {
     printf("%g", value);
     fflush(stdout);
 }
+
+// ── Reference Counting ──────────────────────────────────────
+// Refcount is stored as an int64_t in the 8 bytes preceding
+// the user-visible pointer (allocation header layout).
+
+void axon_rc_inc(void* ptr) {
+    if (!ptr) return;
+    int64_t* rc = ((int64_t*)ptr) - 1;
+    (*rc)++;
+}
+
+void axon_rc_dec(void* ptr) {
+    if (!ptr) return;
+    int64_t* rc = ((int64_t*)ptr) - 1;
+    if (--(*rc) <= 0) {
+        free(rc);  // free from header start
+    }
+}
+
+int64_t axon_rc_count(void* ptr) {
+    if (!ptr) return 0;
+    int64_t* rc = ((int64_t*)ptr) - 1;
+    return *rc;
+}
 "#.to_string()
 }
 
@@ -254,7 +311,7 @@ mod tests {
 
     #[test]
     fn runtime_functions_count() {
-        assert_eq!(RUNTIME_FUNCTIONS.len(), 15);
+        assert_eq!(RUNTIME_FUNCTIONS.len(), 18);
     }
 
     #[test]
@@ -295,6 +352,9 @@ mod tests {
         assert!(ir.contains("@axon_print_i32"));
         assert!(ir.contains("@axon_print_f32"));
         assert!(ir.contains("@axon_print_char"));
+        assert!(ir.contains("@axon_rc_inc"));
+        assert!(ir.contains("@axon_rc_dec"));
+        assert!(ir.contains("@axon_rc_count"));
     }
 
     #[test]
@@ -331,5 +391,30 @@ mod tests {
         assert!(src.contains("void axon_print_i32("));
         assert!(src.contains("void axon_print_f32("));
         assert!(src.contains("void axon_print_char("));
+        assert!(src.contains("void axon_rc_inc("));
+        assert!(src.contains("void axon_rc_dec("));
+        assert!(src.contains("int64_t axon_rc_count("));
+    }
+
+    #[test]
+    fn generate_c_source_contains_dtype_size() {
+        let src = generate_runtime_c_source();
+        // Verify axon_dtype_size function exists with proper dtype handling
+        assert!(src.contains("size_t axon_dtype_size(uint8_t dtype)"), "missing axon_dtype_size function");
+        assert!(src.contains("sizeof(float)"), "missing f32 dtype size");
+        assert!(src.contains("sizeof(double)"), "missing f64 dtype size");
+        assert!(src.contains("sizeof(int32_t)"), "missing i32 dtype size");
+        assert!(src.contains("sizeof(int64_t)"), "missing i64 dtype size");
+        assert!(src.contains("sizeof(uint8_t)"), "missing bool/u8 dtype size");
+        // Verify tensor_alloc uses axon_dtype_size
+        assert!(src.contains("axon_dtype_size"), "tensor_alloc should use axon_dtype_size");
+    }
+
+    #[test]
+    fn generate_c_source_panic_uses_location() {
+        let src = generate_runtime_c_source();
+        // Verify axon_panic uses file and line parameters (not hardcoded)
+        assert!(src.contains("void axon_panic(const char* msg, const char* file, int32_t line)"));
+        assert!(src.contains("file, line, msg"), "axon_panic should use file and line parameters");
     }
 }

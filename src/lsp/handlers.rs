@@ -23,6 +23,9 @@ impl LspServer {
                 definition_provider: true,
                 document_formatting_provider: true,
                 document_symbol_provider: true,
+                signature_help_provider: Some(SignatureHelpOptions {
+                    trigger_characters: vec!["(".to_string(), ",".to_string()],
+                }),
             },
             server_info: Some(ServerInfo {
                 name: "axon-lsp".to_string(),
@@ -462,6 +465,104 @@ impl LspServer {
                 }])
             }
             Err(_) => None,
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Signature Help
+    // ═══════════════════════════════════════════════════════════
+
+    pub fn handle_signature_help(&mut self, id: serde_json::Value, params: serde_json::Value) {
+        if let Ok(p) = serde_json::from_value::<TextDocumentPositionParams>(params) {
+            let result = self.get_signature_help(&p.text_document.uri, p.position);
+            match result {
+                Some(help) => self.send_response(id, serde_json::to_value(help).unwrap()),
+                None => self.send_response(id, serde_json::json!(null)),
+            }
+        } else {
+            self.send_response(id, serde_json::json!(null));
+        }
+    }
+
+    fn get_signature_help(&self, uri: &str, position: Position) -> Option<SignatureHelp> {
+        let doc = self.documents.get(uri)?;
+        let line = doc.text.lines().nth(position.line as usize)?;
+        let col = position.character as usize;
+        let prefix = if col <= line.len() { &line[..col] } else { line };
+
+        // Walk backwards from cursor to find the function name before the '('
+        // Count commas to determine active parameter
+        let mut paren_depth: i32 = 0;
+        let mut comma_count: u32 = 0;
+        let mut fn_call_start: Option<usize> = None;
+
+        for (i, ch) in prefix.char_indices().rev() {
+            match ch {
+                ')' => paren_depth += 1,
+                '(' => {
+                    if paren_depth == 0 {
+                        fn_call_start = Some(i);
+                        break;
+                    }
+                    paren_depth -= 1;
+                }
+                ',' if paren_depth == 0 => comma_count += 1,
+                _ => {}
+            }
+        }
+
+        let open_paren_pos = fn_call_start?;
+        // Extract the function name: scan backwards from '(' to find the identifier
+        let before_paren = prefix[..open_paren_pos].trim_end();
+        let fn_name: String = before_paren
+            .chars()
+            .rev()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect();
+
+        if fn_name.is_empty() {
+            return None;
+        }
+
+        // Look up the function in the type checker's symbol table
+        let filename = uri_to_filename(uri);
+        let (checker, _errors) = crate::typeck::check(&doc.text, &filename);
+
+        let sym_id = checker.symbols.lookup(&fn_name)?;
+        let sym = checker.symbols.get_symbol(sym_id);
+        let ty = checker.interner.resolve(sym.ty);
+
+        if let crate::types::Type::Function { params, ret } = ty {
+            let ret_display = format!("{}", checker.interner.resolve(*ret));
+            let param_infos: Vec<ParameterInformation> = params
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let type_name = format!("{}", checker.interner.resolve(*p));
+                    ParameterInformation {
+                        label: format!("arg{}: {}", i, type_name),
+                        documentation: None,
+                    }
+                })
+                .collect();
+
+            let param_labels: Vec<String> = param_infos.iter().map(|p| p.label.clone()).collect();
+            let label = format!("fn {}({}) -> {}", fn_name, param_labels.join(", "), ret_display);
+
+            Some(SignatureHelp {
+                signatures: vec![SignatureInformation {
+                    label,
+                    documentation: None,
+                    parameters: Some(param_infos),
+                }],
+                active_signature: Some(0),
+                active_parameter: Some(comma_count),
+            })
+        } else {
+            None
         }
     }
 }

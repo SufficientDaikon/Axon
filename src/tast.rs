@@ -363,6 +363,12 @@ impl<'a> TastBuilder<'a> {
             }
             TypedExprKind::UnaryOp { operand, .. } => operand.ty,
             TypedExprKind::FnCall { function, .. } => {
+                // Special case: print/println always return Unit
+                if let TypedExprKind::Identifier(name) = &function.kind {
+                    if name == "print" || name == "println" {
+                        return TypeId::UNIT;
+                    }
+                }
                 let fn_ty = function.ty;
                 let resolved = self.checker.interner.resolve(fn_ty);
                 if let Type::Function { ret, .. } = resolved {

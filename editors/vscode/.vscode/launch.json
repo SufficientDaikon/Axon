@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Axon: Run Current File",
+      "type": "axon",
+      "request": "launch",
+      "program": "${file}",
+      "comment": "Run the current Axon file (requires axonc in PATH)"
+    },
+    {
+      "name": "Axon: Debug Current File (LLVM)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${fileDirname}/${fileBasenameNoExtension}",
+      "preLaunchTask": "axon: build with debug info",
+      "comment": "Build with --emit-llvm and debug via LLDB. Requires CodeLLDB extension."
+    },
+    {
+      "name": "Axon: Check Current File",
+      "type": "axon",
+      "request": "launch",
+      "program": "${file}",
+      "args": ["check"],
+      "comment": "Type-check the current file without building"
+    }
+  ]
+}

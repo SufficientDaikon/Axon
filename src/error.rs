@@ -47,6 +47,11 @@ impl CompileError {
         self
     }
 
+    pub fn with_severity(mut self, severity: Severity) -> Self {
+        self.severity = severity;
+        self
+    }
+
     /// Format for human-readable display.
     pub fn format_human(&self) -> String {
         let mut out = String::new();

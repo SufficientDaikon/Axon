@@ -84,6 +84,14 @@ pub struct ServerCapabilities {
     pub definition_provider: bool,
     pub document_formatting_provider: bool,
     pub document_symbol_provider: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature_help_provider: Option<SignatureHelpOptions>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SignatureHelpOptions {
+    pub trigger_characters: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -294,6 +302,38 @@ pub struct FormattingOptions {
 pub struct TextEdit {
     pub range: Range,
     pub new_text: String,
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Signature Help
+// ═══════════════════════════════════════════════════════════════
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SignatureHelp {
+    pub signatures: Vec<SignatureInformation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_signature: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_parameter: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SignatureInformation {
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub documentation: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<Vec<ParameterInformation>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParameterInformation {
+    pub label: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub documentation: Option<String>,
 }
 
 // ═══════════════════════════════════════════════════════════════

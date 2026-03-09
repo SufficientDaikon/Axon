@@ -93,13 +93,14 @@ impl Formatter {
     }
 
     fn format_attribute(&mut self, attr: &Attribute) {
+        // Axon uses @-prefixed device annotations (not #[...] Rust-style attributes).
         match attr {
-            Attribute::Cpu => self.write("#[cpu]"),
-            Attribute::Gpu => self.write("#[gpu]"),
+            Attribute::Cpu => self.write("@cpu"),
+            Attribute::Gpu => self.write("@gpu"),
             Attribute::Device(expr) => {
-                self.write("#[device(");
+                self.write("@device(");
                 self.format_expr(expr);
-                self.write(")]");
+                self.write(")");
             }
         }
     }

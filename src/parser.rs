@@ -202,6 +202,18 @@ impl Parser {
             }
         }
 
+        // Dedup: remove consecutive errors with the same message and line number.
+        // Error recovery can sometimes report the same issue multiple times.
+        self.errors.dedup_by(|b, a| {
+            let same_msg = a.message == b.message;
+            let same_line = match (&a.location, &b.location) {
+                (Some(loc_a), Some(loc_b)) => loc_a.start.line == loc_b.start.line,
+                (None, None) => true,
+                _ => false,
+            };
+            same_msg && same_line
+        });
+
         let end = self.current_span();
         Program {
             items,

@@ -1,0 +1,10 @@
+// Test: multiple println calls, each on separate lines
+// expect: 1
+// expect: 2
+// expect: 3
+
+fn main() {
+    println(1);
+    println(2);
+    println(3);
+}

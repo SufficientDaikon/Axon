@@ -1,0 +1,6 @@
+// Test: println(true) should output "true\n"
+// expect: true
+
+fn main() {
+    println(true);
+}

@@ -17,7 +17,7 @@ fn full_pipeline(source: &str) -> String {
         &checker.interner,
         axonc::codegen::llvm::OptLevel::O0,
     );
-    codegen.generate(&mir)
+    codegen.generate(&mir).expect("generate() failed — no main function?")
 }
 
 /// Run source through to MIR and return it as string.
@@ -194,7 +194,7 @@ fn test_while_loop_ir() {
 #[test]
 fn test_comparison_ops() {
     let ir = full_pipeline(
-        "fn test_cmp(a: Int64) -> Bool { return a < 10; }",
+        "fn test_cmp(a: Int64) -> Bool { return a < 10; }\nfn main() { let r: Bool = test_cmp(5); }",
     );
     assert!(
         ir.contains("icmp"),
@@ -206,7 +206,7 @@ fn test_comparison_ops() {
 #[test]
 fn test_logical_and() {
     let ir = full_pipeline(
-        "fn test_and(a: Bool, b: Bool) -> Bool { return a && b; }",
+        "fn test_and(a: Bool, b: Bool) -> Bool { return a && b; }\nfn main() { let r: Bool = test_and(true, false); }",
     );
     assert!(
         ir.contains("and") || ir.contains("br"),
@@ -218,7 +218,7 @@ fn test_logical_and() {
 #[test]
 fn test_logical_or() {
     let ir = full_pipeline(
-        "fn test_or(a: Bool, b: Bool) -> Bool { return a || b; }",
+        "fn test_or(a: Bool, b: Bool) -> Bool { return a || b; }\nfn main() { let r: Bool = test_or(true, false); }",
     );
     assert!(
         ir.contains("or") || ir.contains("br"),
@@ -230,7 +230,7 @@ fn test_logical_or() {
 #[test]
 fn test_negation() {
     let ir = full_pipeline(
-        "fn test_neg(x: Int64) -> Int64 { return -x; }",
+        "fn test_neg(x: Int64) -> Int64 { return -x; }\nfn main() { let r: Int64 = test_neg(5); }",
     );
     assert!(
         ir.contains("sub") || ir.contains("neg"),
@@ -242,7 +242,7 @@ fn test_negation() {
 #[test]
 fn test_boolean_not() {
     let ir = full_pipeline(
-        "fn test_not(a: Bool) -> Bool { return !a; }",
+        "fn test_not(a: Bool) -> Bool { return !a; }\nfn main() { let r: Bool = test_not(true); }",
     );
     assert!(
         ir.contains("xor") || ir.contains("icmp"),
@@ -256,7 +256,7 @@ fn test_nested_if() {
     let ir = full_pipeline(
         "fn test_nested(x: Bool, y: Bool) -> Int64 { \
          if x { if y { return 1; } else { return 2; } } \
-         else { return 3; } }",
+         else { return 3; } }\nfn main() { let r: Int64 = test_nested(true, false); }",
     );
     // Nested if-else should generate several basic blocks
     let define_count = ir.matches("br ").count();
@@ -291,7 +291,7 @@ fn test_multiple_functions() {
 #[test]
 fn test_function_params() {
     let ir = full_pipeline(
-        "fn sum(a: Int64, b: Int64) -> Int64 { return a + b; }",
+        "fn sum(a: Int64, b: Int64) -> Int64 { return a + b; }\nfn main() { let r: Int64 = sum(1, 2); }",
     );
     assert!(
         ir.contains("%arg0") && ir.contains("%arg1"),
@@ -307,7 +307,7 @@ fn test_function_params() {
 
 #[test]
 fn test_void_function() {
-    let ir = full_pipeline("fn greet() { }");
+    let ir = full_pipeline("fn greet() { }\nfn main() { greet(); }");
     assert!(
         ir.contains("ret void") || ir.contains("ret "),
         "IR should contain ret for void function: {}",
@@ -331,7 +331,7 @@ fn test_function_call_ir() {
 #[test]
 fn test_multiple_params() {
     let ir = full_pipeline(
-        "fn triple(a: Int64, b: Float64, c: Bool) -> Int64 { return a; }",
+        "fn triple(a: Int64, b: Float64, c: Bool) -> Int64 { return a; }\nfn main() { let r: Int64 = triple(1, 2.0, true); }",
     );
     assert!(ir.contains("%arg0"), "IR should contain first param: {}", ir);
     assert!(ir.contains("%arg1"), "IR should contain second param: {}", ir);
@@ -351,7 +351,7 @@ fn test_function_with_locals() {
          let a: Int64 = 1; \
          let b: Int64 = 2; \
          let c: Int64 = 3; \
-         return a + b + c; }",
+         return a + b + c; }\nfn main() { let r: Int64 = compute(); }",
     );
     let alloca_count = ir.matches("alloca").count();
     assert!(
@@ -565,7 +565,7 @@ fn test_runtime_c_source() {
 #[test]
 fn test_runtime_function_count() {
     let count = axonc::codegen::runtime::RUNTIME_FUNCTIONS.len();
-    assert_eq!(count, 15, "RUNTIME_FUNCTIONS should have 15 entries, got {}", count);
+    assert_eq!(count, 18, "RUNTIME_FUNCTIONS should have 18 entries, got {}", count);
 }
 
 #[test]

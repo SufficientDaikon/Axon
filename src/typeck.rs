@@ -1,6 +1,6 @@
 // typeck.rs — Type checking and inference (Phase 3c)
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::*;
 use crate::error::CompileError;
@@ -66,6 +66,11 @@ impl TypeChecker {
     }
 
     // ── Unification (Robinson's algorithm) ─────────────────────
+
+    // NOTE: The current type inference system uses Hindley-Milner style unification
+    // but does NOT implement let-polymorphism (generalization at let-bindings).
+    // This means `let id = fn(x) { x }` does not get a polymorphic type scheme.
+    // This is a known limitation — full let-polymorphism is planned for v1.1.
 
     fn unify(&mut self, a: TypeId, b: TypeId, span: &Span) -> Result<TypeId, CompileError> {
         let a = self.resolve_type(a);
@@ -480,6 +485,10 @@ impl TypeChecker {
         }
     }
 
+    // NOTE: Trait resolution uses a flat symbol table lookup. There is no
+    // coherence checking (orphan rules) or specialization support yet.
+    // Full trait coherence checking is planned for v1.1.
+
     fn check_impl(&mut self, block: &ImplBlock) {
         self.symbols.push_scope(ScopeKind::Impl);
         for item in &block.items {
@@ -800,6 +809,24 @@ impl TypeChecker {
     }
 
     fn check_fn_call(&mut self, func: &Expr, args: &[Expr], span: &Span) -> TypeId {
+        // ── Special case: print/println accept any single printable argument ──
+        if let ExprKind::Identifier(name) = &func.kind {
+            if name == "print" || name == "println" {
+                if args.len() != 1 {
+                    self.errors.push(CompileError::new(
+                        "E2003",
+                        format!("{} expects 1 argument, found {}", name, args.len()),
+                        span.clone(),
+                    ));
+                    return TypeId::ERROR;
+                }
+                // Type-check the argument (to catch errors in the arg expression)
+                // but accept any concrete type — MIR will dispatch to the right runtime fn.
+                let _arg_ty = self.check_expr(&args[0]);
+                return TypeId::UNIT;
+            }
+        }
+
         let func_ty = self.check_expr(func);
         if func_ty == TypeId::ERROR {
             return TypeId::ERROR;
@@ -1002,7 +1029,113 @@ impl TypeChecker {
             }
         }
 
+        // Check exhaustiveness of the match arms
+        self.check_match_exhaustiveness(scrutinee_ty, arms, span);
+
         result_ty.unwrap_or(TypeId::UNIT)
+    }
+
+    /// Check whether the arms of a match expression are exhaustive.
+    ///
+    /// Emits warning W1001 if the match is not exhaustive. Rules:
+    /// - Enum types: all variants must be covered, or a wildcard `_` must be present.
+    /// - Bool: both `true` and `false` must be covered, or a wildcard.
+    /// - Integer/String/other: a wildcard `_` arm is required.
+    fn check_match_exhaustiveness(
+        &mut self,
+        scrutinee_ty: TypeId,
+        arms: &[MatchArm],
+        span: &Span,
+    ) {
+        // If any arm has a wildcard or identifier pattern (which binds anything), it's exhaustive
+        if self.has_catch_all_pattern(arms) {
+            return;
+        }
+
+        let resolved = self.interner.resolve(self.resolve_type(scrutinee_ty)).clone();
+
+        match resolved {
+            Type::Enum { ref variants, .. } => {
+                // Collect variant names covered by enum variant patterns
+                let covered: HashSet<String> = arms
+                    .iter()
+                    .filter_map(|arm| {
+                        if let PatternKind::EnumVariant { path, .. } = &arm.pattern.kind {
+                            path.last().cloned()
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                let all_variants: Vec<&str> = variants.iter().map(|(name, _)| name.as_str()).collect();
+                let missing: Vec<&str> = all_variants
+                    .iter()
+                    .filter(|v| !covered.contains(**v))
+                    .copied()
+                    .collect();
+
+                if !missing.is_empty() {
+                    self.emit_exhaustiveness_warning(span, &missing);
+                }
+            }
+            Type::Primitive(PrimKind::Bool) => {
+                let mut has_true = false;
+                let mut has_false = false;
+                for arm in arms {
+                    if let PatternKind::Literal(Literal::Bool(true)) = &arm.pattern.kind {
+                        has_true = true;
+                    }
+                    if let PatternKind::Literal(Literal::Bool(false)) = &arm.pattern.kind {
+                        has_false = true;
+                    }
+                }
+                if !has_true || !has_false {
+                    let missing: Vec<&str> = [
+                        if !has_true { Some("true") } else { None },
+                        if !has_false { Some("false") } else { None },
+                    ]
+                    .iter()
+                    .filter_map(|v| *v)
+                    .collect();
+                    self.emit_exhaustiveness_warning(span, &missing);
+                }
+            }
+            _ => {
+                // For integers, strings, floats, etc. — require a wildcard arm
+                self.emit_exhaustiveness_warning(span, &[]);
+            }
+        }
+    }
+
+    /// Returns true if any arm has a catch-all pattern (wildcard `_` or identifier binding).
+    fn has_catch_all_pattern(&self, arms: &[MatchArm]) -> bool {
+        arms.iter().any(|arm| {
+            matches!(
+                &arm.pattern.kind,
+                PatternKind::Wildcard | PatternKind::Identifier(_)
+            )
+        })
+    }
+
+    /// Emit the W1001 non-exhaustive match warning.
+    fn emit_exhaustiveness_warning(&mut self, span: &Span, missing: &[&str]) {
+        let mut warning = CompileError::new(
+            "W1001",
+            "non-exhaustive match — add a wildcard `_` arm",
+            span.clone(),
+        )
+        .with_severity(crate::error::Severity::Warning)
+        .with_suggestion("add a `_ => ...` arm to handle remaining cases");
+
+        if !missing.is_empty() {
+            warning = warning.with_note(format!(
+                "missing coverage for: {}",
+                missing.join(", ")
+            ));
+        }
+
+        self.errors.push(warning);
     }
 
     fn check_field_access(&mut self, object: &Expr, field: &str, span: &Span) -> TypeId {
@@ -1793,6 +1926,103 @@ mod tests {
     #[test]
     fn tuple_type_check() {
         let src = "fn test() -> (Int64, Bool) { return (42, true); }";
+        check_ok(src);
+    }
+
+    // ── 26. print/println builtin type checking ────────────────
+
+    #[test]
+    fn print_int64_typechecks() {
+        let src = "fn main() { print(42); }";
+        check_ok(src);
+    }
+
+    #[test]
+    fn println_bool_typechecks() {
+        let src = "fn main() { println(true); }";
+        check_ok(src);
+    }
+
+    #[test]
+    fn print_float64_typechecks() {
+        let src = "fn main() { print(3.14); }";
+        check_ok(src);
+    }
+
+    #[test]
+    fn print_string_typechecks() {
+        let src = r#"fn main() { print("hello"); }"#;
+        check_ok(src);
+    }
+
+    #[test]
+    fn print_variable_typechecks() {
+        let src = "fn main() { let x: Int64 = 10; print(x); }";
+        check_ok(src);
+    }
+
+    #[test]
+    fn print_no_args_is_error() {
+        let src = "fn main() { print(); }";
+        check_has_error_code(src, "E2003");
+    }
+
+    #[test]
+    fn print_two_args_is_error() {
+        let src = "fn main() { print(1, 2); }";
+        check_has_error_code(src, "E2003");
+    }
+
+    // ── Match exhaustiveness tests ────────────────────────────────
+
+    #[test]
+    fn match_exhaustive_with_wildcard_no_warning() {
+        let src = "fn test(x: Int64) -> Int64 { return match x { 1 => 10, _ => 0, }; }";
+        check_ok(src);
+    }
+
+    #[test]
+    fn match_non_exhaustive_int_emits_warning() {
+        let src = "fn test(x: Int64) -> Int64 { return match x { 1 => 10, 2 => 20, }; }";
+        let (_, errors) = check(src, "test.axon");
+        assert!(
+            errors.iter().any(|e| e.error_code == "W1001"),
+            "expected W1001 exhaustiveness warning, got: {:?}",
+            errors.iter().map(|e| format!("{}: {}", e.error_code, e.message)).collect::<Vec<_>>()
+        );
+        // Ensure it's a warning, not an error
+        let w = errors.iter().find(|e| e.error_code == "W1001").unwrap();
+        assert_eq!(w.severity, crate::error::Severity::Warning);
+    }
+
+    #[test]
+    fn match_bool_non_exhaustive_emits_warning() {
+        let src = "fn test(x: Bool) -> Int64 { return match x { true => 1, }; }";
+        let (_, errors) = check(src, "test.axon");
+        assert!(
+            errors.iter().any(|e| e.error_code == "W1001"),
+            "expected W1001 for non-exhaustive bool match, got: {:?}",
+            errors.iter().map(|e| format!("{}: {}", e.error_code, e.message)).collect::<Vec<_>>()
+        );
+        // Should mention "false" in the note
+        let w = errors.iter().find(|e| e.error_code == "W1001").unwrap();
+        assert!(
+            w.notes.iter().any(|n| n.contains("false")),
+            "expected note mentioning 'false', got: {:?}",
+            w.notes
+        );
+    }
+
+    #[test]
+    fn match_bool_exhaustive_no_warning() {
+        let src = "fn test(x: Bool) -> Int64 { return match x { true => 1, false => 0, }; }";
+        check_ok(src);
+    }
+
+    #[test]
+    fn match_identifier_pattern_is_catch_all() {
+        // An identifier pattern like `y` binds anything, so it's a catch-all
+        let src = "fn test(x: Int64) -> Int64 { return match x { 1 => 10, y => y, }; }";
         check_ok(src);
     }
 }

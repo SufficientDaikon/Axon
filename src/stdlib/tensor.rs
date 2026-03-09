@@ -14,6 +14,7 @@ pub fn register_tensor(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     register_reductions(interner, symbols, tensor_ty);
     register_element_math(interner, symbols, tensor_ty);
     register_linalg(interner, symbols, tensor_ty);
+    register_comparison_and_conversion(interner, symbols, tensor_ty);
     register_device_ops(interner, symbols, tensor_ty);
 }
 
@@ -142,6 +143,36 @@ fn register_linalg(interner: &mut TypeInterner, symbols: &mut SymbolTable, tenso
     def_method(symbols, interner, "Tensor", "trace", vec![tensor_ty], TypeId::FLOAT64);
 }
 
+// -- Comparison & scalar extraction ------------------------------------------
+
+fn register_comparison_and_conversion(
+    interner: &mut TypeInterner,
+    symbols: &mut SymbolTable,
+    tensor_ty: TypeId,
+) {
+    // item(self) -> Float64  — extract scalar from single-element tensor
+    def_method(symbols, interner, "Tensor", "item", vec![tensor_ty], TypeId::FLOAT64);
+
+    // to_vec(self) -> Vec<Float64>  — convert tensor to flat vector
+    let vec_ty = TypeId::UNIT; // Vec<Float64> approximated as UNIT (consistent with stdlib)
+    def_method(symbols, interner, "Tensor", "to_vec", vec![tensor_ty], vec_ty);
+
+    // eq(self, other: Tensor) -> Tensor  — element-wise equality
+    def_method(symbols, interner, "Tensor", "eq", vec![tensor_ty, tensor_ty], tensor_ty);
+
+    // lt(self, other: Tensor) -> Tensor  — element-wise less-than
+    def_method(symbols, interner, "Tensor", "lt", vec![tensor_ty, tensor_ty], tensor_ty);
+
+    // gt(self, other: Tensor) -> Tensor  — element-wise greater-than
+    def_method(symbols, interner, "Tensor", "gt", vec![tensor_ty, tensor_ty], tensor_ty);
+
+    // sum_dim(self, dim: Int64) -> Tensor  — sum along a specific dimension
+    def_method(symbols, interner, "Tensor", "sum_dim", vec![tensor_ty, TypeId::INT64], tensor_ty);
+
+    // mean_dim(self, dim: Int64) -> Tensor  — mean along a specific dimension
+    def_method(symbols, interner, "Tensor", "mean_dim", vec![tensor_ty, TypeId::INT64], tensor_ty);
+}
+
 // -- Device operations --------------------------------------------------------
 
 fn register_device_ops(
@@ -217,5 +248,22 @@ mod tests {
         register_tensor(&mut i, &mut s);
         assert!(s.lookup("Tensor::to_cpu").is_some());
         assert!(s.lookup("Tensor::to_gpu").is_some());
+    }
+
+    #[test]
+    fn tensor_comparison_and_conversion_methods() {
+        let (mut i, mut s) = fresh();
+        register_tensor(&mut i, &mut s);
+        for method in &[
+            "Tensor::item",
+            "Tensor::to_vec",
+            "Tensor::eq",
+            "Tensor::lt",
+            "Tensor::gt",
+            "Tensor::sum_dim",
+            "Tensor::mean_dim",
+        ] {
+            assert!(s.lookup(method).is_some(), "{} should be registered", method);
+        }
     }
 }

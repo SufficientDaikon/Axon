@@ -93,8 +93,11 @@ impl Repl {
             return ReplResult::Definition(name);
         }
 
-        // Expression: wrap in a function and type-check
-        self.format_type(trimmed)
+        // Expression: wrap in a synthetic function, type-check, and report the type.
+        // NOTE: JIT evaluation is deferred to Phase 12. For now, this is a
+        // type-evaluation REPL — we show the type of the expression rather than
+        // its runtime value, which is still useful for exploring the type system.
+        self.eval_expression(trimmed)
     }
 
     fn handle_command(&mut self, cmd: &str) -> ReplResult {
@@ -117,7 +120,7 @@ impl Repl {
                 if arg.is_empty() {
                     return ReplResult::Error("usage: :type <expr>".to_string());
                 }
-                self.format_type(arg)
+                self.eval_expression(arg)
             }
             ":ast" => {
                 if arg.is_empty() {
@@ -158,6 +161,12 @@ impl Repl {
                     Err(e) => ReplResult::Error(format!("could not read '{}': {}", arg, e)),
                 }
             }
+            ":save" | ":s" => {
+                if arg.is_empty() {
+                    return ReplResult::Error("usage: :save <filename>".to_string());
+                }
+                self.save_history(arg)
+            }
             _ => ReplResult::Error(format!("unknown command: {}", command)),
         }
     }
@@ -175,23 +184,61 @@ impl Repl {
         source
     }
 
-    fn format_type(&self, expr: &str) -> ReplResult {
+    /// Evaluate an expression by wrapping it in a synthetic function,
+    /// type-checking, and extracting the inferred type.
+    fn eval_expression(&self, expr: &str) -> ReplResult {
         let source = self.wrap_expression(expr);
-        let (_, errors) = crate::parse_source(&source, "<repl>");
-        if !errors.is_empty() {
+        let (_, parse_errors) = crate::parse_source(&source, "<repl>");
+        if !parse_errors.is_empty() {
             return ReplResult::Error(
-                errors.iter().map(|e| e.format_human()).collect::<String>()
+                parse_errors.iter().map(|e| e.format_human()).collect::<String>()
             );
         }
 
-        // Type check
-        let (_typed, check_errors) = crate::check_source(&source, "<repl>");
+        // Type check the wrapped source to infer the expression's type
+        let (checker, check_errors) = crate::typeck::check(&source, "<repl>");
+
+        // Look up the synthetic __repl_eval__ function to get its resolved type
+        if let Some(sym_id) = checker.symbols.lookup("__repl_eval__") {
+            let sym = checker.symbols.get_symbol(sym_id);
+            let fn_ty = checker.interner.resolve(sym.ty);
+            if let crate::types::Type::Function { ret, .. } = fn_ty {
+                let ret_display = format!("{}", checker.interner.resolve(*ret));
+                // Only report type errors if they are real errors (not just warnings)
+                let has_hard_errors = check_errors.iter().any(|e| {
+                    e.severity == crate::error::Severity::Error
+                });
+                if has_hard_errors {
+                    // Still try to show the type, with a warning note
+                    return ReplResult::Value(format!("{} : {} (type check had errors)", expr, ret_display));
+                }
+                return ReplResult::Value(format!("{} : {}", expr, ret_display));
+            }
+        }
+
+        // Fallback: if we couldn't resolve the function, report based on errors
         if !check_errors.is_empty() {
-            // Still report the expression even with type errors (best effort)
-            return ReplResult::Value(format!("{} (type check had warnings)", expr));
+            let has_hard_errors = check_errors.iter().any(|e| {
+                e.severity == crate::error::Severity::Error
+            });
+            if has_hard_errors {
+                return ReplResult::Value(format!("{} (type check had errors)", expr));
+            }
         }
 
         ReplResult::Value(format!("{} : (type inferred)", expr))
+    }
+
+    /// Save the REPL history to a file.
+    fn save_history(&self, filename: &str) -> ReplResult {
+        let content = self.history.join("\n");
+        match std::fs::write(filename, content + "\n") {
+            Ok(_) => {
+                println!("Saved {} line(s) to {}", self.history.len(), filename);
+                ReplResult::Command
+            }
+            Err(e) => ReplResult::Error(format!("could not write '{}': {}", filename, e)),
+        }
     }
 
     fn print_help(&self) {
@@ -201,9 +248,12 @@ impl Repl {
         println!("  :ast <code>     Show the parsed AST of code");
         println!("  :clear          Clear all accumulated bindings");
         println!("  :load <file>    Load and evaluate an Axon source file");
+        println!("  :save <file>    Save REPL history to a file");
         println!("  :quit, :q       Exit the REPL");
         println!();
         println!("Enter expressions, let bindings, or function definitions.");
+        println!("Expressions display their inferred type (e.g. `1 + 2` → `1 + 2 : Int64`).");
+        // NOTE: JIT evaluation is deferred to Phase 12.
     }
 }
 
@@ -235,7 +285,21 @@ mod tests {
         let mut repl = Repl::new();
         let result = repl.eval_line("1 + 2");
         match result {
-            ReplResult::Value(v) => assert!(v.contains("1 + 2")),
+            ReplResult::Value(v) => assert!(v.contains("1 + 2"), "got: {}", v),
+            other => panic!("expected Value, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_eval_expression_shows_type() {
+        let mut repl = Repl::new();
+        let result = repl.eval_line("1 + 2");
+        match result {
+            ReplResult::Value(v) => {
+                // Should contain the expression and a colon separator
+                assert!(v.contains("1 + 2"), "should echo expression, got: {}", v);
+                assert!(v.contains(":"), "should contain type separator, got: {}", v);
+            }
             other => panic!("expected Value, got {:?}", other),
         }
     }
@@ -294,6 +358,34 @@ mod tests {
         let result = repl.eval_line(":foobar");
         match result {
             ReplResult::Error(e) => assert!(e.contains("unknown command")),
+            other => panic!("expected Error, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_command_save() {
+        let mut repl = Repl::new();
+        repl.history.push("let x: Int32 = 1;".to_string());
+        repl.history.push("x + 2".to_string());
+
+        let tmp = std::env::temp_dir().join("axon_repl_test.axon");
+        let result = repl.eval_line(&format!(":save {}", tmp.display()));
+        assert_eq!(result, ReplResult::Command);
+
+        let content = std::fs::read_to_string(&tmp).unwrap();
+        assert!(content.contains("let x: Int32 = 1;"));
+        assert!(content.contains("x + 2"));
+
+        // Cleanup
+        let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn test_command_save_no_arg() {
+        let mut repl = Repl::new();
+        let result = repl.eval_line(":save");
+        match result {
+            ReplResult::Error(e) => assert!(e.contains("usage")),
             other => panic!("expected Error, got {:?}", other),
         }
     }

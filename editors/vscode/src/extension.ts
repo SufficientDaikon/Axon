@@ -47,6 +47,13 @@ export function activate(context: vscode.ExtensionContext) {
       context.subscriptions,
     );
   }
+
+  // TODO: Code Lens support — planned for a future release.
+  // When implemented, this will show inline "Run | Debug | Test" actions
+  // above fn main(), #[test] functions, and benchmark functions.
+  // Implementation will use vscode.languages.registerCodeLensProvider()
+  // with the Axon LSP server providing code lens data via
+  // textDocument/codeLens requests.
 }
 
 export function deactivate(): Thenable<void> | undefined {
