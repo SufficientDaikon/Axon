@@ -155,10 +155,54 @@
 - [x] T107 Error message tests for all E-codes — `tests/type_tests.rs`
 - [x] T108 Edge case tests (recursive types, complex generics) — `tests/type_tests.rs`
 
+### Phase 4a: MIR
+
+- [x] T109 Define MIR data structures (BasicBlock, Terminator, Rvalue) — `src/mir.rs`
+- [x] T110 Lower TAST → MIR: expressions and statements — `src/mir.rs`
+- [x] T111 Lower TAST → MIR: control flow (if, match, loops) — `src/mir.rs`
+- [x] T112 Lower TAST → MIR: drop insertion — `src/mir.rs`
+- [x] T113 Lower TAST → MIR: tensor operations — `src/mir.rs`
+
+### Phase 4b: LLVM Backend
+
+- [x] T114 Set up LLVM IR text emitter — `src/codegen/llvm.rs`
+- [x] T115 Implement type mapping (Axon → LLVM types) — `src/codegen/llvm.rs`
+- [x] T116 Implement function codegen (params, locals, return) — `src/codegen/llvm.rs`
+- [x] T117 Implement expression codegen (arithmetic, calls, field access) — `src/codegen/llvm.rs`
+- [x] T118 Implement control flow codegen (branches, switches) — `src/codegen/llvm.rs`
+- [x] T119 Implement optimization pipeline (-O0 through -O3) — `src/codegen/llvm.rs`
+- [x] T120 Implement debug info emission (DWARF) — `src/codegen/llvm.rs`
+- [x] T121 Implement native binary output (clang integration) — `src/codegen/llvm.rs`
+
+### Phase 4c: MLIR Backend
+
+- [x] T122 Set up MLIR module (stub) — `src/codegen/mlir.rs`
+- [x] T123 Define GpuTarget enum — `src/codegen/mlir.rs`
+- [x] T124 GPU function detection — `src/codegen/mlir.rs`
+- [x] T125 Placeholder compile_gpu with docs — `src/codegen/mlir.rs`
+- [x] T126 Architecture documentation — `src/codegen/mlir.rs`
+
+### Phase 4d: Runtime & ABI
+
+- [x] T127 Implement runtime library declarations — `src/codegen/runtime.rs`
+- [x] T128 Implement symbol mangling scheme — `src/codegen/abi.rs`
+- [x] T129 Implement FFI calling conventions — `src/codegen/abi.rs`
+- [x] T130 Generate C runtime source — `src/codegen/runtime.rs`
+
+### Phase 4e: CLI & Testing
+
+- [x] T131 CLI `axonc build` command with all flags — `src/main.rs`
+- [x] T132 Test: compile and run "hello world" — `tests/codegen_tests.rs`
+- [x] T133 Test: arithmetic operations produce correct IR — `tests/codegen_tests.rs`
+- [x] T134 Test: struct/enum layout and access — `tests/codegen_tests.rs`
+- [x] T135 Test: control flow IR generation — `tests/codegen_tests.rs`
+- [x] T136 Test: MIR generation tests — `tests/codegen_tests.rs`
+- [x] T137 Test: ABI mangling and runtime tests — `tests/codegen_tests.rs`
+
 ---
 
 ## Summary
 
-- **Total Tasks**: 108
-- **Completed**: 108
+- **Total Tasks**: 137
+- **Completed**: 137
 - **Remaining**: 0

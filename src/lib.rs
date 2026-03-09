@@ -12,6 +12,8 @@ pub mod typeck;
 pub mod shapes;
 pub mod borrow;
 pub mod tast;
+pub mod mir;
+pub mod codegen;
 
 /// Parse an Axon source fileand return the AST along with any errors.
 pub fn parse_source(source: &str, filename: &str) -> (ast::Program, Vec<error::CompileError>) {
