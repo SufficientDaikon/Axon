@@ -1,0 +1,7 @@
+fn main() {
+    let a: Int64 = 10;
+    let b: Int64 = 20;
+    let sum: Int64 = a + b;
+    let diff: Int64 = a - b;
+    let prod: Int64 = a * b;
+}

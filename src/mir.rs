@@ -241,6 +241,8 @@ pub struct MirBuilder<'a> {
     next_local: u32,
     next_block: u32,
     local_map: HashMap<String, LocalId>,
+    /// Maps source function names to their mangled/IR names.
+    function_map: HashMap<String, String>,
 }
 
 impl<'a> MirBuilder<'a> {
@@ -255,16 +257,53 @@ impl<'a> MirBuilder<'a> {
             next_local: 0,
             next_block: 0,
             local_map: HashMap::new(),
+            function_map: HashMap::new(),
         }
     }
 
     pub fn build(&mut self, program: &TypedProgram) -> MirProgram {
+        // First pass: collect all function names and build function_map
+        self.populate_function_map(program);
+
         for item in &program.items {
             self.lower_item(item);
         }
         MirProgram {
             functions: self.functions.clone(),
             statics: self.statics.clone(),
+        }
+    }
+
+    fn populate_function_map(&mut self, program: &TypedProgram) {
+        for item in &program.items {
+            self.collect_function_names(item);
+        }
+        // Built-in functions
+        self.function_map.insert("print".to_string(), "axon_print".to_string());
+        self.function_map.insert("println".to_string(), "axon_println".to_string());
+    }
+
+    fn collect_function_names(&mut self, item: &TypedItem) {
+        match &item.kind {
+            TypedItemKind::Function(decl) => {
+                let mangled = if decl.name == "main" {
+                    "_axon_main".to_string()
+                } else {
+                    decl.name.clone()
+                };
+                self.function_map.insert(decl.name.clone(), mangled);
+            }
+            TypedItemKind::Impl(impl_block) => {
+                for sub_item in &impl_block.items {
+                    self.collect_function_names(sub_item);
+                }
+            }
+            TypedItemKind::Trait(trait_decl) => {
+                for sub_item in &trait_decl.items {
+                    self.collect_function_names(sub_item);
+                }
+            }
+            _ => {}
         }
     }
 
@@ -319,6 +358,27 @@ impl<'a> MirBuilder<'a> {
 
     fn new_temp(&mut self, ty: TypeId) -> LocalId {
         self.new_local(None, ty, false)
+    }
+
+    /// Get the type of a MIR operand from the current function's locals.
+    fn operand_type(&self, operand: &Operand) -> TypeId {
+        match operand {
+            Operand::Place(place) => {
+                self.current_locals
+                    .iter()
+                    .find(|l| l.id == place.local)
+                    .map(|l| l.ty)
+                    .unwrap_or(TypeId::ERROR)
+            }
+            Operand::Constant(c) => match c {
+                MirConstant::Int(_) => TypeId::INT64,
+                MirConstant::Float(_) => TypeId::FLOAT64,
+                MirConstant::Bool(_) => TypeId::BOOL,
+                MirConstant::Char(_) => TypeId::CHAR,
+                MirConstant::String(_) => TypeId::STRING,
+                MirConstant::Unit => TypeId::UNIT,
+            },
+        }
     }
 
     fn lookup_local(&self, name: &str) -> Option<LocalId> {
@@ -401,7 +461,7 @@ impl<'a> MirBuilder<'a> {
 
         let mir_fn = MirFunction {
             name: decl.name.clone(),
-            mangled_name: decl.name.clone(),
+            mangled_name: self.function_map.get(&decl.name).cloned().unwrap_or_else(|| decl.name.clone()),
             params: param_locals,
             return_ty: decl.return_type,
             locals: self.current_locals.clone(),
@@ -760,7 +820,20 @@ impl<'a> MirBuilder<'a> {
     ) -> Operand {
         let left_op = self.lower_expr(left);
         let right_op = self.lower_expr(right);
-        let dest = self.new_temp(ty);
+
+        // If the TAST type is ERROR, infer from the operands
+        let effective_ty = if ty == TypeId::ERROR {
+            // For comparison ops, result is always Bool
+            match op {
+                BinOp::Eq | BinOp::NotEq | BinOp::Lt | BinOp::LtEq
+                | BinOp::Gt | BinOp::GtEq | BinOp::And | BinOp::Or => TypeId::BOOL,
+                _ => self.operand_type(&left_op),
+            }
+        } else {
+            ty
+        };
+
+        let dest = self.new_temp(effective_ty);
 
         // Check for tensor operations
         // MatMul (@) is always a tensor op; for other ops, check if the type is tensor
@@ -832,7 +905,12 @@ impl<'a> MirBuilder<'a> {
         ty: TypeId,
     ) -> Operand {
         let inner = self.lower_expr(operand);
-        let dest = self.new_temp(ty);
+        let effective_ty = if ty == TypeId::ERROR {
+            self.operand_type(&inner)
+        } else {
+            ty
+        };
+        let dest = self.new_temp(effective_ty);
         let mir_op = Self::ast_unaryop_to_mir(op);
         self.emit_stmt(MirStmt::Assign {
             place: Place {
@@ -857,7 +935,28 @@ impl<'a> MirBuilder<'a> {
         args: &[TypedExpr],
         ty: TypeId,
     ) -> Operand {
-        let func_op = self.lower_expr(func);
+        // Resolve function name through function_map if it's an identifier
+        let func_op = match &func.kind {
+            TypedExprKind::Identifier(name) => {
+                if let Some(mangled) = self.function_map.get(name) {
+                    Operand::Constant(MirConstant::String(mangled.clone()))
+                } else if self.lookup_local(name).is_some() {
+                    self.lower_expr(func)
+                } else {
+                    // Unknown function — emit name directly
+                    Operand::Constant(MirConstant::String(name.clone()))
+                }
+            }
+            TypedExprKind::Path(segments) => {
+                let name = segments.join("::");
+                if let Some(mangled) = self.function_map.get(&name) {
+                    Operand::Constant(MirConstant::String(mangled.clone()))
+                } else {
+                    Operand::Constant(MirConstant::String(name))
+                }
+            }
+            _ => self.lower_expr(func),
+        };
         let arg_ops: Vec<Operand> = args.iter().map(|a| self.lower_expr(a)).collect();
         let dest = self.new_temp(ty);
         let cont = self.new_block();

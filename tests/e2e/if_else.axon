@@ -1,0 +1,9 @@
+fn main() {
+    let x: Int64 = 42;
+    let mut y: Int64 = 0;
+    if x > 10 {
+        y = 1;
+    } else {
+        y = 2;
+    }
+}

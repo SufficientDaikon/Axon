@@ -19,5 +19,9 @@ name = "axonc"
 path = "src/lib.rs"
 
 [[test]]
+name = "e2e_tests"
+path = "tests/e2e_tests.rs"
+
+[[test]]
 name = "compiler_bench"
 path = "benches/compiler_bench.rs"

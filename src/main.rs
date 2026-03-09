@@ -114,6 +114,10 @@ enum Commands {
         #[arg(long, default_value = "none")]
         gpu: String,
 
+        /// Keep temporary build files
+        #[arg(long = "keep-temps")]
+        keep_temps: bool,
+
         /// Output error messages in JSON format
         #[arg(long = "error-format", value_parser = ["json", "human"])]
         error_format: Option<String>,
@@ -185,9 +189,9 @@ fn main() {
         Commands::Pkg { action } => {
             run_pkg(action);
         }
-        Commands::Build { file, output, opt_level, emit_llvm, emit_mir, emit_obj, gpu, error_format } => {
+        Commands::Build { file, output, opt_level, emit_llvm, emit_mir, emit_obj, gpu, keep_temps, error_format } => {
             let json_mode = error_format.as_deref() == Some("json");
-            run_build(&file, output.as_deref(), &opt_level, emit_llvm, emit_mir, emit_obj, &gpu, json_mode);
+            run_build(&file, output.as_deref(), &opt_level, emit_llvm, emit_mir, emit_obj, &gpu, json_mode, keep_temps);
         }
     }
 }
@@ -293,7 +297,7 @@ fn run_check(file: &str, json_errors: bool, emit_tast: bool) {
     }
 }
 
-fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: bool, emit_mir: bool, emit_obj: bool, gpu: &str, json_errors: bool) {
+fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: bool, emit_mir: bool, emit_obj: bool, gpu: &str, json_errors: bool, keep_temps: bool) {
     let source = match fs::read_to_string(file) {
         Ok(s) => s,
         Err(e) => {
@@ -386,7 +390,7 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
         output_path.to_string()
     };
 
-    match axonc::codegen::llvm::compile_ir_to_binary(&llvm_ir, &exe_output, opt_level) {
+    match axonc::codegen::llvm::compile_and_link(&llvm_ir, &exe_output, opt_level, keep_temps) {
         Ok(_) => println!("Compiled to {}", exe_output),
         Err(e) => {
             eprintln!("error: {}", e);

@@ -333,6 +333,17 @@ impl TypeInterner {
         id
     }
 
+    /// Find a primitive type's TypeId without mutating.
+    pub fn lookup_prim(&self, prim: PrimKind) -> Option<TypeId> {
+        let target = Type::Primitive(prim);
+        for (i, existing) in self.types.iter().enumerate() {
+            if *existing == target {
+                return Some(TypeId(i as u32));
+            }
+        }
+        None
+    }
+
     pub fn resolve(&self, id: TypeId) -> &Type {
         &self.types[id.0 as usize]
     }

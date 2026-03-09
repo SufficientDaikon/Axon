@@ -290,10 +290,45 @@ impl TypeChecker {
     // ═══════════════════════════════════════════════════════════
 
     pub fn check_program(&mut self, program: &Program) {
+        // First pass: register all function signatures so recursive/mutual calls resolve
+        for item in &program.items {
+            if let ItemKind::Function(decl) = &item.kind {
+                self.register_function_signature(decl);
+            }
+        }
+        // Second pass: check all items (function bodies, struct layouts, etc.)
         for item in &program.items {
             self.check_item(item);
         }
         self.apply_substitutions();
+    }
+
+    /// Pre-register a function's parameter types and return type so recursive calls resolve.
+    fn register_function_signature(&mut self, decl: &FnDecl) {
+        let mut param_types = Vec::new();
+        for param in &decl.params {
+            match &param.kind {
+                FnParamKind::Typed { ty, .. } => {
+                    let resolved_ty = self.resolve_type_expr(ty);
+                    param_types.push(resolved_ty);
+                }
+                FnParamKind::SelfOwned | FnParamKind::SelfRef | FnParamKind::SelfMutRef => {
+                    param_types.push(self.fresh_type_var());
+                }
+            }
+        }
+        let ret_ty = if let Some(ref ret) = decl.return_type {
+            self.resolve_type_expr(ret)
+        } else {
+            TypeId::UNIT
+        };
+        let fn_ty = self.interner.intern(Type::Function {
+            params: param_types,
+            ret: ret_ty,
+        });
+        if let Some(sym_id) = self.symbols.lookup(&decl.name) {
+            self.symbols.get_symbol_mut(sym_id).ty = fn_ty;
+        }
     }
 
     fn check_item(&mut self, item: &Item) {

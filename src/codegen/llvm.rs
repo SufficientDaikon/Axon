@@ -63,6 +63,17 @@ impl<'a> LlvmCodegen<'a> {
             self.output.push('\n');
         }
 
+        // Emit main wrapper if user defined a main function
+        let has_main = program.functions.iter().any(|f| f.name == "main");
+        if has_main {
+            self.output.push_str("\n; C ABI main wrapper\n");
+            self.output.push_str("define i32 @main() {\n");
+            self.output.push_str("entry:\n");
+            self.output.push_str("  call void @_axon_main()\n");
+            self.output.push_str("  ret i32 0\n");
+            self.output.push_str("}\n");
+        }
+
         // Emit accumulated string literals at the end of the module.
         self.emit_string_literals();
 
@@ -256,7 +267,8 @@ impl<'a> LlvmCodegen<'a> {
             })
             .collect();
 
-        format!("{} @{}({})", ret_str, func.mangled_name, params.join(", "))
+        let fn_name = if func.name == "main" { "_axon_main".to_string() } else { func.mangled_name.clone() };
+        format!("{} @{}({})", ret_str, fn_name, params.join(", "))
     }
 
     fn emit_locals(&mut self, locals: &[MirLocal]) {
@@ -414,7 +426,11 @@ impl<'a> LlvmCodegen<'a> {
                 destination,
                 target,
             } => {
-                let callee_name = self.emit_operand(callee, func);
+                // Resolve callee name
+                let callee_name = match callee {
+                    Operand::Constant(MirConstant::String(name)) => format!("@{}", name),
+                    _ => self.emit_operand(callee, func),
+                };
                 let arg_strs: Vec<String> = args
                     .iter()
                     .map(|a| {
@@ -1053,11 +1069,8 @@ impl<'a> LlvmCodegen<'a> {
             MirConstant::Int(v) => format!("{}", v),
             MirConstant::Float(v) => {
                 // LLVM requires hex format for exact representation of floats
-                if v.fract() == 0.0 && v.abs() < 1e15 {
-                    format!("{:.1}", v)
-                } else {
-                    format!("{:e}", v)
-                }
+                let bits = (*v as f64).to_bits();
+                format!("0x{:016X}", bits)
             }
             MirConstant::Bool(v) => {
                 if *v {
@@ -1141,7 +1154,14 @@ impl<'a> LlvmCodegen<'a> {
     fn type_of_rvalue(&self, rvalue: &Rvalue, func: &MirFunction) -> TypeId {
         match rvalue {
             Rvalue::Use(op) => self.type_of_operand(op, func),
-            Rvalue::BinaryOp { left, .. } => self.type_of_operand(left, func),
+            Rvalue::BinaryOp { op, left, .. } => {
+                // Comparison ops return Bool
+                match op {
+                    MirBinOp::Eq | MirBinOp::Ne | MirBinOp::Lt | MirBinOp::Le
+                    | MirBinOp::Gt | MirBinOp::Ge => TypeId::BOOL,
+                    _ => self.type_of_operand(left, func),
+                }
+            }
             Rvalue::UnaryOp { operand, .. } => self.type_of_operand(operand, func),
             Rvalue::Ref { .. } => TypeId::INT64, // simplified
             Rvalue::Aggregate { .. } => TypeId::UNIT, // simplified
@@ -1289,6 +1309,117 @@ pub fn compile_ir_to_object(
     }
 
     Ok(())
+}
+
+/// Compile LLVM IR + Axon C runtime into a native binary.
+pub fn compile_and_link(
+    ir: &str,
+    output_path: &str,
+    opt_level: OptLevel,
+    keep_temps: bool,
+) -> Result<(), String> {
+    use std::process::Command;
+    use std::fs;
+    use crate::codegen::runtime::generate_runtime_c_source;
+
+    // Create build directory
+    let build_dir = format!("{}.axon_build", output_path);
+    fs::create_dir_all(&build_dir).map_err(|e| format!("E5004: Failed to create build dir: {}", e))?;
+
+    let ir_path = format!("{}/program.ll", build_dir);
+    let rt_c_path = format!("{}/axon_runtime.c", build_dir);
+    let rt_o_path = format!("{}/axon_runtime.o", build_dir);
+
+    // Write IR
+    fs::write(&ir_path, ir).map_err(|e| format!("E5004: Failed to write IR: {}", e))?;
+
+    // Write runtime C source
+    let rt_source = generate_runtime_c_source();
+    fs::write(&rt_c_path, &rt_source).map_err(|e| format!("E5004: Failed to write runtime: {}", e))?;
+
+    let opt_flag = match opt_level {
+        OptLevel::O0 => "-O0",
+        OptLevel::O1 => "-O1",
+        OptLevel::O2 => "-O2",
+        OptLevel::O3 => "-O3",
+    };
+
+    // Detect compiler
+    let cc = detect_c_compiler()?;
+
+    // Step 1: Compile runtime
+    let rt_compile = Command::new(&cc)
+        .args(&["-c", &rt_c_path, "-o", &rt_o_path, "-O2"])
+        .output()
+        .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
+
+    if !rt_compile.status.success() {
+        let stderr = String::from_utf8_lossy(&rt_compile.stderr);
+        return Err(format!("E5002: Runtime compilation failed:\n{}", stderr));
+    }
+
+    // Step 2: Compile IR + link with runtime
+    let mut link_args = vec![
+        ir_path.clone(),
+        rt_o_path.clone(),
+        "-o".to_string(),
+        output_path.to_string(),
+        opt_flag.to_string(),
+        "-lm".to_string(),
+    ];
+
+    // On Windows, don't pass -lm
+    if cfg!(target_os = "windows") {
+        link_args.retain(|a| a != "-lm");
+    }
+
+    let link_output = Command::new(&cc)
+        .args(&link_args)
+        .output()
+        .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
+
+    if !link_output.status.success() {
+        let stderr = String::from_utf8_lossy(&link_output.stderr);
+        return Err(format!("E5003: Linking failed:\n{}", stderr));
+    }
+
+    // Clean up
+    if !keep_temps {
+        let _ = fs::remove_dir_all(&build_dir);
+    }
+
+    Ok(())
+}
+
+fn detect_c_compiler() -> Result<String, String> {
+    // Try compilers on PATH first
+    for compiler in &["clang", "gcc", "cc"] {
+        if let Ok(output) = std::process::Command::new(compiler)
+            .arg("--version")
+            .output()
+        {
+            if output.status.success() {
+                return Ok(compiler.to_string());
+            }
+        }
+    }
+    // On Windows, check well-known LLVM install path
+    if cfg!(target_os = "windows") {
+        let llvm_clang = r"C:\Program Files\LLVM\bin\clang.exe";
+        if std::path::Path::new(llvm_clang).exists() {
+            return Ok(llvm_clang.to_string());
+        }
+        // Try cl.exe as last resort
+        if let Ok(output) = std::process::Command::new("cl.exe")
+            .arg("/?")
+            .output()
+        {
+            if output.status.success() || output.status.code() == Some(0) {
+                return Ok("cl.exe".to_string());
+            }
+        }
+    }
+    Err("E5001: No C compiler found. Install clang, gcc, or MSVC.".to_string())
 }
 
 // ═══════════════════════════════════════════════════════════════

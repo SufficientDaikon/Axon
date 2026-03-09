@@ -152,7 +152,7 @@ fn test_float_arithmetic() {
         ir
     );
     assert!(
-        ir.contains("1.0") || ir.contains("1.000000e+00"),
+        ir.contains("1.0") || ir.contains("1.000000e+00") || ir.contains("0x3FF0000000000000"),
         "IR should contain float literal: {}",
         ir
     );
@@ -565,7 +565,7 @@ fn test_runtime_c_source() {
 #[test]
 fn test_runtime_function_count() {
     let count = axonc::codegen::runtime::RUNTIME_FUNCTIONS.len();
-    assert_eq!(count, 12, "RUNTIME_FUNCTIONS should have 12 entries, got {}", count);
+    assert_eq!(count, 15, "RUNTIME_FUNCTIONS should have 15 entries, got {}", count);
 }
 
 #[test]

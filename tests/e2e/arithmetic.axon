@@ -1,0 +1,5 @@
+fn main() {
+    let x: Int64 = 1 + 2 * 3;
+    let y: Int64 = 10 - 4;
+    let z: Int64 = x + y;
+}

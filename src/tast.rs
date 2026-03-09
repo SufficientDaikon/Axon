@@ -297,6 +297,7 @@ pub struct TypedStructLiteralField {
 // ═══════════════════════════════════════════════════════════════
 
 use crate::typeck::TypeChecker;
+use crate::types::Type;
 use crate::ast;
 
 pub struct TastBuilder<'a> {
@@ -309,8 +310,83 @@ impl<'a> TastBuilder<'a> {
         TastBuilder { checker }
     }
 
+    // ---------------------------------------------------------------
+    // Type resolution helpers
+    // ---------------------------------------------------------------
+
+    /// Resolve an AST TypeExpr to a TypeId.
+    fn resolve_type_expr(&self, ty: &ast::TypeExpr) -> TypeId {
+        match &ty.kind {
+            ast::TypeExprKind::Named(name) => self.resolve_type_name(name),
+            ast::TypeExprKind::Inferred => TypeId::ERROR,
+            _ => TypeId::ERROR, // complex types (tuples, arrays, refs, etc.) – future work
+        }
+    }
+
+    /// Map a type name to a TypeId via primitives or symbol table.
+    fn resolve_type_name(&self, name: &str) -> TypeId {
+        if let Some(prim) = crate::symbol::prim_from_name(name) {
+            if let Some(id) = self.checker.interner.lookup_prim(prim) {
+                return id;
+            }
+        }
+        if let Some(sym_id) = self.checker.symbols.lookup(name) {
+            return self.checker.symbols.get_symbol(sym_id).ty;
+        }
+        TypeId::ERROR
+    }
+
+    /// Infer the type of a built expression from its kind.
+    fn infer_expr_type(&self, kind: &TypedExprKind) -> TypeId {
+        match kind {
+            TypedExprKind::Literal(lit) => match lit {
+                Literal::Int(_) => TypeId::INT64,
+                Literal::Float(_) => TypeId::FLOAT64,
+                Literal::Bool(_) => TypeId::BOOL,
+                Literal::Char(_) => TypeId::CHAR,
+                Literal::String(_) => TypeId::STRING,
+            },
+            TypedExprKind::Identifier(name) => {
+                if let Some(sym_id) = self.checker.symbols.lookup(name) {
+                    self.checker.symbols.get_symbol(sym_id).ty
+                } else {
+                    TypeId::ERROR
+                }
+            }
+            TypedExprKind::BinaryOp { left, op, .. } => {
+                // Comparison operators return Bool, arithmetic returns left operand type
+                match op {
+                    BinOp::Eq | BinOp::NotEq | BinOp::Lt | BinOp::LtEq | BinOp::Gt | BinOp::GtEq
+                    | BinOp::And | BinOp::Or => TypeId::BOOL,
+                    _ => left.ty,
+                }
+            }
+            TypedExprKind::UnaryOp { operand, .. } => operand.ty,
+            TypedExprKind::FnCall { function, .. } => {
+                let fn_ty = function.ty;
+                let resolved = self.checker.interner.resolve(fn_ty);
+                if let Type::Function { ret, .. } = resolved {
+                    *ret
+                } else {
+                    TypeId::ERROR
+                }
+            }
+            TypedExprKind::Block(block) => block.ty,
+            TypedExprKind::IfElse { then_block, .. } => then_block.ty,
+            TypedExprKind::Assignment { .. } => TypeId::UNIT,
+            TypedExprKind::Reference { expr, .. } => expr.ty,
+            TypedExprKind::Tuple(elems) => {
+                if elems.is_empty() { TypeId::UNIT } else { TypeId::ERROR }
+            }
+            _ => TypeId::ERROR,
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Build methods
+    // ---------------------------------------------------------------
+
     /// Walk the AST, creating typed counterparts.
-    /// Uses TypeId::ERROR as placeholder for unresolved types.
     pub fn build(&self, program: &ast::Program) -> TypedProgram {
         TypedProgram {
             items: program.items.iter().map(|i| self.build_item(i)).collect(),
@@ -321,59 +397,74 @@ impl<'a> TastBuilder<'a> {
     fn build_item(&self, item: &ast::Item) -> TypedItem {
         let kind = match &item.kind {
             ast::ItemKind::Function(f) => TypedItemKind::Function(self.build_fn(f)),
-            ast::ItemKind::Struct(s) => TypedItemKind::Struct(TypedStructDecl {
-                name: s.name.clone(),
-                fields: s.fields.iter().map(|f| TypedField {
-                    name: f.name.clone(),
-                    ty: TypeId::ERROR,
-                    visibility: f.visibility.clone(),
-                    span: f.span.clone(),
-                }).collect(),
-                ty: TypeId::ERROR,
-                span: s.span.clone(),
-            }),
-            ast::ItemKind::Enum(e) => TypedItemKind::Enum(TypedEnumDecl {
-                name: e.name.clone(),
-                variants: e.variants.iter().map(|v| TypedEnumVariant {
-                    name: v.name.clone(),
-                    fields: match &v.fields {
-                        ast::EnumVariantKind::Unit => TypedEnumVariantKind::Unit,
-                        ast::EnumVariantKind::Tuple(types) => {
-                            TypedEnumVariantKind::Tuple(
-                                types.iter().map(|_| TypeId::ERROR).collect(),
-                            )
-                        }
-                        ast::EnumVariantKind::Struct(fields) => {
-                            TypedEnumVariantKind::Struct(
-                                fields.iter().map(|f| TypedField {
-                                    name: f.name.clone(),
-                                    ty: TypeId::ERROR,
-                                    visibility: f.visibility.clone(),
-                                    span: f.span.clone(),
-                                }).collect(),
-                            )
-                        }
-                    },
-                    span: v.span.clone(),
-                }).collect(),
-                ty: TypeId::ERROR,
-                span: e.span.clone(),
-            }),
+            ast::ItemKind::Struct(s) => {
+                let struct_ty = self.checker.symbols.lookup(&s.name)
+                    .map(|sid| self.checker.symbols.get_symbol(sid).ty)
+                    .unwrap_or(TypeId::ERROR);
+                TypedItemKind::Struct(TypedStructDecl {
+                    name: s.name.clone(),
+                    fields: s.fields.iter().map(|f| TypedField {
+                        name: f.name.clone(),
+                        ty: self.resolve_type_expr(&f.ty),
+                        visibility: f.visibility.clone(),
+                        span: f.span.clone(),
+                    }).collect(),
+                    ty: struct_ty,
+                    span: s.span.clone(),
+                })
+            }
+            ast::ItemKind::Enum(e) => {
+                let enum_ty = self.checker.symbols.lookup(&e.name)
+                    .map(|sid| self.checker.symbols.get_symbol(sid).ty)
+                    .unwrap_or(TypeId::ERROR);
+                TypedItemKind::Enum(TypedEnumDecl {
+                    name: e.name.clone(),
+                    variants: e.variants.iter().map(|v| TypedEnumVariant {
+                        name: v.name.clone(),
+                        fields: match &v.fields {
+                            ast::EnumVariantKind::Unit => TypedEnumVariantKind::Unit,
+                            ast::EnumVariantKind::Tuple(types) => {
+                                TypedEnumVariantKind::Tuple(
+                                    types.iter().map(|t| self.resolve_type_expr(t)).collect(),
+                                )
+                            }
+                            ast::EnumVariantKind::Struct(fields) => {
+                                TypedEnumVariantKind::Struct(
+                                    fields.iter().map(|f| TypedField {
+                                        name: f.name.clone(),
+                                        ty: self.resolve_type_expr(&f.ty),
+                                        visibility: f.visibility.clone(),
+                                        span: f.span.clone(),
+                                    }).collect(),
+                                )
+                            }
+                        },
+                        span: v.span.clone(),
+                    }).collect(),
+                    ty: enum_ty,
+                    span: e.span.clone(),
+                })
+            }
             ast::ItemKind::Impl(imp) => TypedItemKind::Impl(TypedImplBlock {
-                type_name: TypeId::ERROR,
-                trait_name: if imp.trait_name.is_some() { Some(TypeId::ERROR) } else { None },
+                type_name: self.resolve_type_expr(&imp.type_name),
+                trait_name: imp.trait_name.as_ref().map(|t| self.resolve_type_expr(t)),
                 items: imp.items.iter().map(|i| self.build_item(i)).collect(),
                 span: imp.span.clone(),
             }),
-            ast::ItemKind::Trait(t) => TypedItemKind::Trait(TypedTraitDecl {
-                name: t.name.clone(),
-                items: t.items.iter().map(|i| self.build_item(i)).collect(),
-                ty: TypeId::ERROR,
-                span: t.span.clone(),
-            }),
+            ast::ItemKind::Trait(t) => {
+                let trait_ty = self.checker.symbols.lookup(&t.name)
+                    .map(|sid| self.checker.symbols.get_symbol(sid).ty)
+                    .unwrap_or(TypeId::ERROR);
+                TypedItemKind::Trait(TypedTraitDecl {
+                    name: t.name.clone(),
+                    items: t.items.iter().map(|i| self.build_item(i)).collect(),
+                    ty: trait_ty,
+                    span: t.span.clone(),
+                })
+            }
             ast::ItemKind::TypeAlias(ta) => TypedItemKind::TypeAlias(TypedTypeAlias {
                 name: ta.name.clone(),
-                ty: TypeId::ERROR,
+                ty: self.resolve_type_expr(&ta.ty),
                 span: ta.span.clone(),
             }),
             ast::ItemKind::Module(m) => TypedItemKind::Module(TypedModuleDecl {
@@ -395,48 +486,94 @@ impl<'a> TastBuilder<'a> {
     }
 
     fn build_fn(&self, decl: &ast::FnDecl) -> TypedFnDecl {
+        // Try to get function type from symbol table
+        let (param_types, ret_type) = if let Some(sym_id) = self.checker.symbols.lookup(&decl.name) {
+            let fn_sym = self.checker.symbols.get_symbol(sym_id);
+            let resolved = self.checker.interner.resolve(fn_sym.ty);
+            if let Type::Function { params, ret } = resolved {
+                (params.clone(), *ret)
+            } else {
+                self.resolve_fn_from_ast(decl)
+            }
+        } else {
+            self.resolve_fn_from_ast(decl)
+        };
+
         TypedFnDecl {
             name: decl.name.clone(),
-            params: decl.params.iter().map(|p| {
+            params: decl.params.iter().enumerate().map(|(i, p)| {
                 let name = match &p.kind {
                     ast::FnParamKind::Typed { name, .. } => name.clone(),
-                    ast::FnParamKind::SelfOwned => "self".to_string(),
-                    ast::FnParamKind::SelfRef => "self".to_string(),
-                    ast::FnParamKind::SelfMutRef => "self".to_string(),
+                    ast::FnParamKind::SelfOwned
+                    | ast::FnParamKind::SelfRef
+                    | ast::FnParamKind::SelfMutRef => "self".to_string(),
                 };
                 TypedFnParam {
                     name,
-                    ty: TypeId::ERROR,
+                    ty: param_types.get(i).copied().unwrap_or(TypeId::ERROR),
                     span: p.span.clone(),
                 }
             }).collect(),
-            return_type: TypeId::ERROR,
+            return_type: ret_type,
             body: decl.body.as_ref().map(|b| self.build_block(b)),
             span: decl.span.clone(),
         }
     }
 
+    /// Fallback: resolve function param/return types from AST annotations.
+    fn resolve_fn_from_ast(&self, decl: &ast::FnDecl) -> (Vec<TypeId>, TypeId) {
+        let params: Vec<TypeId> = decl.params.iter().map(|p| match &p.kind {
+            ast::FnParamKind::Typed { ty, .. } => self.resolve_type_expr(ty),
+            _ => TypeId::ERROR,
+        }).collect();
+        let ret = decl.return_type.as_ref()
+            .map(|t| self.resolve_type_expr(t))
+            .unwrap_or(TypeId::UNIT);
+        (params, ret)
+    }
+
     fn build_block(&self, block: &ast::Block) -> TypedBlock {
+        let stmts: Vec<TypedStmt> = block.stmts.iter().map(|s| self.build_stmt(s)).collect();
+        let tail_expr = block.tail_expr.as_ref().map(|e| Box::new(self.build_expr(e)));
+        let ty = if let Some(ref tail) = tail_expr {
+            tail.ty
+        } else if let Some(last) = stmts.last() {
+            match &last.kind {
+                TypedStmtKind::Return(Some(e)) => e.ty,
+                TypedStmtKind::Expr(e) => e.ty,
+                _ => TypeId::UNIT,
+            }
+        } else {
+            TypeId::UNIT
+        };
         TypedBlock {
-            stmts: block.stmts.iter().map(|s| self.build_stmt(s)).collect(),
-            tail_expr: block.tail_expr.as_ref().map(|e| Box::new(self.build_expr(e))),
-            ty: TypeId::ERROR,
+            stmts,
+            tail_expr,
+            ty,
             span: block.span.clone(),
         }
     }
 
     fn build_stmt(&self, stmt: &ast::Stmt) -> TypedStmt {
         let kind = match &stmt.kind {
-            ast::StmtKind::Let { name, mutable, ty: _, initializer } => {
+            ast::StmtKind::Let { name, mutable, ty, initializer } => {
                 let name_str = match &name.kind {
                     ast::PatternKind::Identifier(s) => s.clone(),
                     _ => "_".to_string(),
                 };
+                let init_expr = initializer.as_ref().map(|e| self.build_expr(e));
+                let resolved_ty = if let Some(ref t) = ty {
+                    self.resolve_type_expr(t)
+                } else if let Some(ref e) = init_expr {
+                    e.ty
+                } else {
+                    TypeId::ERROR
+                };
                 TypedStmtKind::Let {
                     name: name_str,
                     mutable: *mutable,
-                    ty: TypeId::ERROR,
-                    initializer: initializer.as_ref().map(|e| self.build_expr(e)),
+                    ty: resolved_ty,
+                    initializer: init_expr,
                 }
             }
             ast::StmtKind::Expr(e) => TypedStmtKind::Expr(self.build_expr(e)),
@@ -529,9 +666,9 @@ impl<'a> TastBuilder<'a> {
                 mutable: *mutable,
                 expr: Box::new(self.build_expr(e)),
             },
-            ast::ExprKind::TypeCast { expr: e, target_type: _ } => TypedExprKind::TypeCast {
+            ast::ExprKind::TypeCast { expr: e, target_type } => TypedExprKind::TypeCast {
                 expr: Box::new(self.build_expr(e)),
-                target_type: TypeId::ERROR,
+                target_type: self.resolve_type_expr(target_type),
             },
             ast::ExprKind::ErrorPropagation(e) => TypedExprKind::ErrorPropagation(
                 Box::new(self.build_expr(e)),
@@ -559,16 +696,17 @@ impl<'a> TastBuilder<'a> {
             ast::ExprKind::Closure { params, return_type: _, body } => TypedExprKind::Closure {
                 params: params.iter().map(|p| TypedFnParam {
                     name: p.name.clone(),
-                    ty: TypeId::ERROR,
+                    ty: p.ty.as_ref().map(|t| self.resolve_type_expr(t)).unwrap_or(TypeId::ERROR),
                     span: p.span.clone(),
                 }).collect(),
                 body: Box::new(self.build_expr(body)),
             },
         };
 
+        let ty = self.infer_expr_type(&kind);
         TypedExpr {
             kind,
-            ty: TypeId::ERROR,
+            ty,
             span: expr.span.clone(),
         }
     }

@@ -70,6 +70,21 @@ pub const RUNTIME_FUNCTIONS: &[RuntimeFunction] = &[
         llvm_name: "axon_print_newline",
         description: "Print newline to stdout: () -> void",
     },
+    RuntimeFunction {
+        name: "print_i32",
+        llvm_name: "axon_print_i32",
+        description: "Print i32 to stdout: (value: i32) -> void",
+    },
+    RuntimeFunction {
+        name: "print_f32",
+        llvm_name: "axon_print_f32",
+        description: "Print f32 to stdout: (value: f32) -> void",
+    },
+    RuntimeFunction {
+        name: "print_char",
+        llvm_name: "axon_print_char",
+        description: "Print char to stdout: (codepoint: i32) -> void",
+    },
 ];
 
 /// Generate LLVM IR declarations for all runtime functions.
@@ -94,8 +109,11 @@ pub fn emit_runtime_declarations() -> String {
     ir.push_str("declare void @axon_print_i64(i64)\n");
     ir.push_str("declare void @axon_print_f64(double)\n");
     ir.push_str("declare void @axon_print_str(i8*, i64)\n");
-    ir.push_str("declare void @axon_print_bool(i1)\n");
+    ir.push_str("declare void @axon_print_bool(i8)\n");
     ir.push_str("declare void @axon_print_newline()\n");
+    ir.push_str("declare void @axon_print_i32(i32)\n");
+    ir.push_str("declare void @axon_print_f32(float)\n");
+    ir.push_str("declare void @axon_print_char(i32)\n");
 
     // C stdlib (for printf-based I/O)
     ir.push_str("\n; C standard library\n");
@@ -116,6 +134,21 @@ pub fn generate_runtime_c_source() -> String {
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+#ifdef _MSC_VER
+#pragma section(".CRT$XCU", read)
+static void __cdecl axon_init_io(void);
+__declspec(allocate(".CRT$XCU")) static void (__cdecl *axon_init_io_ptr)(void) = axon_init_io;
+static void __cdecl axon_init_io(void) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+}
+#else
+__attribute__((constructor))
+static void axon_init_io(void) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+}
+#endif
 
 void* axon_alloc(int64_t size, int64_t align) {
     void* ptr;
@@ -155,33 +188,62 @@ int8_t axon_tensor_shape_check(void* a, void* b, int32_t op) {
 }
 
 void* axon_device_transfer(void* src, int8_t dst_device) {
-    (void)dst_device;
-    return src;  // stub: no-op on CPU
+    if (dst_device != 0) {
+        fprintf(stderr, "axon panic: GPU device transfer requested but no GPU runtime linked\n");
+        fflush(stderr);
+        exit(1);
+    }
+    return src;  // CPU-to-CPU: no-op
 }
 
 void axon_panic(const char* msg, const char* file, int32_t line) {
     fprintf(stderr, "axon panic at %s:%d: %s\n", file, line, msg);
+    fflush(stderr);
     exit(1);
 }
 
 void axon_print_i64(int64_t value) {
     printf("%lld", (long long)value);
+    fflush(stdout);
 }
 
 void axon_print_f64(double value) {
     printf("%g", value);
+    fflush(stdout);
 }
 
 void axon_print_str(const char* ptr, int64_t len) {
     fwrite(ptr, 1, len, stdout);
+    fflush(stdout);
 }
 
 void axon_print_bool(int8_t value) {
     printf("%s", value ? "true" : "false");
+    fflush(stdout);
 }
 
 void axon_print_newline(void) {
     printf("\n");
+    fflush(stdout);
+}
+
+void axon_print_i32(int32_t value) {
+    printf("%d", value);
+    fflush(stdout);
+}
+
+void axon_print_char(int32_t codepoint) {
+    if (codepoint < 0x80) {
+        putchar(codepoint);
+    } else {
+        printf("%c", (char)codepoint);
+    }
+    fflush(stdout);
+}
+
+void axon_print_f32(float value) {
+    printf("%g", value);
+    fflush(stdout);
 }
 "#.to_string()
 }
@@ -192,7 +254,7 @@ mod tests {
 
     #[test]
     fn runtime_functions_count() {
-        assert_eq!(RUNTIME_FUNCTIONS.len(), 12);
+        assert_eq!(RUNTIME_FUNCTIONS.len(), 15);
     }
 
     #[test]
@@ -230,6 +292,9 @@ mod tests {
         assert!(ir.contains("@axon_print_str"));
         assert!(ir.contains("@axon_print_bool"));
         assert!(ir.contains("@axon_print_newline"));
+        assert!(ir.contains("@axon_print_i32"));
+        assert!(ir.contains("@axon_print_f32"));
+        assert!(ir.contains("@axon_print_char"));
     }
 
     #[test]
@@ -263,5 +328,8 @@ mod tests {
         assert!(src.contains("void axon_print_str("));
         assert!(src.contains("void axon_print_bool("));
         assert!(src.contains("void axon_print_newline("));
+        assert!(src.contains("void axon_print_i32("));
+        assert!(src.contains("void axon_print_f32("));
+        assert!(src.contains("void axon_print_char("));
     }
 }

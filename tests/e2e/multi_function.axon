@@ -1,0 +1,12 @@
+fn square(x: Int64) -> Int64 {
+    return x * x;
+}
+
+fn double(x: Int64) -> Int64 {
+    return x + x;
+}
+
+fn main() {
+    let a: Int64 = square(5);
+    let b: Int64 = double(a);
+}

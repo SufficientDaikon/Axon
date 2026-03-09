@@ -1,0 +1,19 @@
+fn my_abs(x: Int64) -> Int64 {
+    if x < 0 {
+        return 0 - x;
+    }
+    return x;
+}
+
+fn my_max(a: Int64, b: Int64) -> Int64 {
+    if a > b {
+        return a;
+    }
+    return b;
+}
+
+fn main() {
+    let a: Int64 = my_abs(0 - 42);
+    let b: Int64 = my_max(10, 20);
+    let c: Int64 = my_max(my_abs(0 - 5), 3);
+}
