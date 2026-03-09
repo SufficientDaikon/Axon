@@ -1,0 +1,32 @@
+// Collection operations benchmark for Axon runtime
+// TODO: Enable once runtime supports collection operations
+//
+// fn vec_push_benchmark() -> Float64 {
+//     let start = clock();
+//     let mut v: Vec<Int32> = Vec::new();
+//     let mut i: Int32 = 0;
+//     while i < 100000 {
+//         v.push(i);
+//         i = i + 1;
+//     }
+//     let elapsed = clock() - start;
+//     return elapsed;
+// }
+//
+// fn map_insert_benchmark() -> Float64 {
+//     let start = clock();
+//     let mut m: HashMap<String, Int32> = HashMap::new();
+//     let mut i: Int32 = 0;
+//     while i < 10000 {
+//         m.insert(to_string(i), i);
+//         i = i + 1;
+//     }
+//     let elapsed = clock() - start;
+//     return elapsed;
+// }
+//
+// fn main() -> Int32 {
+//     print("Vec push: "); print(vec_push_benchmark()); print(" seconds\n");
+//     print("Map insert: "); print(map_insert_benchmark()); print(" seconds\n");
+//     return 0;
+// }

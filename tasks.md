@@ -370,10 +370,62 @@
 - [x] T244 Test formatter: idempotency, formatting rules — `tests/tooling_tests.rs`
 - [x] T245 Test linter: all lint rules fire correctly — `tests/tooling_tests.rs`
 
+## Phase 8: Hardening & Release (T246-T277)
+
+### Phase 8a: Benchmarks
+
+- [x] T246 Implement compiler benchmark suite — `benches/compiler_bench.rs`
+- [x] T247 Implement runtime benchmark stubs — `benches/runtime/`
+- [x] T248 Create baseline comparisons — `benches/baselines/`
+- [x] T249 Create benchmark reporting — `benches/compiler_bench.rs`
+- [x] T250 Performance analysis — `benches/compiler_bench.rs`
+
+### Phase 8b: Fuzz Testing
+
+- [x] T251 Set up fuzz testing infrastructure — `fuzz/`
+- [x] T252 Create fuzz targets for lexer, parser, typeck — `fuzz/targets/`
+- [x] T253 Create robustness tests — `tests/fuzz_tests.rs` (53 tests)
+- [x] T254 Edge case and stress testing — `tests/fuzz_tests.rs`
+- [x] T255 Document fuzz testing approach — `fuzz/README.md`
+
+### Phase 8c: Security
+
+- [x] T256 Audit all code for unsafe blocks — `docs/internals/security-audit.md`
+- [x] T257 Document FFI boundaries — `docs/internals/security-audit.md`
+- [x] T258 Document input validation — `docs/internals/security-audit.md`
+- [x] T259 Document dependency audit process — `docs/internals/security-audit.md`
+- [x] T260 Write threat model — `docs/internals/security-audit.md`
+
+### Phase 8d: Documentation
+
+- [x] T261 Write getting-started guide — `docs/guide/getting-started.md`
+- [x] T262 Write language tour — `docs/guide/language-tour.md`
+- [x] T263 Write tensor & GPU programming guides — `docs/guide/tensors.md`, `docs/guide/gpu-programming.md`
+- [x] T264 Write ML tutorials (1–4) — `docs/tutorial/`
+- [x] T265 Write stdlib API reference — integrated in doc generator
+- [x] T266 Write compiler error reference — `docs/reference/compiler-errors.md`
+- [x] T267 Write migration guides — `docs/migration/from-python.md`, `docs/migration/from-pytorch.md`
+- [x] T268 Write README and CHANGELOG — `README.md`, `CHANGELOG.md`
+- [x] T269 Write architecture and contributing docs — `docs/internals/`
+
+### Phase 8e: Release Engineering
+
+- [x] T270 Set up CI/CD pipeline — `.github/workflows/ci.yml`
+- [x] T271 Build release configuration — `.github/workflows/ci.yml`
+- [x] T272 Create install scripts — `scripts/install.sh`, `scripts/install.ps1`
+- [x] T273 Write CHANGELOG — `CHANGELOG.md`
+- [x] T274 Configure release workflow — `.github/workflows/ci.yml`
+
+### Phase 8f: Compliance
+
+- [x] T275 FR compliance matrix — `docs/compliance/fr-matrix.md`
+- [x] T276 NFR compliance matrix — `docs/compliance/nfr-matrix.md`
+- [x] T277 Final compliance report — `docs/compliance/report.md`
+
 ---
 
 ## Summary
 
-- **Total Tasks**: 245
-- **Completed**: 245
+- **Total Tasks**: 277
+- **Completed**: 277
 - **Remaining**: 0

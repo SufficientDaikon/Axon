@@ -1,0 +1,15 @@
+# Fuzz Target: linter_fuzz
+#
+# Feeds arbitrary byte strings to the Axon linter.
+# The linter must never panic on any input.
+#
+# cargo-fuzz target (to be integrated):
+#
+# #![no_main]
+# use libfuzzer_sys::fuzz_target;
+#
+# fuzz_target!(|data: &[u8]| {
+#     if let Ok(s) = std::str::from_utf8(data) {
+#         let _ = axonc::lint::Linter::lint(s, "fuzz.axon");
+#     }
+# });

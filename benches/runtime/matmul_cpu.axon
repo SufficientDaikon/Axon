@@ -1,0 +1,25 @@
+// Matrix multiply benchmark for Axon runtime
+// TODO: Enable once runtime supports tensor operations
+//
+// fn matmul_benchmark() -> Float64 {
+//     let a = Tensor<Float64, [256, 256]>::rand();
+//     let b = Tensor<Float64, [256, 256]>::rand();
+//     let start = clock();
+//     let c = a @ b;
+//     let elapsed = clock() - start;
+//     return elapsed;
+// }
+//
+// fn main() -> Int32 {
+//     let iterations = 100;
+//     let mut total: Float64 = 0.0;
+//     let mut i: Int32 = 0;
+//     while i < iterations {
+//         total = total + matmul_benchmark();
+//         i = i + 1;
+//     }
+//     print("Average matmul time: ");
+//     print(total / 100.0);
+//     print(" seconds\n");
+//     return 0;
+// }

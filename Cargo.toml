@@ -3,6 +3,7 @@ name = "axonc"
 version = "0.1.0"
 edition = "2021"
 description = "The Axon programming language compiler - an ML/AI-first systems language"
+autobenches = false
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -16,3 +17,7 @@ path = "src/main.rs"
 [lib]
 name = "axonc"
 path = "src/lib.rs"
+
+[[test]]
+name = "compiler_bench"
+path = "benches/compiler_bench.rs"
