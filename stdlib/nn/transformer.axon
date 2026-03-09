@@ -1,0 +1,30 @@
+/// std::nn::transformer — Transformer architecture components.
+///
+/// Provides MultiHeadAttention, TransformerEncoderLayer, and
+/// TransformerEncoder for attention-based sequence modeling.
+
+/// Multi-head scaled dot-product attention.
+struct MultiHeadAttention {
+    embed_dim: Int64,
+    num_heads: Int64,
+}
+
+/// Create a new MultiHeadAttention module.
+fn multihead_attention_new(embed_dim: Int64, num_heads: Int64) -> Int64;
+
+/// A single transformer encoder layer (self-attention + feed-forward).
+struct TransformerEncoderLayer {
+    d_model: Int64,
+    nhead: Int64,
+}
+
+/// Create a new TransformerEncoderLayer.
+fn transformer_encoder_layer_new(d_model: Int64, nhead: Int64) -> Int64;
+
+/// Stack of TransformerEncoderLayer modules.
+struct TransformerEncoder {
+    num_layers: Int64,
+}
+
+/// Create a new TransformerEncoder.
+fn transformer_encoder_new(num_layers: Int64) -> Int64;

@@ -251,10 +251,65 @@
 - [x] T168 Axon source stubs — `stdlib/*.axon` (26 files)
 - [x] T169 Register stdlib in type checker pipeline — `src/typeck.rs`
 
+## Phase 6: AI Framework (T170-T204)
+
+### Phase 6a: Autograd
+
+- [x] T170 Design computation graph data structure — `src/stdlib/autograd.rs`
+- [x] T171 Implement GradTensor with gradient tracking — `src/stdlib/autograd.rs`
+- [x] T172 Implement backward pass (reverse-mode AD) — `src/stdlib/autograd.rs`
+- [x] T173 Implement gradient rules for all operations — `src/stdlib/autograd.rs`
+- [x] T174 Implement no_grad context and gradient checkpointing — `src/stdlib/autograd.rs`
+
+### Phase 6b: Neural Network Layers
+
+- [x] T175 Implement Module trait — `src/stdlib/nn.rs`
+- [x] T176 Implement Linear, Conv2d, BatchNorm, LayerNorm — `src/stdlib/nn.rs`
+- [x] T177 Implement Dropout, MaxPool2d, AvgPool2d — `src/stdlib/nn.rs`
+- [x] T178 Implement LSTM, GRU — `src/stdlib/nn.rs`
+- [x] T179 Implement MultiHeadAttention, TransformerEncoder — `src/stdlib/nn.rs`
+- [x] T180 Implement Embedding — `src/stdlib/nn.rs`
+- [x] T181 Implement Sequential container — `src/stdlib/nn.rs`
+- [x] T182 Implement activation modules (ReLU, GELU, SiLU, Softmax) — `src/stdlib/nn.rs`
+- [x] T183 Implement weight initialization — `src/stdlib/nn.rs`
+
+### Phase 6c: Optimizers & Loss
+
+- [x] T184 Implement Optimizer trait — `src/stdlib/optim.rs`
+- [x] T185 Implement SGD — `src/stdlib/optim.rs`
+- [x] T186 Implement Adam, AdamW — `src/stdlib/optim.rs`
+- [x] T187 Implement LR schedulers — `src/stdlib/optim.rs`
+- [x] T188 Implement all loss functions — `src/stdlib/loss.rs`
+
+### Phase 6d: Training & Export
+
+- [x] T189 Implement Trainer with callbacks — `src/stdlib/train.rs`
+- [x] T190 Implement checkpointing (save/load) — `src/stdlib/train.rs`
+- [x] T191 Implement mixed precision training — `src/stdlib/train.rs`
+- [x] T192 Implement ONNX export — `src/stdlib/export.rs`
+- [x] T193 Implement native model serialization — `src/stdlib/export.rs`
+
+### Phase 6e: Metrics & Transforms
+
+- [x] T194 Implement accuracy, precision, recall, F1 — `src/stdlib/metrics.rs`
+- [x] T195 Implement confusion matrix, ROC-AUC — `src/stdlib/metrics.rs`
+- [x] T196 Implement image transforms — `src/stdlib/transforms.rs`
+- [x] T197 Implement text transforms (tokenize, pad) — `src/stdlib/transforms.rs`
+
+### Phase 6f: Testing
+
+- [x] T198 Test autograd: gradient functions — `tests/ai_framework_tests.rs`
+- [x] T199 Test: NN layer construction — `tests/ai_framework_tests.rs`
+- [x] T200 Test: optimizer construction — `tests/ai_framework_tests.rs`
+- [x] T201 Test: loss function construction — `tests/ai_framework_tests.rs`
+- [x] T202 Test: training utilities — `tests/ai_framework_tests.rs`
+- [x] T203 Test: metrics functions — `tests/ai_framework_tests.rs`
+- [x] T204 Test: transforms and export — `tests/ai_framework_tests.rs`
+
 ---
 
 ## Summary
 
-- **Total Tasks**: 169
-- **Completed**: 169
+- **Total Tasks**: 204
+- **Completed**: 204
 - **Remaining**: 0

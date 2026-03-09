@@ -1,0 +1,16 @@
+/// std::export::native — Native Axon model serialization.
+///
+/// Save and load models and tensors in Axon's native binary format.
+/// Faster than ONNX for Axon-to-Axon workflows.
+
+/// Save an entire model (architecture + weights) to disk.
+fn save_model(path: String) -> Bool;
+
+/// Load a previously saved model from disk.
+fn load_model(path: String) -> Int64;
+
+/// Save a single tensor to disk.
+fn save_tensor(path: String) -> Bool;
+
+/// Load a single tensor from disk.
+fn load_tensor(path: String) -> Int64;

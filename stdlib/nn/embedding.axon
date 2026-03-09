@@ -1,0 +1,13 @@
+/// std::nn::embedding — Embedding layer for discrete token lookups.
+///
+/// Maps integer indices to dense vector representations.
+/// Commonly used as the first layer in NLP models.
+
+/// Lookup table that stores embeddings of a fixed dictionary.
+struct Embedding {
+    num_embeddings: Int64,
+    embedding_dim: Int64,
+}
+
+/// Create a new Embedding layer.
+fn embedding_new(num_embeddings: Int64, embedding_dim: Int64) -> Int64;

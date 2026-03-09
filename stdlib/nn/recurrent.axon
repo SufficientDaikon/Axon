@@ -1,0 +1,23 @@
+/// std::nn::recurrent — Recurrent neural network layers.
+///
+/// Provides LSTM and GRU for sequential data processing.
+
+/// Long Short-Term Memory (LSTM) recurrent layer.
+struct LSTM {
+    input_size: Int64,
+    hidden_size: Int64,
+    num_layers: Int64,
+}
+
+/// Create a new LSTM layer.
+fn lstm_new(input_size: Int64, hidden_size: Int64, num_layers: Int64) -> Int64;
+
+/// Gated Recurrent Unit (GRU) recurrent layer.
+struct GRU {
+    input_size: Int64,
+    hidden_size: Int64,
+    num_layers: Int64,
+}
+
+/// Create a new GRU layer.
+fn gru_new(input_size: Int64, hidden_size: Int64, num_layers: Int64) -> Int64;

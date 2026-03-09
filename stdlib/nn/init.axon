@@ -1,0 +1,34 @@
+/// std::nn::init — Weight initialization strategies.
+///
+/// Functions to initialize neural network parameters with values
+/// drawn from various distributions. Proper initialization is
+/// critical for stable training convergence.
+
+/// Xavier (Glorot) uniform initialization.
+/// Fills tensor with values from U(-a, a) where a = gain * sqrt(6 / (fan_in + fan_out)).
+fn xavier_uniform(tensor: Int64);
+
+/// Xavier (Glorot) normal initialization.
+/// Fills tensor with values from N(0, std) where std = gain * sqrt(2 / (fan_in + fan_out)).
+fn xavier_normal(tensor: Int64);
+
+/// Kaiming (He) uniform initialization for ReLU networks.
+fn kaiming_uniform(tensor: Int64);
+
+/// Kaiming (He) normal initialization for ReLU networks.
+fn kaiming_normal(tensor: Int64);
+
+/// Uniform initialization with explicit bounds.
+fn init_uniform(tensor: Int64, low: Float64, high: Float64);
+
+/// Normal initialization with explicit mean and standard deviation.
+fn init_normal(tensor: Int64, mean: Float64, std: Float64);
+
+/// Zero initialization.
+fn init_zeros(tensor: Int64);
+
+/// Ones initialization.
+fn init_ones(tensor: Int64);
+
+/// Constant value initialization.
+fn init_constant(tensor: Int64, value: Float64);

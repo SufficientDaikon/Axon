@@ -1,0 +1,35 @@
+/// std::metrics — Evaluation metrics for model performance.
+///
+/// Classification metrics (accuracy, precision, recall, F1, ROC-AUC)
+/// and regression metrics (MSE, MAE, R²) for evaluating trained models.
+
+// ── Classification metrics ──────────────────────────────────
+
+/// Fraction of correct predictions.
+fn accuracy(predictions: Int64, targets: Int64) -> Float32;
+
+/// Positive predictive value: TP / (TP + FP).
+fn precision(predictions: Int64, targets: Int64) -> Float32;
+
+/// Sensitivity / true positive rate: TP / (TP + FN).
+fn recall(predictions: Int64, targets: Int64) -> Float32;
+
+/// Harmonic mean of precision and recall.
+fn f1_score(predictions: Int64, targets: Int64) -> Float32;
+
+/// NxN matrix of predicted vs actual class counts.
+fn confusion_matrix(predictions: Int64, targets: Int64, num_classes: Int64) -> Int64;
+
+/// Area under the Receiver Operating Characteristic curve.
+fn roc_auc(predictions: Int64, targets: Int64) -> Float32;
+
+// ── Regression metrics ──────────────────────────────────────
+
+/// Mean squared error: (1/n) Σ(pred - target)².
+fn mean_squared_error(predictions: Int64, targets: Int64) -> Float32;
+
+/// Mean absolute error: (1/n) Σ|pred - target|.
+fn mean_absolute_error(predictions: Int64, targets: Int64) -> Float32;
+
+/// Coefficient of determination: 1 - SS_res / SS_tot.
+fn r2_score(predictions: Int64, targets: Int64) -> Float32;

@@ -1,0 +1,37 @@
+/// std::autograd::graph — Computation graph for automatic differentiation.
+///
+/// The computation graph records all tensor operations during the forward
+/// pass. During backward(), it is traversed in reverse topological order
+/// to compute gradients via the chain rule.
+
+/// Internal computation graph that tracks operations.
+struct ComputationGraph {}
+
+/// A single node in the computation graph.
+struct GraphNode {
+    id: Int64,
+    op: Int64,
+}
+
+/// Enumeration of differentiable operations, each with its own
+/// backward rule for gradient computation.
+enum GradOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    MatMul,
+    Relu,
+    Sigmoid,
+    Tanh,
+    Softmax,
+    Sum,
+    Mean,
+    Reshape,
+    Transpose,
+    Conv2d,
+    MaxPool2d,
+    BatchNorm,
+    Linear,
+    Dropout,
+}

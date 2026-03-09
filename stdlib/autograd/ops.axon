@@ -1,0 +1,18 @@
+/// std::autograd::ops — Gradient operation rules.
+///
+/// Defines the backward rules for each differentiable operation.
+/// These rules implement the chain rule for reverse-mode automatic
+/// differentiation.
+///
+/// Backward rules:
+///   c = a + b       → ∂a = ∂c, ∂b = ∂c
+///   c = a * b       → ∂a = ∂c * b, ∂b = ∂c * a
+///   c = a @ b       → ∂a = ∂c @ bᵀ, ∂b = aᵀ @ ∂c
+///   c = relu(a)     → ∂a = ∂c * (a > 0)
+///   c = sigmoid(a)  → ∂a = ∂c * c * (1 - c)
+///   c = tanh(a)     → ∂a = ∂c * (1 - c²)
+///   c = softmax(a)  → Jacobian-vector product
+///   c = sum(a)      → ∂a = broadcast(∂c)
+///   c = mean(a)     → ∂a = broadcast(∂c / n)
+///   c = reshape(a)  → ∂a = reshape(∂c, a.shape)
+///   c = transpose(a)→ ∂a = transpose(∂c)

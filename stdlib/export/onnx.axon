@@ -1,0 +1,14 @@
+/// std::export::onnx — ONNX model export.
+///
+/// Export trained Axon models to the Open Neural Network Exchange
+/// format for interoperability with other ML frameworks and
+/// deployment via ONNX Runtime.
+
+/// Export a model to ONNX format.
+///
+/// Parameters:
+///   path          — Output file path (e.g. "model.onnx")
+///   opset_version — ONNX opset version (e.g. 13)
+///
+/// Returns true on success.
+fn onnx_export(path: String, opset_version: Int32) -> Bool;

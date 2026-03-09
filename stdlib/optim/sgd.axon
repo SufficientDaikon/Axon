@@ -1,0 +1,11 @@
+/// std::optim::sgd — Stochastic Gradient Descent optimizer.
+///
+/// Implements SGD with optional momentum, weight decay,
+/// dampening, and Nesterov acceleration.
+
+struct SGD {
+    lr: Float32,
+}
+
+/// Create a new SGD optimizer with the given learning rate.
+fn sgd_new(lr: Float32) -> Int64;

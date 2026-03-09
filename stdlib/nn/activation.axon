@@ -1,0 +1,23 @@
+/// std::nn::activation — Activation function modules.
+///
+/// Stateless modules that apply element-wise nonlinearities.
+/// All implement the Module trait.
+
+/// Rectified Linear Unit: max(0, x).
+struct ReLU {}
+
+/// Gaussian Error Linear Unit.
+struct GELU {}
+
+/// Sigmoid Linear Unit (Swish): x * sigmoid(x).
+struct SiLU {}
+
+/// Softmax along a specified dimension.
+struct Softmax {
+    dim: Int64,
+}
+
+/// Log-Softmax: log(softmax(x)), numerically stable.
+struct LogSoftmax {
+    dim: Int64,
+}

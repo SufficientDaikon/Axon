@@ -1,0 +1,64 @@
+/// std::data::transforms — Data augmentation and preprocessing.
+///
+/// Image transforms (resize, crop, flip, normalize) and text
+/// transforms (tokenize, pad) for building data pipelines.
+
+/// Transform trait for composable data transformations.
+trait Transform {
+    fn apply(&self, input: Int64) -> Int64;
+}
+
+/// Compose multiple transforms into a single pipeline.
+struct Compose {}
+
+// ── Image transforms ────────────────────────────────────────
+
+/// Resize an image to the given width and height.
+struct Resize {
+    width: Int64,
+    height: Int64,
+}
+fn resize(width: Int64, height: Int64) -> Int64;
+
+/// Crop from the center of an image.
+struct CenterCrop {
+    width: Int64,
+    height: Int64,
+}
+fn center_crop(width: Int64, height: Int64) -> Int64;
+
+/// Randomly crop a region from an image.
+struct RandomCrop {
+    width: Int64,
+    height: Int64,
+}
+fn random_crop(width: Int64, height: Int64) -> Int64;
+
+/// Randomly flip an image horizontally with probability p.
+struct RandomHorizontalFlip {
+    p: Float32,
+}
+fn random_horizontal_flip(p: Float32) -> Int64;
+
+/// Normalize a tensor with given mean and standard deviation.
+struct Normalize {
+    mean: Float64,
+    std: Float64,
+}
+fn normalize_transform(mean: Float64, std: Float64) -> Int64;
+
+/// Convert raw data to a tensor.
+struct ToTensor {}
+fn to_tensor_transform() -> Int64;
+
+// ── Text transforms ─────────────────────────────────────────
+
+/// Tokenize a text string into integer token IDs.
+struct Tokenizer {}
+fn tokenize(text: String) -> Int64;
+
+/// Pad sequences to a uniform length.
+struct PadSequence {
+    max_len: Int64,
+}
+fn pad_sequence(max_len: Int64) -> Int64;

@@ -1,0 +1,71 @@
+/// std::nn::layers — Core neural network layers.
+///
+/// Provides Linear, Conv2d, BatchNorm, LayerNorm, Dropout,
+/// MaxPool2d, AvgPool2d, and AdaptiveAvgPool2d layers.
+
+/// Fully connected (dense) layer: y = x @ W^T + b.
+struct Linear {
+    in_features: Int64,
+    out_features: Int64,
+}
+
+/// Create a new Linear layer.
+fn linear_new(in_features: Int64, out_features: Int64) -> Int64;
+
+/// 2D convolution layer.
+struct Conv2d {
+    in_channels: Int64,
+    out_channels: Int64,
+    kernel_size: Int64,
+}
+
+/// Create a new Conv2d layer.
+fn conv2d_new(in_channels: Int64, out_channels: Int64, kernel_size: Int64) -> Int64;
+
+/// Batch normalization over a mini-batch of inputs.
+struct BatchNorm {
+    num_features: Int64,
+}
+
+/// Create a new BatchNorm layer.
+fn batchnorm_new(num_features: Int64) -> Int64;
+
+/// Layer normalization over the last dimension.
+struct LayerNorm {
+    normalized_shape: Int64,
+}
+
+/// Create a new LayerNorm layer.
+fn layernorm_new(normalized_shape: Int64) -> Int64;
+
+/// Randomly zeroes elements with probability p during training.
+struct Dropout {
+    p: Float32,
+}
+
+/// Create a new Dropout layer.
+fn dropout_new(p: Float32) -> Int64;
+
+/// 2D max pooling.
+struct MaxPool2d {
+    kernel_size: Int64,
+}
+
+/// Create a new MaxPool2d layer.
+fn maxpool2d_new(kernel_size: Int64) -> Int64;
+
+/// 2D average pooling.
+struct AvgPool2d {
+    kernel_size: Int64,
+}
+
+/// Create a new AvgPool2d layer.
+fn avgpool2d_new(kernel_size: Int64) -> Int64;
+
+/// Adaptive average pooling that produces a fixed output size.
+struct AdaptiveAvgPool2d {
+    output_size: Int64,
+}
+
+/// Create a new AdaptiveAvgPool2d layer.
+fn adaptive_avgpool2d_new(output_size: Int64) -> Int64;

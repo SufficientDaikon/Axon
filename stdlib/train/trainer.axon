@@ -1,0 +1,36 @@
+/// std::train::trainer — Training loop orchestrator.
+///
+/// The Trainer struct provides a high-level API for training loops,
+/// handling epoch/batch iteration, loss computation, and callback
+/// dispatch.
+
+/// High-level training orchestrator.
+struct Trainer {}
+
+/// Create a new Trainer instance.
+fn trainer_new() -> Int64;
+
+/// Callback trait for hooking into training events.
+trait Callback {
+    fn on_epoch_start(&mut self, epoch: Int64);
+    fn on_epoch_end(&mut self, epoch: Int64, loss: Float32);
+    fn on_batch_start(&mut self, batch: Int64);
+    fn on_batch_end(&mut self, batch: Int64, loss: Float32);
+    fn on_train_end(&mut self);
+}
+
+/// Early stopping callback: halt training when validation loss
+/// stops improving for `patience` epochs.
+struct EarlyStopping {
+    patience: Int64,
+}
+
+/// Model checkpoint callback: save best model during training.
+struct ModelCheckpoint {
+    path: String,
+}
+
+/// TensorBoard logging callback.
+struct TensorBoard {
+    log_dir: String,
+}

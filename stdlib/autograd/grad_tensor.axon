@@ -1,0 +1,25 @@
+/// std::autograd::grad_tensor — Gradient-tracking tensor.
+///
+/// GradTensor wraps a regular Tensor with automatic differentiation
+/// support. When `requires_grad` is true, all operations on the tensor
+/// are recorded in the computation graph for backward pass.
+
+/// A tensor that tracks gradients for automatic differentiation.
+struct GradTensor {
+    data: Int64,
+    requires_grad: Bool,
+}
+
+/// Create a new gradient-tracking tensor.
+fn grad_tensor_new(requires_grad: Bool) -> Int64;
+
+/// Compute gradients for all tensors in the computation graph
+/// by traversing it in reverse topological order.
+fn backward();
+
+/// Reset all accumulated gradients to zero.
+fn zero_grad();
+
+/// Detach a tensor from the computation graph, returning a
+/// plain tensor with no gradient tracking.
+fn detach(tensor: Int64) -> Int64;

@@ -1,0 +1,47 @@
+/// std::optim::scheduler — Learning rate schedulers.
+///
+/// Schedulers adjust the learning rate during training to improve
+/// convergence and final model quality.
+
+/// Learning rate scheduler trait.
+trait LrScheduler {
+    /// Advance the scheduler by one step.
+    fn step(&mut self);
+
+    /// Get the current learning rate.
+    fn get_lr(&self) -> Float32;
+}
+
+/// Step decay: multiply LR by gamma every step_size epochs.
+struct StepLR {
+    step_size: Int64,
+    gamma: Float32,
+}
+
+/// Create a new StepLR scheduler.
+fn step_lr_new(step_size: Int64, gamma: Float32) -> Int64;
+
+/// Cosine annealing: smoothly decrease LR following a cosine curve.
+struct CosineAnnealingLR {
+    t_max: Int64,
+}
+
+/// Create a new CosineAnnealingLR scheduler.
+fn cosine_annealing_lr_new(t_max: Int64) -> Int64;
+
+/// Reduce LR when a metric has stopped improving.
+struct ReduceLROnPlateau {
+    patience: Int64,
+}
+
+/// Create a new ReduceLROnPlateau scheduler.
+fn reduce_lr_on_plateau_new(patience: Int64) -> Int64;
+
+/// Super-convergence schedule: ramp up then anneal over total_steps.
+struct OneCycleLR {
+    max_lr: Float32,
+    total_steps: Int64,
+}
+
+/// Create a new OneCycleLR scheduler.
+fn one_cycle_lr_new(max_lr: Float32, total_steps: Int64) -> Int64;

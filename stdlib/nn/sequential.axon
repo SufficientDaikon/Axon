@@ -1,0 +1,11 @@
+/// std::nn::sequential — Sequential container module.
+///
+/// Chains multiple Module implementations so that the output of
+/// one layer feeds directly into the next.
+
+/// A sequential container that runs layers in order.
+struct Sequential {}
+
+/// Create a new empty Sequential container.
+/// Layers are added via the `add` method after construction.
+fn sequential_new() -> Int64;

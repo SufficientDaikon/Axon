@@ -1,0 +1,59 @@
+/// std::loss — Loss functions for training.
+///
+/// Each loss function computes a scalar measure of the discrepancy
+/// between model predictions and ground-truth targets. All implement
+/// the LossFn trait.
+
+/// Loss function trait.
+trait LossFn {
+    /// Compute loss given predictions and targets.
+    fn forward(&self, prediction: Int64, target: Int64) -> Float32;
+}
+
+/// Mean Squared Error loss: (1/n) Σ(pred - target)².
+struct MSELoss {}
+fn mse_loss() -> Int64;
+
+/// Mean Absolute Error loss: (1/n) Σ|pred - target|.
+struct L1Loss {}
+fn l1_loss() -> Int64;
+
+/// Cross-entropy loss (softmax + NLL) for multi-class classification.
+struct CrossEntropyLoss {}
+fn cross_entropy_loss() -> Int64;
+
+/// Binary cross-entropy loss for binary classification.
+struct BCELoss {}
+fn bce_loss() -> Int64;
+
+/// Binary cross-entropy with built-in sigmoid for numerical stability.
+struct BCEWithLogitsLoss {}
+fn bce_with_logits_loss() -> Int64;
+
+/// Negative log-likelihood loss.
+struct NLLLoss {}
+fn nll_loss() -> Int64;
+
+/// Huber loss (smooth L1): quadratic for small errors, linear for large.
+struct HuberLoss {
+    delta: Float32,
+}
+fn huber_loss(delta: Float32) -> Int64;
+
+/// Kullback-Leibler divergence loss.
+struct KLDivLoss {}
+fn kl_div_loss() -> Int64;
+
+/// Cosine embedding loss for similarity learning.
+struct CosineEmbeddingLoss {}
+fn cosine_embedding_loss() -> Int64;
+
+/// Triplet margin loss for metric learning.
+struct TripletMarginLoss {
+    margin: Float32,
+}
+fn triplet_margin_loss(margin: Float32) -> Int64;
+
+/// Connectionist Temporal Classification loss for sequence labeling.
+struct CTCLoss {}
+fn ctc_loss() -> Int64;

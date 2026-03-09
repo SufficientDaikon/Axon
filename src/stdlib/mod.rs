@@ -18,6 +18,14 @@ pub mod random;
 pub mod string;
 pub mod mem;
 pub mod time;
+pub mod nn;
+pub mod autograd;
+pub mod optim;
+pub mod loss;
+pub mod train;
+pub mod metrics;
+pub mod transforms;
+pub mod export;
 
 use crate::span::Span;
 use crate::symbol::*;
@@ -191,6 +199,14 @@ pub fn register_stdlib(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     random::register_random(interner, symbols);
     mem::register_mem(interner, symbols);
     time::register_time(interner, symbols);
+    nn::register_nn(interner, symbols);
+    autograd::register_autograd(interner, symbols);
+    optim::register_optim(interner, symbols);
+    loss::register_loss(interner, symbols);
+    train::register_train(interner, symbols);
+    metrics::register_metrics(interner, symbols);
+    transforms::register_transforms(interner, symbols);
+    export::register_export(interner, symbols);
 }
 
 // ---------------------------------------------------------------------------

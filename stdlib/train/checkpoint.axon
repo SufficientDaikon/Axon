@@ -1,0 +1,16 @@
+/// std::train::checkpoint — Model checkpointing.
+///
+/// Save and restore training state (model weights, optimizer state,
+/// epoch number) for resumable training.
+
+/// A checkpoint captures training state at a point in time.
+struct Checkpoint {
+    path: String,
+    epoch: Int64,
+}
+
+/// Save a checkpoint with the model state and current epoch.
+fn checkpoint_save(path: String, epoch: Int64);
+
+/// Load a checkpoint from disk, returning the saved state.
+fn checkpoint_load(path: String) -> Int64;

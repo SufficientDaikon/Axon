@@ -1,0 +1,51 @@
+/// std::optim::adam — Adam and AdamW optimizers.
+///
+/// Adam: Adaptive Moment Estimation with bias-corrected first
+/// and second moment estimates.
+///
+/// AdamW: Adam with decoupled weight decay regularization,
+/// which is the preferred variant for most use cases.
+
+struct Adam {
+    lr: Float32,
+}
+
+/// Create a new Adam optimizer with the given learning rate.
+fn adam_new(lr: Float32) -> Int64;
+
+struct AdamW {
+    lr: Float32,
+}
+
+/// Create a new AdamW optimizer with the given learning rate.
+/// Uses decoupled weight decay (default 0.01).
+fn adamw_new(lr: Float32) -> Int64;
+
+struct RMSprop {
+    lr: Float32,
+}
+
+/// Create a new RMSprop optimizer.
+fn rmsprop_new(lr: Float32) -> Int64;
+
+struct Adagrad {
+    lr: Float32,
+}
+
+/// Create a new Adagrad optimizer.
+fn adagrad_new(lr: Float32) -> Int64;
+
+/// Optimizer trait implemented by all optimizers.
+trait Optimizer {
+    /// Perform a single optimization step using accumulated gradients.
+    fn step(&mut self);
+
+    /// Reset all parameter gradients to zero.
+    fn zero_grad(&mut self);
+
+    /// Return the optimizer state dictionary for serialization.
+    fn state_dict(&self) -> Int64;
+
+    /// Load a previously saved optimizer state.
+    fn load_state_dict(&mut self, state: Int64);
+}

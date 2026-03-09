@@ -1,0 +1,13 @@
+/// std::autograd::context — Gradient context management.
+///
+/// Provides no_grad for inference without gradient tracking,
+/// and gradient checkpointing for memory-efficient training.
+
+/// Disable gradient tracking for subsequent operations.
+/// Use during inference to reduce memory usage.
+fn no_grad();
+
+/// Gradient checkpointing: recompute forward activations during
+/// backward pass instead of storing them, trading compute for memory.
+/// Essential for training very large models.
+fn grad_checkpoint(tensor: Int64) -> Int64;

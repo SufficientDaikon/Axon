@@ -1,0 +1,19 @@
+/// std::train::amp — Automatic Mixed Precision training.
+///
+/// Mixed precision uses Float16 for forward/backward passes where
+/// safe, while keeping master weights in Float32 for numerical
+/// stability. This reduces memory usage and improves throughput
+/// on hardware with Float16 tensor cores.
+
+/// Gradient scaler for mixed precision training.
+/// Scales loss to prevent Float16 underflow, then unscales
+/// gradients before the optimizer step.
+struct GradScaler {
+    init_scale: Float32,
+}
+
+/// Create a new GradScaler with the given initial scale factor.
+fn grad_scaler_new(init_scale: Float32) -> Int64;
+
+/// Enable automatic casting to Float16 for supported operations.
+fn autocast();
