@@ -1,0 +1,118 @@
+// std::math — Mathematical constants and functions
+//
+// Provides standard math operations on Float64, with generic min/max/clamp.
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+let PI: Float64      = 3.14159265358979323846;
+let E: Float64       = 2.71828182845904523536;
+let TAU: Float64     = 6.28318530717958647692;
+let SQRT_2: Float64  = 1.41421356237309504880;
+let LN_2: Float64    = 0.69314718055994530942;
+let LN_10: Float64   = 2.30258509299404568402;
+let LOG2_E: Float64  = 1.44269504088896340736;
+let LOG10_E: Float64 = 0.43429448190325182765;
+
+let INF: Float64;
+let NEG_INF: Float64;
+let NAN: Float64;
+let EPSILON: Float64;
+
+// ---------------------------------------------------------------------------
+// Trigonometric
+// ---------------------------------------------------------------------------
+
+fn sin(x: Float64) -> Float64;
+fn cos(x: Float64) -> Float64;
+fn tan(x: Float64) -> Float64;
+fn asin(x: Float64) -> Float64;
+fn acos(x: Float64) -> Float64;
+fn atan(x: Float64) -> Float64;
+fn atan2(y: Float64, x: Float64) -> Float64;
+
+// Hyperbolic
+fn sinh(x: Float64) -> Float64;
+fn cosh(x: Float64) -> Float64;
+fn tanh(x: Float64) -> Float64;
+fn asinh(x: Float64) -> Float64;
+fn acosh(x: Float64) -> Float64;
+fn atanh(x: Float64) -> Float64;
+
+// ---------------------------------------------------------------------------
+// Exponential & Logarithmic
+// ---------------------------------------------------------------------------
+
+fn exp(x: Float64) -> Float64;
+fn exp2(x: Float64) -> Float64;
+fn log(x: Float64) -> Float64;       // Natural log (ln)
+fn log2(x: Float64) -> Float64;
+fn log10(x: Float64) -> Float64;
+fn pow(base: Float64, exp: Float64) -> Float64;
+fn sqrt(x: Float64) -> Float64;
+fn cbrt(x: Float64) -> Float64;
+fn hypot(x: Float64, y: Float64) -> Float64;
+
+// ---------------------------------------------------------------------------
+// Rounding
+// ---------------------------------------------------------------------------
+
+fn floor(x: Float64) -> Float64;
+fn ceil(x: Float64) -> Float64;
+fn round(x: Float64) -> Float64;
+fn trunc(x: Float64) -> Float64;
+fn fract(x: Float64) -> Float64;
+
+// ---------------------------------------------------------------------------
+// Min / Max / Clamp / Abs
+// ---------------------------------------------------------------------------
+
+fn min<T: PartialOrd>(a: T, b: T) -> T;
+fn max<T: PartialOrd>(a: T, b: T) -> T;
+fn clamp<T: PartialOrd>(val: T, lo: T, hi: T) -> T;
+fn abs<T: Neg<Output = T> + PartialOrd + Default>(x: T) -> T;
+
+// ---------------------------------------------------------------------------
+// Sign & Classification
+// ---------------------------------------------------------------------------
+
+fn signum(x: Float64) -> Float64;     // -1.0, 0.0, or 1.0
+fn copysign(mag: Float64, sign: Float64) -> Float64;
+fn is_nan(x: Float64) -> Bool;
+fn is_infinite(x: Float64) -> Bool;
+fn is_finite(x: Float64) -> Bool;
+fn is_normal(x: Float64) -> Bool;
+
+// ---------------------------------------------------------------------------
+// Float decomposition
+// ---------------------------------------------------------------------------
+
+/// Decompose into (mantissa, exponent) such that x = mantissa * 2^exponent.
+fn frexp(x: Float64) -> (Float64, Int32);
+
+/// Compute mantissa * 2^exponent.
+fn ldexp(mantissa: Float64, exponent: Int32) -> Float64;
+
+// ---------------------------------------------------------------------------
+// Conversion helpers
+// ---------------------------------------------------------------------------
+
+/// Convert degrees to radians.
+fn to_radians(degrees: Float64) -> Float64;
+
+/// Convert radians to degrees.
+fn to_degrees(radians: Float64) -> Float64;
+
+// ---------------------------------------------------------------------------
+// Integer math
+// ---------------------------------------------------------------------------
+
+/// Greatest common divisor.
+fn gcd(a: Int64, b: Int64) -> Int64;
+
+/// Least common multiple.
+fn lcm(a: Int64, b: Int64) -> Int64;
+
+/// Integer exponentiation.
+fn pow_int(base: Int64, exp: Int64) -> Int64;

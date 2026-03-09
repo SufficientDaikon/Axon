@@ -1,0 +1,73 @@
+// std::convert — Type conversion traits
+//
+// Provides infallible (From/Into) and fallible (TryFrom/TryInto) conversions.
+
+// ---------------------------------------------------------------------------
+// Infallible conversions
+// ---------------------------------------------------------------------------
+
+/// Construct Self from a value of type T. This conversion must not fail.
+trait From<T> {
+    fn from(value: T) -> Self;
+}
+
+/// Convert self into a value of type T. Blanket-implemented whenever
+/// T: From<Self>, so prefer implementing From rather than Into.
+trait Into<T> {
+    fn into(self) -> T;
+}
+
+// Blanket: impl<T, U> Into<U> for T where U: From<T>
+
+// ---------------------------------------------------------------------------
+// Fallible conversions
+// ---------------------------------------------------------------------------
+
+/// Attempt to construct Self from a value of type T, returning an error
+/// on failure.
+trait TryFrom<T> {
+    type Error;
+    fn try_from(value: T) -> Result<Self, Self::Error>;
+}
+
+/// Attempt to convert self into a value of type T, returning an error
+/// on failure.
+trait TryInto<T> {
+    type Error;
+    fn try_into(self) -> Result<T, Self::Error>;
+}
+
+// Blanket: impl<T, U> TryInto<U> for T where U: TryFrom<T>
+
+// ---------------------------------------------------------------------------
+// Identity conversions
+// ---------------------------------------------------------------------------
+
+// impl<T> From<T> for T { fn from(value: T) -> T { value } }
+
+// ---------------------------------------------------------------------------
+// Standard numeric conversions (compiler-provided)
+// ---------------------------------------------------------------------------
+
+// impl From<Int32>  for Int64   { fn from(v: Int32)  -> Int64   { /* widen */ } }
+// impl From<Int32>  for Float64 { fn from(v: Int32)  -> Float64 { /* widen */ } }
+// impl From<Float32> for Float64 { fn from(v: Float32) -> Float64 { /* widen */ } }
+// impl From<UInt8>  for Int32   { fn from(v: UInt8)  -> Int32   { /* widen */ } }
+// impl From<UInt8>  for Int64   { fn from(v: UInt8)  -> Int64   { /* widen */ } }
+// impl From<Bool>   for Int32   { fn from(v: Bool)   -> Int32   { /* 0 or 1 */ } }
+
+// Narrowing conversions use TryFrom and may fail:
+// impl TryFrom<Int64> for Int32 { type Error = OverflowError; ... }
+// impl TryFrom<Float64> for Float32 { type Error = PrecisionError; ... }
+
+// ---------------------------------------------------------------------------
+// AsRef / AsMut — lightweight reference conversions
+// ---------------------------------------------------------------------------
+
+trait AsRef<T> {
+    fn as_ref(&self) -> &T;
+}
+
+trait AsMut<T> {
+    fn as_mut(&mut self) -> &mut T;
+}

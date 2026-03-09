@@ -1,0 +1,163 @@
+// std::ops — Operator overloading traits
+//
+// Each trait maps to a built-in operator so user-defined types can
+// participate in arithmetic, comparison, indexing, and function-call syntax.
+
+// ---------------------------------------------------------------------------
+// Arithmetic
+// ---------------------------------------------------------------------------
+
+trait Add<Rhs = Self> {
+    type Output;
+    fn add(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait Sub<Rhs = Self> {
+    type Output;
+    fn sub(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait Mul<Rhs = Self> {
+    type Output;
+    fn mul(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait Div<Rhs = Self> {
+    type Output;
+    fn div(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait Mod<Rhs = Self> {
+    type Output;
+    fn modulo(&self, rhs: &Rhs) -> Self::Output;
+}
+
+// ---------------------------------------------------------------------------
+// Unary
+// ---------------------------------------------------------------------------
+
+trait Neg {
+    type Output;
+    fn neg(&self) -> Self::Output;
+}
+
+trait Not {
+    type Output;
+    fn not(&self) -> Self::Output;
+}
+
+// ---------------------------------------------------------------------------
+// Bitwise
+// ---------------------------------------------------------------------------
+
+trait BitAnd<Rhs = Self> {
+    type Output;
+    fn bitand(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait BitOr<Rhs = Self> {
+    type Output;
+    fn bitor(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait BitXor<Rhs = Self> {
+    type Output;
+    fn bitxor(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait Shl<Rhs = Self> {
+    type Output;
+    fn shl(&self, rhs: &Rhs) -> Self::Output;
+}
+
+trait Shr<Rhs = Self> {
+    type Output;
+    fn shr(&self, rhs: &Rhs) -> Self::Output;
+}
+
+// ---------------------------------------------------------------------------
+// Compound assignment (+=, -=, *=, /=, %=)
+// ---------------------------------------------------------------------------
+
+trait AddAssign<Rhs = Self> { fn add_assign(&mut self, rhs: Rhs); }
+trait SubAssign<Rhs = Self> { fn sub_assign(&mut self, rhs: Rhs); }
+trait MulAssign<Rhs = Self> { fn mul_assign(&mut self, rhs: Rhs); }
+trait DivAssign<Rhs = Self> { fn div_assign(&mut self, rhs: Rhs); }
+trait ModAssign<Rhs = Self> { fn mod_assign(&mut self, rhs: Rhs); }
+
+// ---------------------------------------------------------------------------
+// Tensor-specific: matrix multiply via @ operator
+// ---------------------------------------------------------------------------
+
+trait MatMul<Rhs = Self> {
+    type Output;
+    /// Invoked by the `@` operator for matrix multiplication.
+    fn matmul(&self, rhs: &Rhs) -> Self::Output;
+}
+
+// ---------------------------------------------------------------------------
+// Indexing
+// ---------------------------------------------------------------------------
+
+trait Index<Idx> {
+    type Output;
+    fn index(&self, idx: Idx) -> &Self::Output;
+}
+
+trait IndexMut<Idx> {
+    type Output;
+    fn index_mut(&mut self, idx: Idx) -> &mut Self::Output;
+}
+
+// ---------------------------------------------------------------------------
+// Range types (used for slicing)
+// ---------------------------------------------------------------------------
+
+struct Range<T> {
+    start: T,
+    end: T,
+}
+
+struct RangeFrom<T> {
+    start: T,
+}
+
+struct RangeTo<T> {
+    end: T,
+}
+
+struct RangeFull {}
+
+struct RangeInclusive<T> {
+    start: T,
+    end: T,
+}
+
+// ---------------------------------------------------------------------------
+// Function call traits
+// ---------------------------------------------------------------------------
+
+trait Fn<Args> {
+    type Output;
+    fn call(&self, args: Args) -> Self::Output;
+}
+
+trait FnMut<Args> {
+    type Output;
+    fn call_mut(&mut self, args: Args) -> Self::Output;
+}
+
+trait FnOnce<Args> {
+    type Output;
+    fn call_once(self, args: Args) -> Self::Output;
+}
+
+// ---------------------------------------------------------------------------
+// Primitive implementations (compiler-generated for all numeric types)
+// ---------------------------------------------------------------------------
+
+// impl Add for Int32  { type Output = Int32;  fn add(&self, rhs: &Int32)  -> Int32  { /* intrinsic */ } }
+// impl Add for Int64  { type Output = Int64;  fn add(&self, rhs: &Int64)  -> Int64  { /* intrinsic */ } }
+// impl Add for Float32{ type Output = Float32;fn add(&self, rhs: &Float32)-> Float32{ /* intrinsic */ } }
+// impl Add for Float64{ type Output = Float64;fn add(&self, rhs: &Float64)-> Float64{ /* intrinsic */ } }
+// ... analogous impls for Sub, Mul, Div, Mod, Neg, Not, and all integer types.

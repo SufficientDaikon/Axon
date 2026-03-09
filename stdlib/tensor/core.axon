@@ -1,0 +1,274 @@
+// std::tensor::core — Tensor creation, shape operations, reductions, and element-wise math
+//
+// Tensor<DType, Shape> is the core numeric array type, supporting
+// CPU and GPU execution with shape-aware operations.
+
+// ---------------------------------------------------------------------------
+// Numeric marker trait
+// ---------------------------------------------------------------------------
+
+/// Marker trait for types that can be stored in a tensor.
+trait Numeric: Clone + Default + PartialOrd + Add + Sub + Mul + Div {}
+
+// Int32, Int64, Float32, Float64 all implement Numeric.
+
+// ---------------------------------------------------------------------------
+// Tensor struct
+// ---------------------------------------------------------------------------
+
+struct Tensor<DType, Shape> {
+    // Internal: data buffer, shape array, strides, device tag, requires_grad flag
+}
+
+impl<DType: Numeric, Shape> Tensor<DType, Shape> {
+    // --- Creation ----------------------------------------------------------
+
+    /// Create a tensor filled with zeros.
+    fn zeros(shape: Shape) -> Tensor<DType, Shape>;
+
+    /// Create a tensor filled with ones.
+    fn ones(shape: Shape) -> Tensor<DType, Shape>;
+
+    /// Create a tensor filled with `value`.
+    fn full(shape: Shape, value: DType) -> Tensor<DType, Shape>;
+
+    /// Create a tensor with uniformly distributed random values in [0, 1).
+    fn rand(shape: Shape) -> Tensor<DType, Shape>;
+
+    /// Create a tensor with normally distributed random values (mean=0, std=1).
+    fn randn(shape: Shape) -> Tensor<DType, Shape>;
+
+    /// Create a tensor from a flat vector and a shape.
+    fn from_vec(data: Vec<DType>, shape: Shape) -> Tensor<DType, Shape>;
+
+    /// Create a 1-D tensor with values from `start` to `end` (exclusive), stepping by `step`.
+    fn arange(start: DType, end: DType, step: DType) -> Tensor<DType, [?]>;
+
+    /// Create a 1-D tensor with `count` evenly spaced values from `start` to `end`.
+    fn linspace(start: DType, end: DType, count: Int64) -> Tensor<DType, [?]>;
+
+    /// Create an identity matrix of size n×n.
+    fn eye(n: Int64) -> Tensor<DType, [?, ?]>;
+
+    /// Create a tensor from a nested literal (compiler macro support).
+    // tensor![[1, 2], [3, 4]]
+
+    // --- Shape information -------------------------------------------------
+
+    /// Return the shape as a vector of dimension sizes.
+    fn shape(&self) -> Vec<Int64>;
+
+    /// Return the number of dimensions.
+    fn ndim(&self) -> Int64;
+
+    /// Return the total number of elements.
+    fn numel(&self) -> Int64;
+
+    /// Return the size of a specific dimension.
+    fn size(&self, dim: Int64) -> Int64;
+
+    /// Return the strides.
+    fn strides(&self) -> Vec<Int64>;
+
+    /// Return the data type name.
+    fn dtype(&self) -> String;
+
+    // --- Shape operations --------------------------------------------------
+
+    /// Reshape to a new shape (total elements must match).
+    fn reshape(&self, new_shape: Vec<Int64>) -> Tensor<DType, [?]>;
+
+    /// Transpose (swap last two dimensions).
+    fn transpose(&self) -> Tensor<DType, [?]>;
+
+    /// Transpose specific dimensions.
+    fn transpose_dims(&self, dim0: Int64, dim1: Int64) -> Tensor<DType, [?]>;
+
+    /// Permute dimensions in the given order.
+    fn permute(&self, dims: Vec<Int64>) -> Tensor<DType, [?]>;
+
+    /// Remove a dimension of size 1.
+    fn squeeze(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Insert a dimension of size 1.
+    fn unsqueeze(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Flatten to a 1-D tensor.
+    fn flatten(&self) -> Tensor<DType, [?]>;
+
+    /// View as a different shape (must be contiguous).
+    fn view(&self, shape: Vec<Int64>) -> Tensor<DType, [?]>;
+
+    /// Expand to a larger shape by broadcasting.
+    fn expand(&self, shape: Vec<Int64>) -> Tensor<DType, [?]>;
+
+    /// Repeat along dimensions.
+    fn repeat(&self, repeats: Vec<Int64>) -> Tensor<DType, [?]>;
+
+    // --- Reduction operations ----------------------------------------------
+
+    /// Sum all elements.
+    fn sum(&self) -> DType;
+
+    /// Sum along a dimension.
+    fn sum_dim(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Mean of all elements.
+    fn mean(&self) -> DType;
+
+    /// Mean along a dimension.
+    fn mean_dim(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Variance along a dimension.
+    fn var(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Standard deviation along a dimension.
+    fn std(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Maximum element.
+    fn max(&self) -> DType;
+
+    /// Maximum along a dimension.
+    fn max_dim(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Minimum element.
+    fn min(&self) -> DType;
+
+    /// Minimum along a dimension.
+    fn min_dim(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Index of maximum along a dimension.
+    fn argmax(&self, dim: Int64) -> Tensor<Int64, [?]>;
+
+    /// Index of minimum along a dimension.
+    fn argmin(&self, dim: Int64) -> Tensor<Int64, [?]>;
+
+    /// Product of all elements.
+    fn prod(&self) -> DType;
+
+    /// Cumulative sum along a dimension.
+    fn cumsum(&self, dim: Int64) -> Tensor<DType, [?]>;
+
+    // --- Element-wise math -------------------------------------------------
+
+    fn abs(&self) -> Tensor<DType, Shape>;
+    fn sqrt(&self) -> Tensor<DType, Shape>;
+    fn exp(&self) -> Tensor<DType, Shape>;
+    fn log(&self) -> Tensor<DType, Shape>;
+    fn log2(&self) -> Tensor<DType, Shape>;
+    fn log10(&self) -> Tensor<DType, Shape>;
+    fn pow(&self, exponent: DType) -> Tensor<DType, Shape>;
+    fn clamp(&self, min: DType, max: DType) -> Tensor<DType, Shape>;
+    fn floor(&self) -> Tensor<DType, Shape>;
+    fn ceil(&self) -> Tensor<DType, Shape>;
+    fn round(&self) -> Tensor<DType, Shape>;
+    fn sign(&self) -> Tensor<DType, Shape>;
+    fn reciprocal(&self) -> Tensor<DType, Shape>;
+
+    // Activation functions
+    fn relu(&self) -> Tensor<DType, Shape>;
+    fn sigmoid(&self) -> Tensor<DType, Shape>;
+    fn tanh(&self) -> Tensor<DType, Shape>;
+    fn softmax(&self, dim: Int64) -> Tensor<DType, Shape>;
+    fn log_softmax(&self, dim: Int64) -> Tensor<DType, Shape>;
+    fn gelu(&self) -> Tensor<DType, Shape>;
+    fn silu(&self) -> Tensor<DType, Shape>;
+    fn leaky_relu(&self, negative_slope: DType) -> Tensor<DType, Shape>;
+
+    // Trigonometric
+    fn sin(&self) -> Tensor<DType, Shape>;
+    fn cos(&self) -> Tensor<DType, Shape>;
+    fn tan(&self) -> Tensor<DType, Shape>;
+    fn asin(&self) -> Tensor<DType, Shape>;
+    fn acos(&self) -> Tensor<DType, Shape>;
+    fn atan(&self) -> Tensor<DType, Shape>;
+
+    // --- Comparison (element-wise, returns Bool tensor) --------------------
+
+    fn eq(&self, other: &Tensor<DType, Shape>) -> Tensor<Bool, Shape>;
+    fn ne(&self, other: &Tensor<DType, Shape>) -> Tensor<Bool, Shape>;
+    fn lt(&self, other: &Tensor<DType, Shape>) -> Tensor<Bool, Shape>;
+    fn le(&self, other: &Tensor<DType, Shape>) -> Tensor<Bool, Shape>;
+    fn gt(&self, other: &Tensor<DType, Shape>) -> Tensor<Bool, Shape>;
+    fn ge(&self, other: &Tensor<DType, Shape>) -> Tensor<Bool, Shape>;
+
+    // --- Data access -------------------------------------------------------
+
+    /// Extract the scalar value (only for 0-d or single-element tensors).
+    fn item(&self) -> DType;
+
+    /// Convert to a flat Vec.
+    fn to_vec(&self) -> Vec<DType>;
+
+    /// Ensure memory is contiguous.
+    fn contiguous(&self) -> Tensor<DType, Shape>;
+
+    /// Check if memory layout is contiguous.
+    fn is_contiguous(&self) -> Bool;
+
+    /// Clone the tensor data.
+    fn clone(&self) -> Tensor<DType, Shape>;
+
+    /// Detach from the computation graph (no gradient tracking).
+    fn detach(&self) -> Tensor<DType, Shape>;
+
+    // --- Type casting ------------------------------------------------------
+
+    /// Cast to a different data type.
+    fn to_dtype<NewDType: Numeric>(&self) -> Tensor<NewDType, Shape>;
+
+    fn to_float32(&self) -> Tensor<Float32, Shape>;
+    fn to_float64(&self) -> Tensor<Float64, Shape>;
+    fn to_int32(&self) -> Tensor<Int32, Shape>;
+    fn to_int64(&self) -> Tensor<Int64, Shape>;
+
+    // --- Indexing & Slicing ------------------------------------------------
+
+    /// Select a single index along a dimension.
+    fn select(&self, dim: Int64, index: Int64) -> Tensor<DType, [?]>;
+
+    /// Slice along a dimension.
+    fn narrow(&self, dim: Int64, start: Int64, length: Int64) -> Tensor<DType, [?]>;
+
+    /// Index with a boolean mask.
+    fn masked_select(&self, mask: &Tensor<Bool, Shape>) -> Tensor<DType, [?]>;
+
+    /// Advanced integer indexing.
+    fn index_select(&self, dim: Int64, indices: &Tensor<Int64, [?]>) -> Tensor<DType, [?]>;
+
+    /// Set values where mask is true.
+    fn masked_fill(&self, mask: &Tensor<Bool, Shape>, value: DType) -> Tensor<DType, Shape>;
+
+    // --- Concatenation & Stacking ------------------------------------------
+
+    /// Concatenate tensors along a dimension.
+    fn cat(tensors: Vec<&Tensor<DType, [?]>>, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Stack tensors along a new dimension.
+    fn stack(tensors: Vec<&Tensor<DType, [?]>>, dim: Int64) -> Tensor<DType, [?]>;
+
+    /// Split into chunks along a dimension.
+    fn chunk(&self, chunks: Int64, dim: Int64) -> Vec<Tensor<DType, [?]>>;
+
+    /// Split with specified sizes along a dimension.
+    fn split(&self, sizes: Vec<Int64>, dim: Int64) -> Vec<Tensor<DType, [?]>>;
+}
+
+// ---------------------------------------------------------------------------
+// Operator trait implementations for Tensor
+// ---------------------------------------------------------------------------
+
+// impl<D: Numeric, S> Add for Tensor<D, S> { type Output = Tensor<D, S>; ... }
+// impl<D: Numeric, S> Sub for Tensor<D, S> { type Output = Tensor<D, S>; ... }
+// impl<D: Numeric, S> Mul for Tensor<D, S> { type Output = Tensor<D, S>; ... }
+// impl<D: Numeric, S> Div for Tensor<D, S> { type Output = Tensor<D, S>; ... }
+// impl<D: Numeric, S> Neg for Tensor<D, S> { type Output = Tensor<D, S>; ... }
+// impl<D: Numeric, S> MatMul for Tensor<D, S> { type Output = Tensor<D, [?]>; ... }
+// impl<D: Numeric, S> Index<Int64> for Tensor<D, S> { ... }
+
+// ---------------------------------------------------------------------------
+// Display / Debug
+// ---------------------------------------------------------------------------
+
+// impl<D: Debug, S> Debug   for Tensor<D, S> { ... }
+// impl<D: Display, S> Display for Tensor<D, S> { ... }

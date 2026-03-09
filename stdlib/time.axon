@@ -1,0 +1,141 @@
+// std::time — Time measurement and duration
+//
+// Monotonic clocks, durations, and basic timing utilities.
+
+// ---------------------------------------------------------------------------
+// Duration
+// ---------------------------------------------------------------------------
+
+/// A span of time, stored as whole seconds plus nanoseconds.
+struct Duration {
+    secs: Int64,
+    nanos: Int32,
+}
+
+impl Duration {
+    /// Create a duration from seconds.
+    fn from_secs(secs: Int64) -> Duration;
+
+    /// Create a duration from milliseconds.
+    fn from_millis(millis: Int64) -> Duration;
+
+    /// Create a duration from microseconds.
+    fn from_micros(micros: Int64) -> Duration;
+
+    /// Create a duration from nanoseconds.
+    fn from_nanos(nanos: Int64) -> Duration;
+
+    /// Create a duration from floating-point seconds.
+    fn from_secs_f64(secs: Float64) -> Duration;
+
+    /// A zero-length duration.
+    fn zero() -> Duration;
+
+    // --- Accessors ---------------------------------------------------------
+
+    /// Return the whole seconds component.
+    fn as_secs(&self) -> Int64;
+
+    /// Return the total duration as milliseconds.
+    fn as_millis(&self) -> Int64;
+
+    /// Return the total duration as microseconds.
+    fn as_micros(&self) -> Int64;
+
+    /// Return the total duration as nanoseconds.
+    fn as_nanos(&self) -> Int64;
+
+    /// Return the total duration as floating-point seconds.
+    fn as_secs_f64(&self) -> Float64;
+
+    /// Return the fractional nanoseconds component (0–999_999_999).
+    fn subsec_nanos(&self) -> Int32;
+
+    /// Return the fractional milliseconds component (0–999).
+    fn subsec_millis(&self) -> Int32;
+
+    // --- Predicates --------------------------------------------------------
+
+    /// Return true if this is a zero-length duration.
+    fn is_zero(&self) -> Bool;
+
+    // --- Arithmetic --------------------------------------------------------
+
+    /// Add two durations. Panics on overflow.
+    fn add(&self, other: Duration) -> Duration;
+
+    /// Subtract a duration. Panics if the result would be negative.
+    fn sub(&self, other: Duration) -> Duration;
+
+    /// Checked addition (returns None on overflow).
+    fn checked_add(&self, other: Duration) -> Option<Duration>;
+
+    /// Checked subtraction (returns None if negative).
+    fn checked_sub(&self, other: Duration) -> Option<Duration>;
+
+    /// Multiply by a scalar.
+    fn mul(&self, factor: Int32) -> Duration;
+
+    /// Divide by a scalar.
+    fn div(&self, divisor: Int32) -> Duration;
+}
+
+// impl Add for Duration { ... }
+// impl Sub for Duration { ... }
+// impl PartialEq for Duration { ... }
+// impl Eq for Duration { ... }
+// impl PartialOrd for Duration { ... }
+// impl Ord for Duration { ... }
+// impl Clone for Duration { ... }
+// impl Copy for Duration { ... }
+// impl Debug for Duration { ... }
+// impl Display for Duration { ... }  // "1.234s", "500ms", etc.
+// impl Default for Duration { fn default() -> Self { Duration::zero() } }
+
+// ---------------------------------------------------------------------------
+// Instant — monotonic clock
+// ---------------------------------------------------------------------------
+
+/// A measurement of a monotonic clock. Useful for measuring elapsed time.
+struct Instant { /* internal: platform-specific monotonic timestamp */ }
+
+impl Instant {
+    /// Capture the current instant.
+    fn now() -> Instant;
+
+    /// Return the duration elapsed since this instant was captured.
+    fn elapsed(&self) -> Duration;
+
+    /// Return the duration between `self` and `later`.
+    fn duration_since(&self, earlier: Instant) -> Duration;
+
+    /// Checked duration_since (returns None if `earlier` is after `self`).
+    fn checked_duration_since(&self, earlier: Instant) -> Option<Duration>;
+
+    /// Return an instant that is `duration` in the future.
+    fn add(&self, duration: Duration) -> Instant;
+
+    /// Return an instant that is `duration` in the past.
+    fn sub(&self, duration: Duration) -> Instant;
+}
+
+// impl Add<Duration> for Instant { ... }
+// impl Sub<Duration> for Instant { ... }
+// impl Sub<Instant> for Instant { type Output = Duration; ... }
+// impl PartialEq for Instant { ... }
+// impl Eq for Instant { ... }
+// impl PartialOrd for Instant { ... }
+// impl Ord for Instant { ... }
+// impl Clone for Instant { ... }
+// impl Copy for Instant { ... }
+// impl Debug for Instant { ... }
+
+// ---------------------------------------------------------------------------
+// Convenience functions
+// ---------------------------------------------------------------------------
+
+/// Measure the wall-clock time to execute `f`.
+fn measure<T>(f: fn() -> T) -> (T, Duration);
+
+/// Put the current thread to sleep for the given duration.
+fn sleep(duration: Duration);

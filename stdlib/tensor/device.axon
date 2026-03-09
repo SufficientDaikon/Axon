@@ -1,0 +1,71 @@
+// std::tensor::device — Device transfer and memory management for tensors
+//
+// Move tensors between CPU, GPU, and TPU devices.
+
+use std::device::Device;
+
+// ---------------------------------------------------------------------------
+// Device transfer methods on Tensor
+// ---------------------------------------------------------------------------
+
+impl<DType: Numeric, Shape> Tensor<DType, Shape> {
+    /// Move the tensor to CPU memory.
+    fn to_cpu(&self) -> Tensor<DType, Shape>;
+
+    /// Move the tensor to the default GPU.
+    fn to_gpu(&self) -> Tensor<DType, Shape>;
+
+    /// Move the tensor to a specific device.
+    fn to_device(&self, device: Device) -> Tensor<DType, Shape>;
+
+    /// Return the device this tensor resides on.
+    fn device(&self) -> Device;
+
+    /// Return true if this tensor is on CPU.
+    fn is_cpu(&self) -> Bool;
+
+    /// Return true if this tensor is on a GPU.
+    fn is_gpu(&self) -> Bool;
+
+    /// Pin tensor memory for faster host-to-device transfer.
+    fn pin_memory(&self) -> Tensor<DType, Shape>;
+
+    /// Return true if the tensor's memory is pinned.
+    fn is_pinned(&self) -> Bool;
+}
+
+// ---------------------------------------------------------------------------
+// Device memory info
+// ---------------------------------------------------------------------------
+
+/// Return the amount of memory currently allocated on the given device (bytes).
+fn memory_allocated(device: Device) -> Int64;
+
+/// Return the amount of memory reserved (cached) on the given device (bytes).
+fn memory_reserved(device: Device) -> Int64;
+
+/// Return the peak memory allocated on the device since the last reset.
+fn max_memory_allocated(device: Device) -> Int64;
+
+/// Reset peak memory tracking statistics for the device.
+fn reset_peak_memory_stats(device: Device);
+
+/// Release all unused cached memory on the device.
+fn empty_cache(device: Device);
+
+// ---------------------------------------------------------------------------
+// Synchronization
+// ---------------------------------------------------------------------------
+
+/// Block the CPU until all pending operations on the device are complete.
+fn synchronize(device: Device);
+
+// ---------------------------------------------------------------------------
+// Device context manager
+// ---------------------------------------------------------------------------
+
+/// Set the default device for new tensor allocations.
+fn set_default_device(device: Device);
+
+/// Get the current default device.
+fn get_default_device() -> Device;

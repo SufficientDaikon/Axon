@@ -1,0 +1,181 @@
+// std::collections::vec — Growable array type
+//
+// Vec<T> is a contiguous, growable array stored on the heap.
+
+struct Vec<T> { /* internal: ptr, len, cap */ }
+
+impl<T> Vec<T> {
+    // --- Construction ------------------------------------------------------
+
+    /// Create an empty vector.
+    fn new() -> Vec<T>;
+
+    /// Create an empty vector with pre-allocated capacity.
+    fn with_capacity(cap: Int64) -> Vec<T>;
+
+    /// Create a vector of `n` copies of `value`.
+    fn from_elem(value: T, n: Int64) -> Vec<T>;  // where T: Clone
+
+    // --- Properties --------------------------------------------------------
+
+    /// Return the number of elements.
+    fn len(&self) -> Int64;
+
+    /// Return true if the vector contains no elements.
+    fn is_empty(&self) -> Bool;
+
+    /// Return the current allocated capacity.
+    fn capacity(&self) -> Int64;
+
+    // --- Access ------------------------------------------------------------
+
+    /// Return a reference to the element at `index`, or None if out of bounds.
+    fn get(&self, index: Int64) -> Option<&T>;
+
+    /// Return a mutable reference to the element at `index`.
+    fn get_mut(&mut self, index: Int64) -> Option<&mut T>;
+
+    /// Return a reference to the first element.
+    fn first(&self) -> Option<&T>;
+
+    /// Return a reference to the last element.
+    fn last(&self) -> Option<&T>;
+
+    /// Return a slice over the entire vector.
+    fn as_slice(&self) -> &[T];
+
+    /// Return a mutable slice over the entire vector.
+    fn as_mut_slice(&mut self) -> &mut [T];
+
+    // --- Modification ------------------------------------------------------
+
+    /// Append an element to the back.
+    fn push(&mut self, value: T);
+
+    /// Remove and return the last element, or None if empty.
+    fn pop(&mut self) -> Option<T>;
+
+    /// Insert an element at `index`, shifting subsequent elements right.
+    fn insert(&mut self, index: Int64, value: T);
+
+    /// Remove and return the element at `index`, shifting subsequent elements left.
+    fn remove(&mut self, index: Int64) -> T;
+
+    /// Remove an element by swapping it with the last element (O(1)).
+    fn swap_remove(&mut self, index: Int64) -> T;
+
+    /// Remove all elements.
+    fn clear(&mut self);
+
+    /// Truncate the vector to `len` elements.
+    fn truncate(&mut self, len: Int64);
+
+    /// Resize the vector to `new_len`, filling with `value` if growing.
+    fn resize(&mut self, new_len: Int64, value: T);  // where T: Clone
+
+    /// Reserve capacity for at least `additional` more elements.
+    fn reserve(&mut self, additional: Int64);
+
+    /// Shrink the allocation to fit the current length.
+    fn shrink_to_fit(&mut self);
+
+    // --- Reordering --------------------------------------------------------
+
+    /// Sort the vector in ascending order.
+    fn sort(&mut self);  // where T: Ord
+
+    /// Sort with a custom comparison function.
+    fn sort_by(&mut self, cmp: fn(&T, &T) -> Ordering);
+
+    /// Sort by a key extracted with `f`.
+    fn sort_by_key<K: Ord>(&mut self, f: fn(&T) -> K);
+
+    /// Reverse the order of elements in place.
+    fn reverse(&mut self);
+
+    /// Swap two elements by index.
+    fn swap(&mut self, a: Int64, b: Int64);
+
+    /// Remove consecutive duplicate elements.
+    fn dedup(&mut self);  // where T: PartialEq
+
+    // --- Searching ---------------------------------------------------------
+
+    /// Return true if the vector contains `value`.
+    fn contains(&self, value: &T) -> Bool;  // where T: PartialEq
+
+    /// Return the index of the first occurrence of `value`.
+    fn index_of(&self, value: &T) -> Option<Int64>;  // where T: PartialEq
+
+    /// Binary search for `value` in a sorted vector.
+    fn binary_search(&self, value: &T) -> Result<Int64, Int64>;  // where T: Ord
+
+    // --- Iteration ---------------------------------------------------------
+
+    /// Return an iterator over references.
+    fn iter(&self) -> VecIter<T>;
+
+    /// Return an iterator over mutable references.
+    fn iter_mut(&mut self) -> VecIterMut<T>;
+
+    /// Return a draining iterator that removes elements in the given range.
+    fn drain(&mut self, start: Int64, end: Int64) -> Drain<T>;
+
+    // --- Splitting & Joining -----------------------------------------------
+
+    /// Split the vector at `index`, returning a new vector with elements from `index` onward.
+    fn split_off(&mut self, index: Int64) -> Vec<T>;
+
+    /// Append all elements from `other` into self, leaving `other` empty.
+    fn append(&mut self, other: &mut Vec<T>);
+
+    /// Extend from an iterator.
+    fn extend(&mut self, iter: impl Iterator<Item = T>);
+
+    /// Extend from a slice.
+    fn extend_from_slice(&mut self, slice: &[T]);  // where T: Clone
+
+    // --- Functional --------------------------------------------------------
+
+    /// Keep only elements for which `f` returns true.
+    fn retain(&mut self, f: fn(&T) -> Bool);
+
+    /// Return a new vector with elements mapped by `f`.
+    fn map<U>(&self, f: fn(&T) -> U) -> Vec<U>;
+
+    /// Return a new vector with only elements satisfying `f`.
+    fn filter(&self, f: fn(&T) -> Bool) -> Vec<T>;  // where T: Clone
+
+    // --- Windowing ---------------------------------------------------------
+
+    /// Return an iterator of overlapping windows of length `size`.
+    fn windows(&self, size: Int64) -> WindowsIter<T>;
+
+    /// Return an iterator of non-overlapping chunks of length `size`.
+    fn chunks(&self, size: Int64) -> ChunksIter<T>;
+}
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl<T>            Index<Int64>  for Vec<T> { type Output = T; ... }
+// impl<T>            IndexMut<Int64> for Vec<T> { type Output = T; ... }
+// impl<T: Clone>     Clone         for Vec<T> { ... }
+// impl<T: PartialEq> PartialEq    for Vec<T> { ... }
+// impl<T: Eq>        Eq            for Vec<T> { ... }
+// impl<T: Debug>     Debug         for Vec<T> { ... }
+// impl<T>            Default       for Vec<T> { fn default() -> Vec<T> { Vec::new() } }
+// impl<T>            Drop          for Vec<T> { ... }
+// impl<T>            IntoIterator  for Vec<T> { ... }
+// impl<T>            FromIterator<T> for Vec<T> { ... }
+
+// ---------------------------------------------------------------------------
+// Iterator types
+// ---------------------------------------------------------------------------
+
+struct VecIter<T>     { /* internal */ }
+struct VecIterMut<T>  { /* internal */ }
+struct Drain<T>       { /* internal */ }
+struct WindowsIter<T> { /* internal */ }
+struct ChunksIter<T>  { /* internal */ }

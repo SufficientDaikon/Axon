@@ -1,0 +1,90 @@
+// std::data::csv — CSV file reading and writing
+//
+// Read and write comma-separated value files with optional headers.
+
+use std::data::loader::{DataFrame, DataError};
+
+// ---------------------------------------------------------------------------
+// Reading
+// ---------------------------------------------------------------------------
+
+/// Read a CSV file into a DataFrame.
+fn read_csv(path: &String) -> Result<DataFrame, DataError>;
+
+/// Read a CSV file with custom options.
+fn read_csv_with(path: &String, options: CsvReadOptions) -> Result<DataFrame, DataError>;
+
+struct CsvReadOptions {
+    /// Column delimiter (default: ',').
+    delimiter: Char,
+    /// Whether the first row is a header (default: true).
+    has_header: Bool,
+    /// Quote character (default: '"').
+    quote: Char,
+    /// Comment character — lines starting with this are skipped.
+    comment: Option<Char>,
+    /// Maximum number of rows to read (None = all).
+    max_rows: Option<Int64>,
+    /// Columns to read (None = all).
+    columns: Option<Vec<String>>,
+    /// Skip the first `n` rows (after the header).
+    skip_rows: Int64,
+    /// String that represents missing/null values.
+    null_value: Option<String>,
+    /// Character encoding (default: "utf-8").
+    encoding: String,
+}
+
+impl CsvReadOptions {
+    fn default() -> CsvReadOptions;
+}
+
+// ---------------------------------------------------------------------------
+// Writing
+// ---------------------------------------------------------------------------
+
+/// Write a DataFrame to a CSV file.
+fn write_csv(df: &DataFrame, path: &String) -> Result<(), DataError>;
+
+/// Write a DataFrame with custom options.
+fn write_csv_with(df: &DataFrame, path: &String, options: CsvWriteOptions) -> Result<(), DataError>;
+
+struct CsvWriteOptions {
+    /// Column delimiter (default: ',').
+    delimiter: Char,
+    /// Whether to write a header row (default: true).
+    write_header: Bool,
+    /// Quote character (default: '"').
+    quote: Char,
+    /// Line ending (default: "\n").
+    line_terminator: String,
+}
+
+impl CsvWriteOptions {
+    fn default() -> CsvWriteOptions;
+}
+
+// ---------------------------------------------------------------------------
+// Streaming CSV reader (for large files)
+// ---------------------------------------------------------------------------
+
+struct CsvReader { /* internal */ }
+
+impl CsvReader {
+    /// Open a CSV file for streaming.
+    fn open(path: &String) -> Result<CsvReader, DataError>;
+
+    /// Open with custom options.
+    fn open_with(path: &String, options: CsvReadOptions) -> Result<CsvReader, DataError>;
+
+    /// Read the next row as a vector of strings.
+    fn next_row(&mut self) -> Option<Result<Vec<String>, DataError>>;
+
+    /// Read the next `n` rows into a DataFrame.
+    fn read_rows(&mut self, n: Int64) -> Result<DataFrame, DataError>;
+
+    /// Return the header row, if present.
+    fn headers(&self) -> Option<&Vec<String>>;
+}
+
+// impl Iterator for CsvReader { type Item = Result<Vec<String>, DataError>; ... }

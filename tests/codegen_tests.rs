@@ -695,8 +695,8 @@ fn test_e2e_multiple_functions_call() {
 #[test]
 fn test_e2e_with_control_flow() {
     let ir = full_pipeline(
-        "fn abs(x: Int64) -> Int64 { if x < 0 { return -x; } else { return x; } }\n\
-         fn main() -> Int64 { return abs(-5); }",
+        "fn my_abs(x: Int64) -> Int64 { if x < 0 { return -x; } else { return x; } }\n\
+         fn main() -> Int64 { return my_abs(-5); }",
     );
     assert!(ir.contains("icmp"), "IR should contain comparison");
     assert!(ir.contains("br"), "IR should contain branch");

@@ -1,0 +1,141 @@
+// std::sync::channel — Message passing and atomic reference counting
+//
+// Channels for thread-safe communication and Arc for shared ownership.
+
+// ---------------------------------------------------------------------------
+// Channel<T> — multi-producer, single-consumer
+// ---------------------------------------------------------------------------
+
+/// Create an unbounded channel. Returns (sender, receiver).
+fn channel<T>() -> (Sender<T>, Receiver<T>);
+
+/// Create a bounded channel with a fixed capacity.
+fn bounded<T>(cap: Int64) -> (Sender<T>, Receiver<T>);
+
+/// The sending half of a channel.
+struct Sender<T> { /* internal */ }
+
+impl<T> Sender<T> {
+    /// Send a value through the channel. Blocks if the channel is full (bounded).
+    fn send(&self, value: T) -> Result<(), SendError<T>>;
+
+    /// Try to send without blocking. Returns Err if full or disconnected.
+    fn try_send(&self, value: T) -> Result<(), TrySendError<T>>;
+
+    /// Clone the sender (channels are multi-producer).
+    fn clone(&self) -> Sender<T>;
+
+    /// Return true if the receiver has been dropped.
+    fn is_disconnected(&self) -> Bool;
+}
+
+/// The receiving half of a channel.
+struct Receiver<T> { /* internal */ }
+
+impl<T> Receiver<T> {
+    /// Receive a value, blocking until one is available or the channel is closed.
+    fn recv(&self) -> Result<T, RecvError>;
+
+    /// Try to receive without blocking.
+    fn try_recv(&self) -> Result<T, TryRecvError>;
+
+    /// Receive with a timeout.
+    fn recv_timeout(&self, timeout: Duration) -> Result<T, RecvTimeoutError>;
+
+    /// Return an iterator that yields values until the channel is closed.
+    fn iter(&self) -> ChannelIter<T>;
+
+    /// Return true if the channel is empty.
+    fn is_empty(&self) -> Bool;
+
+    /// Return the number of pending messages.
+    fn len(&self) -> Int64;
+}
+
+// impl<T> IntoIterator for Receiver<T> { ... }
+
+// ---------------------------------------------------------------------------
+// Channel error types
+// ---------------------------------------------------------------------------
+
+struct SendError<T> {
+    /// The value that failed to send.
+    value: T,
+}
+
+enum TrySendError<T> {
+    Full(T),
+    Disconnected(T),
+}
+
+struct RecvError {}
+enum TryRecvError { Empty, Disconnected }
+enum RecvTimeoutError { Timeout, Disconnected }
+
+struct ChannelIter<T> { /* internal */ }
+
+// ---------------------------------------------------------------------------
+// Arc<T> — atomic reference counting
+// ---------------------------------------------------------------------------
+
+/// Thread-safe reference-counted pointer. Multiple Arc<T> instances can
+/// share ownership of the same heap-allocated value.
+struct Arc<T> { /* internal: pointer + atomic refcount */ }
+
+impl<T> Arc<T> {
+    /// Wrap a value in a new Arc.
+    fn new(value: T) -> Arc<T>;
+
+    /// Return the current reference count.
+    fn strong_count(this: &Arc<T>) -> Int64;
+
+    /// Return a mutable reference if this is the only Arc (refcount == 1).
+    fn get_mut(this: &mut Arc<T>) -> Option<&mut T>;
+
+    /// Attempt to unwrap the value if this is the only Arc.
+    fn try_unwrap(this: Arc<T>) -> Result<T, Arc<T>>;
+
+    /// Make a mutable clone if needed (clone-on-write).
+    fn make_mut(this: &mut Arc<T>) -> &mut T;  // where T: Clone
+}
+
+impl<T> Clone for Arc<T> {
+    /// Increment the reference count and return a new Arc pointing to the same data.
+    fn clone(&self) -> Arc<T>;
+}
+
+// impl<T> Drop for Arc<T> { /* decrement refcount, free when zero */ }
+// impl<T> Deref for Arc<T> { type Target = T; fn deref(&self) -> &T; }
+// impl<T: PartialEq> PartialEq for Arc<T> { ... }
+// impl<T: Eq> Eq for Arc<T> { ... }
+// impl<T: Debug> Debug for Arc<T> { ... }
+// impl<T: Display> Display for Arc<T> { ... }
+// impl<T: Hash> Hash for Arc<T> { ... }
+
+// ---------------------------------------------------------------------------
+// Weak<T> — non-owning reference
+// ---------------------------------------------------------------------------
+
+/// A non-owning reference to an Arc-managed value.
+/// Does not prevent the value from being deallocated.
+struct Weak<T> { /* internal */ }
+
+impl<T> Weak<T> {
+    /// Attempt to upgrade to a strong Arc<T>. Returns None if the value was dropped.
+    fn upgrade(&self) -> Option<Arc<T>>;
+
+    /// Return the number of strong references.
+    fn strong_count(&self) -> Int64;
+
+    /// Return the number of weak references.
+    fn weak_count(&self) -> Int64;
+}
+
+impl<T> Arc<T> {
+    /// Create a Weak reference from this Arc.
+    fn downgrade(this: &Arc<T>) -> Weak<T>;
+}
+
+impl<T> Clone for Weak<T> {
+    fn clone(&self) -> Weak<T>;
+}

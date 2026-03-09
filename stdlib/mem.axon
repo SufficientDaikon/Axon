@@ -1,0 +1,107 @@
+// std::mem — Memory utilities
+//
+// Low-level memory operations: size queries, swapping, and manual drop.
+
+// ---------------------------------------------------------------------------
+// Size and alignment queries
+// ---------------------------------------------------------------------------
+
+/// Return the size of a type in bytes.
+fn size_of<T>() -> Int64;
+
+/// Return the size of a value in bytes.
+fn size_of_val<T>(val: &T) -> Int64;
+
+/// Return the minimum alignment of a type in bytes.
+fn align_of<T>() -> Int64;
+
+/// Return the minimum alignment of a value in bytes.
+fn align_of_val<T>(val: &T) -> Int64;
+
+// ---------------------------------------------------------------------------
+// Swapping and replacing
+// ---------------------------------------------------------------------------
+
+/// Swap the values of two mutable references.
+fn swap<T>(a: &mut T, b: &mut T);
+
+/// Replace the value at `dest` with `src`, returning the old value.
+fn replace<T>(dest: &mut T, src: T) -> T;
+
+/// Take the value from `dest`, leaving Default::default() in its place.
+fn take<T: Default>(dest: &mut T) -> T;
+
+// ---------------------------------------------------------------------------
+// Drop
+// ---------------------------------------------------------------------------
+
+/// Explicitly drop a value, running its destructor immediately.
+fn drop<T>(val: T);
+
+/// Prevent a value's destructor from running.
+fn forget<T>(val: T);
+
+// ---------------------------------------------------------------------------
+// Zeroing and initialization
+// ---------------------------------------------------------------------------
+
+/// Return a zero-initialized value of type T (all bytes zero).
+fn zeroed<T>() -> T;
+
+/// Return an uninitialized value of type T.
+/// SAFETY: The caller must initialize the value before reading it.
+fn uninit<T>() -> MaybeUninit<T>;
+
+/// A wrapper around a possibly-uninitialized value.
+struct MaybeUninit<T> { /* internal */ }
+
+impl<T> MaybeUninit<T> {
+    /// Create an uninitialized MaybeUninit.
+    fn uninit() -> MaybeUninit<T>;
+
+    /// Create a MaybeUninit with a value.
+    fn new(val: T) -> MaybeUninit<T>;
+
+    /// Write a value, returning a mutable reference.
+    fn write(&mut self, val: T) -> &mut T;
+
+    /// Assume the value is initialized and extract it.
+    /// SAFETY: Undefined behavior if not actually initialized.
+    fn assume_init(self) -> T;
+
+    /// Get a reference to the value, assuming it is initialized.
+    fn assume_init_ref(&self) -> &T;
+
+    /// Get a mutable reference to the value, assuming it is initialized.
+    fn assume_init_mut(&mut self) -> &mut T;
+}
+
+// ---------------------------------------------------------------------------
+// Transmute
+// ---------------------------------------------------------------------------
+
+/// Reinterpret the bits of one type as another type.
+/// SAFETY: Both types must have the same size. Highly unsafe.
+fn transmute<Src, Dst>(src: Src) -> Dst;
+
+// ---------------------------------------------------------------------------
+// Discriminant
+// ---------------------------------------------------------------------------
+
+/// Return the discriminant of an enum value (for pattern matching internals).
+fn discriminant<T>(val: &T) -> Int64;
+
+// ---------------------------------------------------------------------------
+// ManuallyDrop — opt out of automatic drop
+// ---------------------------------------------------------------------------
+
+struct ManuallyDrop<T> { /* internal */ }
+
+impl<T> ManuallyDrop<T> {
+    fn new(val: T) -> ManuallyDrop<T>;
+    fn into_inner(self) -> T;
+
+    /// Explicitly drop the contained value.
+    /// SAFETY: Must not be called more than once.
+    fn drop(&mut self);
+}

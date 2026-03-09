@@ -1,0 +1,170 @@
+// std::data::loader — ML data loading pipeline
+//
+// DataLoader and Dataset abstractions for batched iteration
+// over training/validation data.
+
+// ---------------------------------------------------------------------------
+// Dataset trait
+// ---------------------------------------------------------------------------
+
+/// A dataset is an indexable collection of samples.
+trait Dataset<T> {
+    /// Return the total number of samples.
+    fn len(&self) -> Int64;
+
+    /// Return true if the dataset is empty.
+    fn is_empty(&self) -> Bool;
+
+    /// Return the sample at the given index.
+    fn get(&self, index: Int64) -> T;
+}
+
+// ---------------------------------------------------------------------------
+// DataLoader
+// ---------------------------------------------------------------------------
+
+/// Iterates over a Dataset in batches, with optional shuffling and
+/// multi-threaded prefetching.
+struct DataLoader<T> { /* internal */ }
+
+impl<T> DataLoader<T> {
+    /// Create a new data loader.
+    fn new(
+        dataset: &impl Dataset<T>,
+        batch_size: Int64,
+        shuffle: Bool,
+    ) -> DataLoader<T>;
+
+    /// Create with full configuration.
+    fn builder(dataset: &impl Dataset<T>) -> DataLoaderBuilder<T>;
+
+    /// Return an iterator over batches.
+    fn iter(&self) -> DataLoaderIter<T>;
+
+    /// Return the number of batches per epoch.
+    fn num_batches(&self) -> Int64;
+
+    /// Return the configured batch size.
+    fn batch_size(&self) -> Int64;
+}
+
+// ---------------------------------------------------------------------------
+// DataLoaderBuilder
+// ---------------------------------------------------------------------------
+
+struct DataLoaderBuilder<T> { /* internal */ }
+
+impl<T> DataLoaderBuilder<T> {
+    fn batch_size(&mut self, size: Int64) -> &mut DataLoaderBuilder<T>;
+    fn shuffle(&mut self, shuffle: Bool) -> &mut DataLoaderBuilder<T>;
+    fn num_workers(&mut self, workers: Int64) -> &mut DataLoaderBuilder<T>;
+    fn drop_last(&mut self, drop: Bool) -> &mut DataLoaderBuilder<T>;
+    fn prefetch_factor(&mut self, factor: Int64) -> &mut DataLoaderBuilder<T>;
+    fn seed(&mut self, seed: Int64) -> &mut DataLoaderBuilder<T>;
+    fn build(&self) -> DataLoader<T>;
+}
+
+struct DataLoaderIter<T> { /* internal */ }
+
+// impl<T> Iterator for DataLoaderIter<T> { type Item = Vec<T>; ... }
+
+// ---------------------------------------------------------------------------
+// DataFrame — tabular data
+// ---------------------------------------------------------------------------
+
+struct DataFrame { /* internal: column-oriented storage */ }
+
+impl DataFrame {
+    /// Return the shape (rows, columns).
+    fn shape(&self) -> (Int64, Int64);
+
+    /// Return the number of rows.
+    fn nrows(&self) -> Int64;
+
+    /// Return the number of columns.
+    fn ncols(&self) -> Int64;
+
+    /// Return column names.
+    fn columns(&self) -> Vec<String>;
+
+    /// Select a column by name.
+    fn column(&self, name: &String) -> Result<Series, DataError>;
+
+    /// Select multiple columns.
+    fn select(&self, names: Vec<&String>) -> Result<DataFrame, DataError>;
+
+    /// Return the first `n` rows.
+    fn head(&self, n: Int64) -> DataFrame;
+
+    /// Return the last `n` rows.
+    fn tail(&self, n: Int64) -> DataFrame;
+
+    /// Filter rows by a boolean mask.
+    fn filter(&self, mask: &Series) -> Result<DataFrame, DataError>;
+
+    /// Sort by a column.
+    fn sort_by(&self, column: &String, ascending: Bool) -> Result<DataFrame, DataError>;
+
+    /// Convert to a 2-D tensor (all columns must be numeric).
+    fn to_tensor<D: Numeric>(&self) -> Result<Tensor<D, [?, ?]>, DataError>;
+
+    /// Add a new column.
+    fn with_column(&self, name: String, data: Series) -> DataFrame;
+
+    /// Drop a column.
+    fn drop_column(&self, name: &String) -> Result<DataFrame, DataError>;
+
+    /// Apply a function to each row.
+    fn map_rows<U>(&self, f: fn(&Vec<Series>) -> U) -> Vec<U>;
+
+    /// Group by a column.
+    fn group_by(&self, column: &String) -> GroupBy;
+
+    /// Describe basic statistics (count, mean, std, min, max).
+    fn describe(&self) -> DataFrame;
+}
+
+// ---------------------------------------------------------------------------
+// Series — a single column of data
+// ---------------------------------------------------------------------------
+
+struct Series { /* internal */ }
+
+impl Series {
+    fn from_vec_int(name: String, data: Vec<Int64>) -> Series;
+    fn from_vec_float(name: String, data: Vec<Float64>) -> Series;
+    fn from_vec_string(name: String, data: Vec<String>) -> Series;
+    fn from_vec_bool(name: String, data: Vec<Bool>) -> Series;
+
+    fn name(&self) -> &String;
+    fn len(&self) -> Int64;
+    fn dtype(&self) -> String;
+
+    fn sum(&self) -> Float64;
+    fn mean(&self) -> Float64;
+    fn min(&self) -> Float64;
+    fn max(&self) -> Float64;
+    fn std(&self) -> Float64;
+
+    fn to_vec_int(&self) -> Result<Vec<Int64>, DataError>;
+    fn to_vec_float(&self) -> Result<Vec<Float64>, DataError>;
+    fn to_vec_string(&self) -> Result<Vec<String>, DataError>;
+}
+
+struct GroupBy { /* internal */ }
+
+impl GroupBy {
+    fn agg_sum(&self) -> DataFrame;
+    fn agg_mean(&self) -> DataFrame;
+    fn agg_count(&self) -> DataFrame;
+    fn agg_min(&self) -> DataFrame;
+    fn agg_max(&self) -> DataFrame;
+}
+
+// ---------------------------------------------------------------------------
+// Error type
+// ---------------------------------------------------------------------------
+
+struct DataError {
+    message: String,
+}

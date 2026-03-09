@@ -1,0 +1,120 @@
+// std::option — Optional values
+//
+// Option<T> represents a value that may or may not be present.
+// Used pervasively instead of null pointers.
+
+enum Option<T> {
+    Some(T),
+    None,
+}
+
+impl<T> Option<T> {
+    // --- Querying ----------------------------------------------------------
+
+    /// Returns true if the option contains a value.
+    fn is_some(&self) -> Bool;
+
+    /// Returns true if the option is None.
+    fn is_none(&self) -> Bool;
+
+    // --- Extracting --------------------------------------------------------
+
+    /// Returns the contained value, panicking with `msg` if None.
+    fn expect(self, msg: String) -> T;
+
+    /// Returns the contained value, panicking if None.
+    fn unwrap(self) -> T;
+
+    /// Returns the contained value or `default` if None.
+    fn unwrap_or(self, default: T) -> T;
+
+    /// Returns the contained value or computes it from `f` if None.
+    fn unwrap_or_else(self, f: fn() -> T) -> T;
+
+    /// Returns the contained value or Default::default() if None.
+    fn unwrap_or_default(self) -> T;  // where T: Default
+
+    // --- Transforming ------------------------------------------------------
+
+    /// Map the contained value with `f`, returning None if self is None.
+    fn map<U>(self, f: fn(T) -> U) -> Option<U>;
+
+    /// Map the contained value or return `default` if None.
+    fn map_or<U>(self, default: U, f: fn(T) -> U) -> U;
+
+    /// Map the contained value or compute a default.
+    fn map_or_else<U>(self, default: fn() -> U, f: fn(T) -> U) -> U;
+
+    /// Return None if self is None, otherwise return `other`.
+    fn and<U>(self, other: Option<U>) -> Option<U>;
+
+    /// Return None if self is None, otherwise call `f` with the value.
+    fn and_then<U>(self, f: fn(T) -> Option<U>) -> Option<U>;
+
+    /// Return self if it contains a value, otherwise return `other`.
+    fn or(self, other: Option<T>) -> Option<T>;
+
+    /// Return self if it contains a value, otherwise call `f`.
+    fn or_else(self, f: fn() -> Option<T>) -> Option<T>;
+
+    /// Return Some if exactly one of self, other is Some, otherwise None.
+    fn xor(self, other: Option<T>) -> Option<T>;
+
+    /// Filter: return self if the predicate returns true, otherwise None.
+    fn filter(self, predicate: fn(&T) -> Bool) -> Option<T>;
+
+    /// Flatten Option<Option<T>> to Option<T>.
+    fn flatten(self) -> Option<T>;  // where T = Option<U>
+
+    // --- Conversion to Result ---------------------------------------------
+
+    /// Convert to Result, mapping None to `err`.
+    fn ok_or<E>(self, err: E) -> Result<T, E>;
+
+    /// Convert to Result, mapping None to the result of `f`.
+    fn ok_or_else<E>(self, f: fn() -> E) -> Result<T, E>;
+
+    // --- Reference access --------------------------------------------------
+
+    /// Convert &Option<T> to Option<&T>.
+    fn as_ref(&self) -> Option<&T>;
+
+    /// Convert &mut Option<T> to Option<&mut T>.
+    fn as_mut(&mut self) -> Option<&mut T>;
+
+    // --- Iteration ---------------------------------------------------------
+
+    /// Iterate over the contained value (yields 0 or 1 elements).
+    fn iter(&self) -> OptionIter<T>;
+
+    // --- Zipping -----------------------------------------------------------
+
+    /// Zip two options into an option of a tuple.
+    fn zip<U>(self, other: Option<U>) -> Option<(T, U)>;
+
+    // --- Replace / Take ----------------------------------------------------
+
+    /// Replace the contained value, returning the old value.
+    fn replace(&mut self, value: T) -> Option<T>;
+
+    /// Take the value out, leaving None in its place.
+    fn take(&mut self) -> Option<T>;
+}
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl<T: Clone>      Clone      for Option<T> { ... }
+// impl<T: Copy>       Copy       for Option<T> { ... }
+// impl<T: PartialEq>  PartialEq  for Option<T> { ... }
+// impl<T: Eq>         Eq         for Option<T> { ... }
+// impl<T: PartialOrd> PartialOrd for Option<T> { ... }
+// impl<T: Ord>        Ord        for Option<T> { ... }
+// impl<T: Hash>       Hash       for Option<T> { ... }
+// impl<T: Debug>      Debug      for Option<T> { ... }
+// impl<T: Display>    Display    for Option<T> { ... }
+// impl<T>             Default    for Option<T> { fn default() -> Self { None } }
+// impl<T>             IntoIterator for Option<T> { ... }
+
+struct OptionIter<T> { /* internal */ }

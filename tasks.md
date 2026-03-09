@@ -199,10 +199,62 @@
 - [x] T136 Test: MIR generation tests — `tests/codegen_tests.rs`
 - [x] T137 Test: ABI mangling and runtime tests — `tests/codegen_tests.rs`
 
+## Phase 5: Standard Library (T138-T169)
+
+### Phase 5a: Core Traits & Prelude
+
+- [x] T138 Define operator traits (Add, Sub, Mul, Div, MatMul, Index, etc.) — `src/stdlib/ops.rs`
+- [x] T139 Define conversion traits (From, Into, TryFrom, TryInto) — `src/stdlib/convert.rs`
+- [x] T140 Define Display, Debug, Clone, Copy, Default, Drop — `src/stdlib/prelude.rs`
+- [x] T141 Define Iterator trait with default methods — `src/stdlib/prelude.rs`
+- [x] T142 Implement operator traits for all primitives — `src/stdlib/ops.rs`
+
+### Phase 5b: Collections
+
+- [x] T143 Implement Vec<T> — `src/stdlib/collections.rs`
+- [x] T144 Implement HashMap<K, V> — `src/stdlib/collections.rs`
+- [x] T145 Implement HashSet<T> — `src/stdlib/collections.rs`
+- [x] T146 Implement Option<T> and Result<T, E> with methods — `src/stdlib/collections.rs`
+- [x] T147 Implement String with UTF-8 support — `src/stdlib/string.rs`
+
+### Phase 5c: Tensor Operations
+
+- [x] T148 Implement Tensor creation functions — `src/stdlib/tensor.rs`
+- [x] T149 Implement shape operations — `src/stdlib/tensor.rs`
+- [x] T150 Implement reduction operations — `src/stdlib/tensor.rs`
+- [x] T151 Implement element-wise math — `src/stdlib/tensor.rs`
+- [x] T152 Implement linear algebra — `src/stdlib/tensor.rs`
+- [x] T153 Implement device transfer — `src/stdlib/tensor.rs`
+
+### Phase 5d: Math & I/O
+
+- [x] T154 Implement std::math functions — `src/stdlib/math.rs`
+- [x] T155 Implement Read/Write traits and File — `src/stdlib/io.rs`
+- [x] T156 Implement println/print/eprintln — `src/stdlib/prelude.rs`
+- [x] T157 Implement string formatting (Display/Debug) — `src/stdlib/io.rs`
+
+### Phase 5e: Concurrency & Data
+
+- [x] T158 Implement Mutex, RwLock, Arc — `src/stdlib/sync.rs`
+- [x] T159 Implement Channel (unbounded + bounded) — `src/stdlib/sync.rs`
+- [x] T160 Implement thread::spawn and JoinHandle — `src/stdlib/thread.rs`
+- [x] T161 Implement CSV/JSON loading — `src/stdlib/data.rs`
+- [x] T162 Implement DataLoader for ML pipelines — `src/stdlib/data.rs`
+- [x] T163 Implement Device abstraction — `src/stdlib/device.rs`
+- [x] T164 Implement random number generation — `src/stdlib/random.rs`
+
+### Phase 5f: Testing
+
+- [x] T165 Unit tests for all stdlib modules — `src/stdlib/*.rs` (87 tests)
+- [x] T166 Integration tests for stdlib functions — `tests/stdlib_tests.rs` (70 tests)
+- [x] T167 Math function tests — `tests/stdlib_tests.rs`
+- [x] T168 Axon source stubs — `stdlib/*.axon` (26 files)
+- [x] T169 Register stdlib in type checker pipeline — `src/typeck.rs`
+
 ---
 
 ## Summary
 
-- **Total Tasks**: 137
-- **Completed**: 137
+- **Total Tasks**: 169
+- **Completed**: 169
 - **Remaining**: 0

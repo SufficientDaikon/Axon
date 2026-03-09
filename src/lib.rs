@@ -10,6 +10,7 @@ pub mod types;
 pub mod symbol;
 pub mod typeck;
 pub mod shapes;
+pub mod stdlib;
 pub mod borrow;
 pub mod tast;
 pub mod mir;

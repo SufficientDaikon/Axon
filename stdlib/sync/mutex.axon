@@ -1,0 +1,131 @@
+// std::sync::mutex — Mutual exclusion and read-write locks
+//
+// Thread-safe shared state primitives.
+
+// ---------------------------------------------------------------------------
+// Mutex<T>
+// ---------------------------------------------------------------------------
+
+/// A mutual exclusion lock protecting shared data of type T.
+struct Mutex<T> { /* internal: OS mutex + data */ }
+
+impl<T> Mutex<T> {
+    /// Create a new mutex wrapping `value`.
+    fn new(value: T) -> Mutex<T>;
+
+    /// Acquire the lock, blocking until available.
+    /// Returns a guard that releases the lock when dropped.
+    fn lock(&self) -> MutexGuard<T>;
+
+    /// Try to acquire the lock without blocking.
+    /// Returns None if the lock is already held.
+    fn try_lock(&self) -> Option<MutexGuard<T>>;
+
+    /// Return true if the lock is currently held.
+    fn is_locked(&self) -> Bool;
+
+    /// Consume the mutex and return the inner value.
+    fn into_inner(self) -> T;
+
+    /// Get a mutable reference to the inner value (only when not shared).
+    fn get_mut(&mut self) -> &mut T;
+}
+
+/// RAII guard that releases the mutex when dropped.
+/// Derefs to &T (and &mut T) for direct access to the protected data.
+struct MutexGuard<T> { /* internal */ }
+
+impl<T> MutexGuard<T> {
+    fn deref(&self) -> &T;
+    fn deref_mut(&mut self) -> &mut T;
+}
+
+// impl<T> Drop for MutexGuard<T> { fn drop(&mut self) { /* release lock */ } }
+
+// ---------------------------------------------------------------------------
+// RwLock<T>
+// ---------------------------------------------------------------------------
+
+/// A reader-writer lock allowing multiple concurrent readers or one writer.
+struct RwLock<T> { /* internal: OS rwlock + data */ }
+
+impl<T> RwLock<T> {
+    /// Create a new read-write lock wrapping `value`.
+    fn new(value: T) -> RwLock<T>;
+
+    /// Acquire a shared read lock, blocking until available.
+    fn read(&self) -> ReadGuard<T>;
+
+    /// Acquire an exclusive write lock, blocking until available.
+    fn write(&self) -> WriteGuard<T>;
+
+    /// Try to acquire a read lock without blocking.
+    fn try_read(&self) -> Option<ReadGuard<T>>;
+
+    /// Try to acquire a write lock without blocking.
+    fn try_write(&self) -> Option<WriteGuard<T>>;
+
+    /// Consume the lock and return the inner value.
+    fn into_inner(self) -> T;
+
+    /// Get a mutable reference (only when not shared).
+    fn get_mut(&mut self) -> &mut T;
+}
+
+/// RAII guard for shared read access.
+struct ReadGuard<T> { /* internal */ }
+
+impl<T> ReadGuard<T> {
+    fn deref(&self) -> &T;
+}
+
+/// RAII guard for exclusive write access.
+struct WriteGuard<T> { /* internal */ }
+
+impl<T> WriteGuard<T> {
+    fn deref(&self) -> &T;
+    fn deref_mut(&mut self) -> &mut T;
+}
+
+// impl<T> Drop for ReadGuard<T>  { ... }
+// impl<T> Drop for WriteGuard<T> { ... }
+
+// ---------------------------------------------------------------------------
+// Condvar (condition variable)
+// ---------------------------------------------------------------------------
+
+/// A condition variable for signaling between threads.
+struct Condvar { /* internal */ }
+
+impl Condvar {
+    fn new() -> Condvar;
+
+    /// Block the current thread until notified. Must be called with a MutexGuard.
+    fn wait<T>(&self, guard: MutexGuard<T>) -> MutexGuard<T>;
+
+    /// Block until notified or until the timeout duration elapses.
+    fn wait_timeout<T>(&self, guard: MutexGuard<T>, duration: Duration) -> (MutexGuard<T>, Bool);
+
+    /// Wake one waiting thread.
+    fn notify_one(&self);
+
+    /// Wake all waiting threads.
+    fn notify_all(&self);
+}
+
+// ---------------------------------------------------------------------------
+// Once — one-time initialization
+// ---------------------------------------------------------------------------
+
+/// Ensures a piece of code is executed at most once, even across threads.
+struct Once { /* internal */ }
+
+impl Once {
+    fn new() -> Once;
+
+    /// Execute `f` the first time this is called; subsequent calls are no-ops.
+    fn call_once(&self, f: fn());
+
+    /// Return true if `call_once` has completed successfully.
+    fn is_completed(&self) -> Bool;
+}

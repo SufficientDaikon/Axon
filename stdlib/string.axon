@@ -1,0 +1,180 @@
+// std::string — UTF-8 encoded string type
+//
+// String is a growable, heap-allocated, UTF-8 string.
+
+struct String { /* internal: Vec<UInt8> */ }
+
+impl String {
+    // --- Construction ------------------------------------------------------
+
+    /// Create an empty string.
+    fn new() -> String;
+
+    /// Create a string with pre-allocated capacity.
+    fn with_capacity(cap: Int64) -> String;
+
+    /// Create a string from a byte vector (must be valid UTF-8).
+    fn from_utf8(bytes: Vec<UInt8>) -> Result<String, Utf8Error>;
+
+    /// Create a string from a byte vector without validation (unsafe).
+    fn from_utf8_unchecked(bytes: Vec<UInt8>) -> String;
+
+    // --- Properties --------------------------------------------------------
+
+    /// Return the byte length of the string.
+    fn len(&self) -> Int64;
+
+    /// Return the number of Unicode scalar values (characters).
+    fn char_count(&self) -> Int64;
+
+    /// Return true if the string is empty.
+    fn is_empty(&self) -> Bool;
+
+    /// Return the pre-allocated capacity in bytes.
+    fn capacity(&self) -> Int64;
+
+    // --- Access ------------------------------------------------------------
+
+    /// Return the character at the given byte index.
+    fn char_at(&self, index: Int64) -> Option<Char>;
+
+    /// Return a substring as a string slice.
+    fn slice(&self, start: Int64, end: Int64) -> String;
+
+    /// Return the underlying bytes.
+    fn as_bytes(&self) -> &Vec<UInt8>;
+
+    // --- Searching ---------------------------------------------------------
+
+    /// Return true if the string contains `pattern`.
+    fn contains(&self, pattern: &String) -> Bool;
+
+    /// Return the byte index of the first occurrence of `pattern`.
+    fn find(&self, pattern: &String) -> Option<Int64>;
+
+    /// Return the byte index of the last occurrence of `pattern`.
+    fn rfind(&self, pattern: &String) -> Option<Int64>;
+
+    /// Return true if the string starts with `prefix`.
+    fn starts_with(&self, prefix: &String) -> Bool;
+
+    /// Return true if the string ends with `suffix`.
+    fn ends_with(&self, suffix: &String) -> Bool;
+
+    // --- Modification (returns new String) ---------------------------------
+
+    /// Concatenate another string.
+    fn concat(&self, other: &String) -> String;
+
+    /// Append a string in place.
+    fn push_str(&mut self, s: &String);
+
+    /// Append a single character.
+    fn push(&mut self, c: Char);
+
+    /// Replace all occurrences of `from` with `to`.
+    fn replace(&self, from: &String, to: &String) -> String;
+
+    /// Replace the first `n` occurrences.
+    fn replacen(&self, from: &String, to: &String, n: Int64) -> String;
+
+    /// Convert to uppercase.
+    fn to_uppercase(&self) -> String;
+
+    /// Convert to lowercase.
+    fn to_lowercase(&self) -> String;
+
+    /// Remove leading and trailing whitespace.
+    fn trim(&self) -> String;
+
+    /// Remove leading whitespace.
+    fn trim_start(&self) -> String;
+
+    /// Remove trailing whitespace.
+    fn trim_end(&self) -> String;
+
+    /// Repeat the string `n` times.
+    fn repeat(&self, n: Int64) -> String;
+
+    // --- Splitting ---------------------------------------------------------
+
+    /// Split by a delimiter string.
+    fn split(&self, delimiter: &String) -> Vec<String>;
+
+    /// Split into at most `n` parts.
+    fn splitn(&self, n: Int64, delimiter: &String) -> Vec<String>;
+
+    /// Split by whitespace.
+    fn split_whitespace(&self) -> Vec<String>;
+
+    /// Split into individual lines.
+    fn lines(&self) -> Vec<String>;
+
+    // --- Joining -----------------------------------------------------------
+
+    /// Join a vector of strings with self as separator.
+    fn join(&self, parts: &Vec<String>) -> String;
+
+    // --- Parsing -----------------------------------------------------------
+
+    /// Parse the string into a numeric type.
+    fn parse_int(&self) -> Result<Int64, ParseError>;
+
+    /// Parse the string into a floating-point type.
+    fn parse_float(&self) -> Result<Float64, ParseError>;
+
+    /// Parse the string into a boolean.
+    fn parse_bool(&self) -> Result<Bool, ParseError>;
+
+    // --- Iteration ---------------------------------------------------------
+
+    /// Iterate over characters.
+    fn chars(&self) -> CharsIter;
+
+    /// Iterate over bytes.
+    fn bytes(&self) -> BytesIter;
+
+    /// Iterate over (byte_index, character) pairs.
+    fn char_indices(&self) -> CharIndicesIter;
+
+    // --- Truncation --------------------------------------------------------
+
+    /// Truncate the string to `new_len` bytes.
+    fn truncate(&mut self, new_len: Int64);
+
+    /// Clear the string, removing all content.
+    fn clear(&mut self);
+
+    /// Remove and return the last character.
+    fn pop(&mut self) -> Option<Char>;
+}
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl Clone      for String { ... }
+// impl PartialEq  for String { ... }
+// impl Eq         for String { ... }
+// impl PartialOrd for String { ... }
+// impl Ord        for String { ... }
+// impl Hash       for String { ... }
+// impl Display    for String { ... }
+// impl Debug      for String { ... }
+// impl Default    for String { fn default() -> String { String::new() } }
+// impl Add<&String> for String { type Output = String; ... }  // "a" + "b"
+// impl Index<Range<Int64>> for String { ... }
+// impl From<&str> for String { ... }
+// impl FromIterator<Char> for String { ... }
+
+// ---------------------------------------------------------------------------
+// Supporting types
+// ---------------------------------------------------------------------------
+
+struct Char { /* Unicode scalar value */ }
+struct Utf8Error { /* internal */ }
+struct ParseError { /* internal */ }
+
+struct CharsIter       { /* internal */ }
+struct BytesIter        { /* internal */ }
+struct CharIndicesIter  { /* internal */ }

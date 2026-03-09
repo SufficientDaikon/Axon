@@ -1,0 +1,117 @@
+// std::thread — Thread spawning and management
+//
+// OS-level threads with join handles and thread-local storage.
+
+// ---------------------------------------------------------------------------
+// Spawning
+// ---------------------------------------------------------------------------
+
+/// Spawn a new OS thread running `f`. Returns a handle to join later.
+fn spawn<T: Send>(f: fn() -> T) -> JoinHandle<T>;
+
+/// Spawn a named thread (useful for debugging).
+fn spawn_named<T: Send>(name: String, f: fn() -> T) -> JoinHandle<T>;
+
+// ---------------------------------------------------------------------------
+// JoinHandle
+// ---------------------------------------------------------------------------
+
+/// A handle to a spawned thread. Must be joined or detached.
+struct JoinHandle<T> { /* internal */ }
+
+impl<T> JoinHandle<T> {
+    /// Block until the thread finishes and return its result.
+    fn join(self) -> Result<T, ThreadError>;
+
+    /// Return true if the thread has finished executing.
+    fn is_finished(&self) -> Bool;
+
+    /// Return the thread's metadata.
+    fn thread(&self) -> Thread;
+}
+
+// ---------------------------------------------------------------------------
+// Thread metadata
+// ---------------------------------------------------------------------------
+
+struct Thread { /* internal */ }
+
+impl Thread {
+    /// Return the thread's name, if one was assigned.
+    fn name(&self) -> Option<String>;
+
+    /// Return the thread's unique ID.
+    fn id(&self) -> ThreadId;
+
+    /// Unpark (wake) the thread if it is parked.
+    fn unpark(&self);
+}
+
+struct ThreadId { /* internal: UInt64 */ }
+
+// ---------------------------------------------------------------------------
+// Current thread utilities
+// ---------------------------------------------------------------------------
+
+/// Return a handle to the current thread.
+fn current() -> Thread;
+
+/// Yield the current time slice to the OS scheduler.
+fn yield_now();
+
+/// Put the current thread to sleep for the given duration.
+fn sleep(duration: Duration);
+
+/// Park the current thread until unparked by another thread.
+fn park();
+
+/// Park with a timeout.
+fn park_timeout(duration: Duration);
+
+/// Return the number of hardware threads (logical CPUs) available.
+fn available_parallelism() -> Int64;
+
+// ---------------------------------------------------------------------------
+// Send & Sync marker traits
+// ---------------------------------------------------------------------------
+
+/// Types that can be safely transferred across thread boundaries.
+trait Send {}
+
+/// Types that can be safely shared (via &T) across thread boundaries.
+trait Sync {}
+
+// All primitive types implement Send + Sync.
+// Arc<T> implements Send + Sync where T: Send + Sync.
+// Mutex<T> implements Sync where T: Send.
+// Rc<T> does NOT implement Send or Sync.
+
+// ---------------------------------------------------------------------------
+// Error type
+// ---------------------------------------------------------------------------
+
+struct ThreadError {
+    message: String,
+}
+
+// ---------------------------------------------------------------------------
+// Scoped threads (structured concurrency)
+// ---------------------------------------------------------------------------
+
+/// Run a closure with a scope that guarantees all spawned threads
+/// are joined before the scope exits.
+fn scope<R>(f: fn(scope: &Scope) -> R) -> R;
+
+struct Scope { /* internal */ }
+
+impl Scope {
+    /// Spawn a thread within this scope. The thread borrows from the parent stack.
+    fn spawn<T: Send>(&self, f: fn() -> T) -> ScopedJoinHandle<T>;
+}
+
+struct ScopedJoinHandle<T> { /* internal */ }
+
+impl<T> ScopedJoinHandle<T> {
+    fn join(self) -> Result<T, ThreadError>;
+    fn is_finished(&self) -> Bool;
+}

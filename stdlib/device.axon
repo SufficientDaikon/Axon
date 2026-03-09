@@ -1,0 +1,101 @@
+// std::device — Compute device abstraction
+//
+// Represents the hardware target for tensor operations: CPU, GPU, or TPU.
+
+// ---------------------------------------------------------------------------
+// Device enum
+// ---------------------------------------------------------------------------
+
+enum Device {
+    /// Host CPU.
+    Cpu,
+    /// GPU identified by index (0-based).
+    Gpu(Int32),
+    /// TPU identified by index (0-based).
+    Tpu(Int32),
+}
+
+impl Device {
+    // --- Querying ----------------------------------------------------------
+
+    /// Check whether a specific device is available on this system.
+    fn is_available(device: Device) -> Bool;
+
+    /// Return the number of available GPUs.
+    fn gpu_count() -> Int32;
+
+    /// Return the number of available TPUs.
+    fn tpu_count() -> Int32;
+
+    /// Return the total number of accelerator devices.
+    fn accelerator_count() -> Int32;
+
+    /// Return the current default device.
+    fn current() -> Device;
+
+    /// Set the default device for new tensor allocations.
+    fn set_default(device: Device);
+
+    // --- Device properties -------------------------------------------------
+
+    /// Return the human-readable name of the device (e.g., "NVIDIA RTX 4090").
+    fn name(&self) -> String;
+
+    /// Return the total memory in bytes on this device.
+    fn total_memory(&self) -> Int64;
+
+    /// Return the currently allocated memory in bytes.
+    fn memory_allocated(&self) -> Int64;
+
+    /// Return the reserved (cached) memory in bytes.
+    fn memory_reserved(&self) -> Int64;
+
+    /// Return the free memory in bytes.
+    fn free_memory(&self) -> Int64;
+
+    // --- Synchronization ---------------------------------------------------
+
+    /// Block until all pending operations on this device are complete.
+    fn synchronize(&self);
+
+    // --- Comparison --------------------------------------------------------
+
+    fn is_cpu(&self) -> Bool;
+    fn is_gpu(&self) -> Bool;
+    fn is_tpu(&self) -> Bool;
+}
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl Clone      for Device { ... }
+// impl Copy       for Device { ... }
+// impl PartialEq  for Device { ... }
+// impl Eq         for Device { ... }
+// impl Hash       for Device { ... }
+// impl Display    for Device { ... }  // "cpu", "gpu:0", "tpu:1"
+// impl Debug      for Device { ... }
+// impl Default    for Device { fn default() -> Self { Device::Cpu } }
+
+// ---------------------------------------------------------------------------
+// Convenience constructors
+// ---------------------------------------------------------------------------
+
+/// Return Device::Cpu.
+fn cpu() -> Device;
+
+/// Return Device::Gpu(0) — the default GPU.
+fn gpu() -> Device;
+
+/// Return Device::Gpu(index).
+fn gpu_at(index: Int32) -> Device;
+
+/// Return Device::Tpu(0) — the default TPU.
+fn tpu() -> Device;
+
+/// Return Device::Tpu(index).
+fn tpu_at(index: Int32) -> Device;
+
+/// Return the best available accelerator, falling back to CPU.
+fn best_available() -> Device;

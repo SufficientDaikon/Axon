@@ -1,0 +1,111 @@
+// std::tensor::linalg — Linear algebra operations
+//
+// Matrix decompositions, solvers, and vector/matrix products.
+
+// ---------------------------------------------------------------------------
+// Matrix multiplication & products
+// ---------------------------------------------------------------------------
+
+/// Matrix multiply: a[M×K] @ b[K×N] → [M×N].
+fn matmul<D: Numeric, M, K, N>(a: &Tensor<D, [M, K]>, b: &Tensor<D, [K, N]>) -> Tensor<D, [M, N]>;
+
+/// Batched matrix multiply: a[B×M×K] @ b[B×K×N] → [B×M×N].
+fn bmm<D: Numeric, B, M, K, N>(a: &Tensor<D, [B, M, K]>, b: &Tensor<D, [B, K, N]>) -> Tensor<D, [B, M, N]>;
+
+/// Dot product of two 1-D tensors.
+fn dot<D: Numeric, N>(a: &Tensor<D, [N]>, b: &Tensor<D, [N]>) -> D;
+
+/// Outer product: a[M] ⊗ b[N] → [M×N].
+fn outer<D: Numeric, M, N>(a: &Tensor<D, [M]>, b: &Tensor<D, [N]>) -> Tensor<D, [M, N]>;
+
+/// Matrix-vector product: A[M×N] * x[N] → [M].
+fn mv<D: Numeric, M, N>(a: &Tensor<D, [M, N]>, x: &Tensor<D, [N]>) -> Tensor<D, [M]>;
+
+// ---------------------------------------------------------------------------
+// Norms
+// ---------------------------------------------------------------------------
+
+/// Vector/matrix norm. `p` selects the norm type (1, 2, inf, etc.).
+fn norm<D: Numeric, S>(a: &Tensor<D, S>, p: Float64) -> D;
+
+/// Frobenius norm (default matrix norm).
+fn frobenius_norm<D: Numeric, M, N>(a: &Tensor<D, [M, N]>) -> D;
+
+/// Normalize a tensor along a dimension to unit norm.
+fn normalize<D: Numeric, S>(a: &Tensor<D, S>, p: Float64, dim: Int64) -> Tensor<D, S>;
+
+// ---------------------------------------------------------------------------
+// Decompositions
+// ---------------------------------------------------------------------------
+
+/// Singular value decomposition: A = U Σ Vᵀ.
+fn svd<D: Numeric, M, N>(a: &Tensor<D, [M, N]>) -> (Tensor<D, [M, M]>, Tensor<D, [?]>, Tensor<D, [N, N]>);
+
+/// Eigenvalue decomposition: A = V diag(λ) V⁻¹.
+fn eig<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> (Tensor<D, [N]>, Tensor<D, [N, N]>);
+
+/// Symmetric eigenvalue decomposition.
+fn eigh<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> (Tensor<D, [N]>, Tensor<D, [N, N]>);
+
+/// QR decomposition: A = Q R.
+fn qr<D: Numeric, M, N>(a: &Tensor<D, [M, N]>) -> (Tensor<D, [M, M]>, Tensor<D, [M, N]>);
+
+/// LU decomposition with partial pivoting: PA = LU.
+fn lu<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> (Tensor<D, [N, N]>, Tensor<D, [N, N]>, Tensor<Int64, [N]>);
+
+/// Cholesky decomposition: A = L Lᵀ (A must be positive definite).
+fn cholesky<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> Tensor<D, [N, N]>;
+
+// ---------------------------------------------------------------------------
+// Solvers
+// ---------------------------------------------------------------------------
+
+/// Solve the linear system A x = b for x.
+fn solve<D: Numeric, N, K>(a: &Tensor<D, [N, N]>, b: &Tensor<D, [N, K]>) -> Tensor<D, [N, K]>;
+
+/// Least-squares solution to A x ≈ b (A may be non-square).
+fn lstsq<D: Numeric, M, N, K>(a: &Tensor<D, [M, N]>, b: &Tensor<D, [M, K]>) -> Tensor<D, [N, K]>;
+
+/// Solve a triangular system (upper or lower).
+fn triangular_solve<D: Numeric, N, K>(
+    a: &Tensor<D, [N, N]>,
+    b: &Tensor<D, [N, K]>,
+    upper: Bool,
+) -> Tensor<D, [N, K]>;
+
+// ---------------------------------------------------------------------------
+// Matrix properties
+// ---------------------------------------------------------------------------
+
+/// Determinant.
+fn det<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> D;
+
+/// Log-absolute-determinant (numerically stable).
+fn logdet<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> D;
+
+/// Matrix inverse.
+fn inv<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> Tensor<D, [N, N]>;
+
+/// Matrix rank.
+fn matrix_rank<D: Numeric, M, N>(a: &Tensor<D, [M, N]>) -> Int64;
+
+/// Trace (sum of diagonal elements).
+fn trace<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> D;
+
+/// Diagonal elements (or construct a diagonal matrix from a vector).
+fn diag<D: Numeric>(a: &Tensor<D, [?]>) -> Tensor<D, [?]>;
+
+/// Matrix exponential.
+fn matrix_exp<D: Numeric, N>(a: &Tensor<D, [N, N]>) -> Tensor<D, [N, N]>;
+
+/// Matrix power.
+fn matrix_power<D: Numeric, N>(a: &Tensor<D, [N, N]>, n: Int64) -> Tensor<D, [N, N]>;
+
+/// Condition number.
+fn cond<D: Numeric, M, N>(a: &Tensor<D, [M, N]>) -> D;
+
+/// Pseudo-inverse (Moore-Penrose).
+fn pinv<D: Numeric, M, N>(a: &Tensor<D, [M, N]>) -> Tensor<D, [N, M]>;
+
+/// Cross product (3-D vectors only).
+fn cross<D: Numeric>(a: &Tensor<D, [3]>, b: &Tensor<D, [3]>) -> Tensor<D, [3]>;

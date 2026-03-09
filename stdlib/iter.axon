@@ -1,0 +1,185 @@
+// std::iter — Iterator trait and adapters
+//
+// The Iterator trait is the foundation of lazy, composable sequences.
+// Only `next()` must be implemented; all other methods have default impls.
+
+// ---------------------------------------------------------------------------
+// Core Iterator trait
+// ---------------------------------------------------------------------------
+
+trait Iterator {
+    type Item;
+
+    /// Advance the iterator and return the next value, or None if exhausted.
+    fn next(&mut self) -> Option<Self::Item>;
+
+    // --- Adapters (return lazy iterators) ---------------------------------
+
+    /// Transform each element with `f`.
+    fn map<B>(self, f: fn(Self::Item) -> B) -> Map<Self, B>;
+
+    /// Keep only elements for which `f` returns true.
+    fn filter(self, f: fn(&Self::Item) -> Bool) -> Filter<Self>;
+
+    /// Map then flatten one level.
+    fn flat_map<B, I: Iterator<Item = B>>(self, f: fn(Self::Item) -> I) -> FlatMap<Self, I>;
+
+    /// Flatten an iterator of iterators.
+    fn flatten(self) -> Flatten<Self>;
+
+    /// Yield (index, element) pairs.
+    fn enumerate(self) -> Enumerate<Self>;
+
+    /// Pair elements from two iterators.
+    fn zip<Other: Iterator>(self, other: Other) -> Zip<Self, Other>;
+
+    /// Yield only the first `n` elements.
+    fn take(self, n: Int64) -> Take<Self>;
+
+    /// Skip the first `n` elements.
+    fn skip(self, n: Int64) -> Skip<Self>;
+
+    /// Chain two iterators sequentially.
+    fn chain<Other: Iterator<Item = Self::Item>>(self, other: Other) -> Chain<Self, Other>;
+
+    /// Yield elements while `f` returns true.
+    fn take_while(self, f: fn(&Self::Item) -> Bool) -> TakeWhile<Self>;
+
+    /// Skip elements while `f` returns true, then yield the rest.
+    fn skip_while(self, f: fn(&Self::Item) -> Bool) -> SkipWhile<Self>;
+
+    /// Yield every `step`-th element.
+    fn step_by(self, step: Int64) -> StepBy<Self>;
+
+    /// Insert a peek at each element without consuming it.
+    fn inspect(self, f: fn(&Self::Item)) -> Inspect<Self>;
+
+    // --- Consumers (eagerly evaluate) -------------------------------------
+
+    /// Reduce the iterator to a single value using an accumulator.
+    fn fold<B>(self, init: B, f: fn(B, Self::Item) -> B) -> B;
+
+    /// Reduce without an initial value (uses first element).
+    fn reduce(self, f: fn(Self::Item, Self::Item) -> Self::Item) -> Option<Self::Item>;
+
+    /// Collect into a collection (Vec, HashMap, HashSet, String, etc.).
+    fn collect<C: FromIterator<Self::Item>>(self) -> C;
+
+    /// Execute `f` on each element for side effects.
+    fn for_each(self, f: fn(Self::Item));
+
+    /// Count the number of elements.
+    fn count(self) -> Int64;
+
+    /// Sum all elements. Requires Item: Add.
+    fn sum(self) -> Self::Item;
+
+    /// Multiply all elements. Requires Item: Mul.
+    fn product(self) -> Self::Item;
+
+    /// Return true if any element satisfies `f`.
+    fn any(self, f: fn(&Self::Item) -> Bool) -> Bool;
+
+    /// Return true if all elements satisfy `f`.
+    fn all(self, f: fn(&Self::Item) -> Bool) -> Bool;
+
+    /// Find the first element satisfying `f`.
+    fn find(self, f: fn(&Self::Item) -> Bool) -> Option<Self::Item>;
+
+    /// Find the position of the first element satisfying `f`.
+    fn position(self, f: fn(&Self::Item) -> Bool) -> Option<Int64>;
+
+    /// Return the maximum element. Requires Item: Ord.
+    fn max(self) -> Option<Self::Item>;
+
+    /// Return the minimum element. Requires Item: Ord.
+    fn min(self) -> Option<Self::Item>;
+
+    /// Return the maximum element by a key function.
+    fn max_by_key<K: Ord>(self, f: fn(&Self::Item) -> K) -> Option<Self::Item>;
+
+    /// Return the minimum element by a key function.
+    fn min_by_key<K: Ord>(self, f: fn(&Self::Item) -> K) -> Option<Self::Item>;
+
+    /// Return the last element.
+    fn last(self) -> Option<Self::Item>;
+
+    /// Return the nth element (0-indexed).
+    fn nth(self, n: Int64) -> Option<Self::Item>;
+
+    /// Create a peekable iterator that allows looking ahead.
+    fn peekable(self) -> Peekable<Self>;
+}
+
+// ---------------------------------------------------------------------------
+// FromIterator — construct a collection from an iterator
+// ---------------------------------------------------------------------------
+
+trait FromIterator<T> {
+    fn from_iter(iter: impl Iterator<Item = T>) -> Self;
+}
+
+// ---------------------------------------------------------------------------
+// IntoIterator — anything that can be turned into an iterator
+// ---------------------------------------------------------------------------
+
+trait IntoIterator {
+    type Item;
+    type IntoIter: Iterator<Item = Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter;
+}
+
+// Blanket: every Iterator is IntoIterator for itself.
+// impl<I: Iterator> IntoIterator for I { ... }
+
+// ---------------------------------------------------------------------------
+// Adapter structs (opaque; created by Iterator methods)
+// ---------------------------------------------------------------------------
+
+struct Map<I, B>       { /* internal */ }
+struct Filter<I>       { /* internal */ }
+struct FlatMap<I, J>   { /* internal */ }
+struct Flatten<I>      { /* internal */ }
+struct Enumerate<I>    { /* internal */ }
+struct Zip<A, B>       { /* internal */ }
+struct Take<I>         { /* internal */ }
+struct Skip<I>         { /* internal */ }
+struct Chain<A, B>     { /* internal */ }
+struct TakeWhile<I>    { /* internal */ }
+struct SkipWhile<I>    { /* internal */ }
+struct StepBy<I>       { /* internal */ }
+struct Inspect<I>      { /* internal */ }
+struct Peekable<I>     { /* internal */ }
+
+// All adapter structs implement Iterator with the appropriate Item type.
+
+// ---------------------------------------------------------------------------
+// Peekable extras
+// ---------------------------------------------------------------------------
+
+impl<I: Iterator> Peekable<I> {
+    /// Return a reference to the next element without consuming it.
+    fn peek(&mut self) -> Option<&I::Item>;
+}
+
+// ---------------------------------------------------------------------------
+// Free functions
+// ---------------------------------------------------------------------------
+
+/// Create an iterator that yields nothing.
+fn empty<T>() -> Empty<T>;
+
+/// Create an iterator that yields a single value.
+fn once<T>(value: T) -> Once<T>;
+
+/// Create an infinite iterator that repeatedly calls `f`.
+fn repeat<T>(value: T) -> Repeat<T>;
+
+/// Create an iterator by repeatedly applying `f` to a state.
+fn successors<T>(first: Option<T>, f: fn(&T) -> Option<T>) -> Successors<T>;
+
+struct Empty<T>      { /* internal */ }
+struct Once<T>       { /* internal */ }
+struct Repeat<T>     { /* internal */ }
+struct Successors<T> { /* internal */ }

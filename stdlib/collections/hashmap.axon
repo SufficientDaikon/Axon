@@ -1,0 +1,142 @@
+// std::collections::hashmap — Hash map (associative array)
+//
+// HashMap<K, V> uses Robin Hood hashing for efficient key-value storage.
+
+struct HashMap<K, V> { /* internal: Robin Hood hashing */ }
+
+impl<K: Hash + Eq, V> HashMap<K, V> {
+    // --- Construction ------------------------------------------------------
+
+    /// Create an empty hash map.
+    fn new() -> HashMap<K, V>;
+
+    /// Create an empty hash map with pre-allocated capacity.
+    fn with_capacity(cap: Int64) -> HashMap<K, V>;
+
+    // --- Properties --------------------------------------------------------
+
+    /// Return the number of key-value pairs.
+    fn len(&self) -> Int64;
+
+    /// Return true if the map contains no entries.
+    fn is_empty(&self) -> Bool;
+
+    /// Return the current allocated capacity.
+    fn capacity(&self) -> Int64;
+
+    // --- Access ------------------------------------------------------------
+
+    /// Return a reference to the value associated with `key`.
+    fn get(&self, key: &K) -> Option<&V>;
+
+    /// Return a mutable reference to the value associated with `key`.
+    fn get_mut(&mut self, key: &K) -> Option<&mut V>;
+
+    /// Return true if the map contains `key`.
+    fn contains_key(&self, key: &K) -> Bool;
+
+    /// Return the key-value pair for `key`.
+    fn get_key_value(&self, key: &K) -> Option<(&K, &V)>;
+
+    // --- Modification ------------------------------------------------------
+
+    /// Insert a key-value pair. Returns the old value if the key already existed.
+    fn insert(&mut self, key: K, value: V) -> Option<V>;
+
+    /// Remove a key-value pair by key. Returns the removed value if it existed.
+    fn remove(&mut self, key: &K) -> Option<V>;
+
+    /// Remove all entries.
+    fn clear(&mut self);
+
+    /// Reserve capacity for at least `additional` more entries.
+    fn reserve(&mut self, additional: Int64);
+
+    /// Shrink the allocation to fit the current number of entries.
+    fn shrink_to_fit(&mut self);
+
+    /// Get a mutable reference to the value for `key`, inserting `default` if absent.
+    fn entry(&mut self, key: K) -> Entry<K, V>;
+
+    // --- Bulk operations ---------------------------------------------------
+
+    /// Extend with key-value pairs from an iterator.
+    fn extend(&mut self, iter: impl Iterator<Item = (K, V)>);
+
+    /// Keep only entries for which `f` returns true.
+    fn retain(&mut self, f: fn(&K, &mut V) -> Bool);
+
+    // --- Iteration ---------------------------------------------------------
+
+    /// Iterate over (&K, &V) pairs.
+    fn iter(&self) -> HashMapIter<K, V>;
+
+    /// Iterate over (&K, &mut V) pairs.
+    fn iter_mut(&mut self) -> HashMapIterMut<K, V>;
+
+    /// Iterate over keys.
+    fn keys(&self) -> KeysIter<K, V>;
+
+    /// Iterate over values.
+    fn values(&self) -> ValuesIter<K, V>;
+
+    /// Iterate over mutable values.
+    fn values_mut(&mut self) -> ValuesMutIter<K, V>;
+
+    /// Drain all entries, returning an iterator of owned (K, V) pairs.
+    fn drain(&mut self) -> HashMapDrain<K, V>;
+}
+
+// ---------------------------------------------------------------------------
+// Entry API
+// ---------------------------------------------------------------------------
+
+enum Entry<K, V> {
+    Occupied(OccupiedEntry<K, V>),
+    Vacant(VacantEntry<K, V>),
+}
+
+impl<K, V> Entry<K, V> {
+    /// Insert `default` if vacant, then return a mutable reference.
+    fn or_insert(self, default: V) -> &mut V;
+
+    /// Insert with `f` if vacant, then return a mutable reference.
+    fn or_insert_with(self, f: fn() -> V) -> &mut V;
+
+    /// Insert Default::default() if vacant, then return a mutable reference.
+    fn or_default(self) -> &mut V;  // where V: Default
+
+    /// Return a reference to the entry's key.
+    fn key(&self) -> &K;
+
+    /// Modify the entry if occupied.
+    fn and_modify(self, f: fn(&mut V)) -> Entry<K, V>;
+}
+
+struct OccupiedEntry<K, V> { /* internal */ }
+struct VacantEntry<K, V>   { /* internal */ }
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl<K: Clone + Hash + Eq, V: Clone> Clone for HashMap<K, V> { ... }
+// impl<K: Hash + Eq + Debug, V: Debug> Debug for HashMap<K, V> { ... }
+// impl<K: Hash + Eq, V: PartialEq> PartialEq for HashMap<K, V> { ... }
+// impl<K: Hash + Eq, V: Eq> Eq for HashMap<K, V> { ... }
+// impl<K: Hash + Eq, V> Default for HashMap<K, V> { fn default() -> Self { HashMap::new() } }
+// impl<K: Hash + Eq, V> Index<&K> for HashMap<K, V> { type Output = V; ... }
+// impl<K: Hash + Eq, V> IntoIterator for HashMap<K, V> { ... }
+// impl<K: Hash + Eq, V> FromIterator<(K, V)> for HashMap<K, V> { ... }
+// impl<K: Hash + Eq, V> Drop for HashMap<K, V> { ... }
+
+// ---------------------------------------------------------------------------
+// Iterator types
+// ---------------------------------------------------------------------------
+
+struct HashMapIter<K, V>      { /* internal */ }
+struct HashMapIterMut<K, V>   { /* internal */ }
+struct KeysIter<K, V>         { /* internal */ }
+struct ValuesIter<K, V>       { /* internal */ }
+struct ValuesMutIter<K, V>    { /* internal */ }
+struct HashMapDrain<K, V>     { /* internal */ }

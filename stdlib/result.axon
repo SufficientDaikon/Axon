@@ -1,0 +1,122 @@
+// std::result — Recoverable error handling
+//
+// Result<T, E> represents either success (Ok(T)) or failure (Err(E)).
+// Used for operations that can fail in an expected way.
+
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+
+impl<T, E> Result<T, E> {
+    // --- Querying ----------------------------------------------------------
+
+    /// Returns true if the result is Ok.
+    fn is_ok(&self) -> Bool;
+
+    /// Returns true if the result is Err.
+    fn is_err(&self) -> Bool;
+
+    // --- Extracting --------------------------------------------------------
+
+    /// Returns the contained Ok value, panicking with `msg` if Err.
+    fn expect(self, msg: String) -> T;
+
+    /// Returns the contained Ok value, panicking if Err.
+    fn unwrap(self) -> T;
+
+    /// Returns the contained Err value, panicking with `msg` if Ok.
+    fn expect_err(self, msg: String) -> E;
+
+    /// Returns the contained Err value, panicking if Ok.
+    fn unwrap_err(self) -> E;
+
+    /// Returns the contained Ok value, or `default` if Err.
+    fn unwrap_or(self, default: T) -> T;
+
+    /// Returns the contained Ok value, or computes it from the error.
+    fn unwrap_or_else(self, f: fn(E) -> T) -> T;
+
+    /// Returns the contained Ok value, or Default::default() if Err.
+    fn unwrap_or_default(self) -> T;  // where T: Default
+
+    // --- Transforming Ok ---------------------------------------------------
+
+    /// Map the Ok value with `f`, leaving Err untouched.
+    fn map<U>(self, f: fn(T) -> U) -> Result<U, E>;
+
+    /// Map the Ok value or return `default` if Err.
+    fn map_or<U>(self, default: U, f: fn(T) -> U) -> U;
+
+    /// Map the Ok value or compute from the error.
+    fn map_or_else<U>(self, default: fn(E) -> U, f: fn(T) -> U) -> U;
+
+    // --- Transforming Err --------------------------------------------------
+
+    /// Map the Err value with `f`, leaving Ok untouched.
+    fn map_err<F>(self, f: fn(E) -> F) -> Result<T, F>;
+
+    // --- Chaining ----------------------------------------------------------
+
+    /// Return `other` if self is Ok, otherwise propagate Err.
+    fn and<U>(self, other: Result<U, E>) -> Result<U, E>;
+
+    /// Call `f` with the Ok value, or propagate Err.
+    fn and_then<U>(self, f: fn(T) -> Result<U, E>) -> Result<U, E>;
+
+    /// Return self if Ok, otherwise return `other`.
+    fn or<F>(self, other: Result<T, F>) -> Result<T, F>;
+
+    /// Return self if Ok, otherwise call `f` with the error.
+    fn or_else<F>(self, f: fn(E) -> Result<T, F>) -> Result<T, F>;
+
+    // --- Conversion to Option ----------------------------------------------
+
+    /// Convert to Option<T>, discarding the error if any.
+    fn ok(self) -> Option<T>;
+
+    /// Convert to Option<E>, discarding the success value if any.
+    fn err(self) -> Option<E>;
+
+    // --- Reference access --------------------------------------------------
+
+    /// Convert &Result<T, E> to Result<&T, &E>.
+    fn as_ref(&self) -> Result<&T, &E>;
+
+    /// Convert &mut Result<T, E> to Result<&mut T, &mut E>.
+    fn as_mut(&mut self) -> Result<&mut T, &mut E>;
+
+    // --- Flatten -----------------------------------------------------------
+
+    /// Flatten Result<Result<T, E>, E> to Result<T, E>.
+    fn flatten(self) -> Result<T, E>;  // where T = Result<U, E>
+
+    // --- Iteration ---------------------------------------------------------
+
+    /// Iterate over the Ok value (yields 0 or 1 elements).
+    fn iter(&self) -> ResultIter<T>;
+}
+
+// ---------------------------------------------------------------------------
+// The ? operator
+// ---------------------------------------------------------------------------
+
+// The `?` operator on Result<T, E> desugars to:
+//   match expr {
+//       Ok(val) => val,
+//       Err(e)  => return Err(From::from(e)),
+//   }
+// This allows automatic error type conversion when E2: From<E1>.
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl<T: Clone, E: Clone>     Clone      for Result<T, E> { ... }
+// impl<T: Copy, E: Copy>       Copy       for Result<T, E> { ... }
+// impl<T: PartialEq, E: PartialEq> PartialEq for Result<T, E> { ... }
+// impl<T: Eq, E: Eq>           Eq         for Result<T, E> { ... }
+// impl<T: Debug, E: Debug>     Debug      for Result<T, E> { ... }
+// impl<T, E>                   IntoIterator for Result<T, E> { ... }
+
+struct ResultIter<T> { /* internal */ }

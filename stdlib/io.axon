@@ -1,0 +1,195 @@
+// std::io — Input/output traits and types
+//
+// Provides Read/Write traits, File, stdin/stdout/stderr, and buffered I/O.
+
+// ---------------------------------------------------------------------------
+// Error type
+// ---------------------------------------------------------------------------
+
+struct IoError {
+    kind: IoErrorKind,
+    message: String,
+}
+
+enum IoErrorKind {
+    NotFound,
+    PermissionDenied,
+    AlreadyExists,
+    InvalidInput,
+    UnexpectedEof,
+    BrokenPipe,
+    TimedOut,
+    Other,
+}
+
+impl IoError {
+    fn new(kind: IoErrorKind, msg: String) -> IoError;
+    fn kind(&self) -> IoErrorKind;
+}
+
+// ---------------------------------------------------------------------------
+// Read trait
+// ---------------------------------------------------------------------------
+
+trait Read {
+    /// Read bytes into `buf`. Returns the number of bytes read.
+    fn read(&mut self, buf: &mut Vec<UInt8>) -> Result<Int64, IoError>;
+
+    /// Read all remaining bytes into a string.
+    fn read_to_string(&mut self) -> Result<String, IoError>;
+
+    /// Read all remaining bytes into a byte vector.
+    fn read_to_end(&mut self) -> Result<Vec<UInt8>, IoError>;
+
+    /// Read exactly `buf.len()` bytes, or return an error.
+    fn read_exact(&mut self, buf: &mut Vec<UInt8>) -> Result<(), IoError>;
+}
+
+// ---------------------------------------------------------------------------
+// Write trait
+// ---------------------------------------------------------------------------
+
+trait Write {
+    /// Write bytes from `buf`. Returns the number of bytes written.
+    fn write(&mut self, buf: &[UInt8]) -> Result<Int64, IoError>;
+
+    /// Write an entire byte slice, retrying as needed.
+    fn write_all(&mut self, buf: &[UInt8]) -> Result<(), IoError>;
+
+    /// Write a string.
+    fn write_string(&mut self, s: &String) -> Result<Int64, IoError>;
+
+    /// Flush any buffered output.
+    fn flush(&mut self) -> Result<(), IoError>;
+}
+
+// ---------------------------------------------------------------------------
+// Seek trait
+// ---------------------------------------------------------------------------
+
+enum SeekFrom {
+    Start(Int64),
+    End(Int64),
+    Current(Int64),
+}
+
+trait Seek {
+    fn seek(&mut self, pos: SeekFrom) -> Result<Int64, IoError>;
+}
+
+// ---------------------------------------------------------------------------
+// BufRead trait
+// ---------------------------------------------------------------------------
+
+trait BufRead: Read {
+    /// Read a line into `buf`. Returns the number of bytes read.
+    fn read_line(&mut self) -> Result<String, IoError>;
+
+    /// Return an iterator over lines.
+    fn lines(&mut self) -> LinesIter;
+}
+
+struct LinesIter { /* internal */ }
+
+// ---------------------------------------------------------------------------
+// File
+// ---------------------------------------------------------------------------
+
+struct File { /* internal: OS file descriptor */ }
+
+impl File {
+    /// Open a file for reading.
+    fn open(path: &String) -> Result<File, IoError>;
+
+    /// Create a file for writing (truncates if exists).
+    fn create(path: &String) -> Result<File, IoError>;
+
+    /// Open with specific options.
+    fn open_options() -> OpenOptions;
+
+    /// Return file metadata (size, timestamps, etc.).
+    fn metadata(&self) -> Result<Metadata, IoError>;
+}
+
+impl Read for File { /* ... */ }
+impl Write for File { /* ... */ }
+impl Seek for File { /* ... */ }
+
+struct OpenOptions { /* internal */ }
+
+impl OpenOptions {
+    fn new() -> OpenOptions;
+    fn read(&mut self, read: Bool) -> &mut OpenOptions;
+    fn write(&mut self, write: Bool) -> &mut OpenOptions;
+    fn append(&mut self, append: Bool) -> &mut OpenOptions;
+    fn create(&mut self, create: Bool) -> &mut OpenOptions;
+    fn truncate(&mut self, truncate: Bool) -> &mut OpenOptions;
+    fn open(&self, path: &String) -> Result<File, IoError>;
+}
+
+struct Metadata { /* internal */ }
+
+impl Metadata {
+    fn size(&self) -> Int64;
+    fn is_file(&self) -> Bool;
+    fn is_dir(&self) -> Bool;
+}
+
+// ---------------------------------------------------------------------------
+// Buffered I/O wrappers
+// ---------------------------------------------------------------------------
+
+struct BufReader<R: Read> { /* internal */ }
+
+impl<R: Read> BufReader<R> {
+    fn new(reader: R) -> BufReader<R>;
+    fn with_capacity(cap: Int64, reader: R) -> BufReader<R>;
+}
+
+impl<R: Read> Read for BufReader<R> { /* ... */ }
+impl<R: Read> BufRead for BufReader<R> { /* ... */ }
+
+struct BufWriter<W: Write> { /* internal */ }
+
+impl<W: Write> BufWriter<W> {
+    fn new(writer: W) -> BufWriter<W>;
+    fn with_capacity(cap: Int64, writer: W) -> BufWriter<W>;
+}
+
+impl<W: Write> Write for BufWriter<W> { /* ... */ }
+
+// ---------------------------------------------------------------------------
+// Standard streams
+// ---------------------------------------------------------------------------
+
+struct StdinReader  { /* internal */ }
+struct StdoutWriter { /* internal */ }
+struct StderrWriter { /* internal */ }
+
+impl Read  for StdinReader  { /* ... */ }
+impl BufRead for StdinReader { /* ... */ }
+impl Write for StdoutWriter { /* ... */ }
+impl Write for StderrWriter { /* ... */ }
+
+fn stdin() -> StdinReader;
+fn stdout() -> StdoutWriter;
+fn stderr() -> StderrWriter;
+
+// ---------------------------------------------------------------------------
+// Convenience free functions
+// ---------------------------------------------------------------------------
+
+/// Print a string followed by a newline to stdout.
+fn println(s: &String);
+
+/// Print a string to stdout without a trailing newline.
+fn print(s: &String);
+
+/// Print a string followed by a newline to stderr.
+fn eprintln(s: &String);
+
+/// Read an entire file to a string.
+fn read_to_string(path: &String) -> Result<String, IoError>;
+
+/// Write a string to a file (creates or overwrites).
+fn write_string(path: &String, contents: &String) -> Result<(), IoError>;

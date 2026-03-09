@@ -1,0 +1,124 @@
+// std::data::json — JSON parsing and serialization
+//
+// Parse JSON text into a dynamic value tree and serialize back.
+
+use std::data::loader::DataError;
+
+// ---------------------------------------------------------------------------
+// JSON value type
+// ---------------------------------------------------------------------------
+
+enum JsonValue {
+    Null,
+    Bool(Bool),
+    Int(Int64),
+    Float(Float64),
+    String(String),
+    Array(Vec<JsonValue>),
+    Object(HashMap<String, JsonValue>),
+}
+
+impl JsonValue {
+    // --- Type checking -----------------------------------------------------
+
+    fn is_null(&self) -> Bool;
+    fn is_bool(&self) -> Bool;
+    fn is_number(&self) -> Bool;
+    fn is_string(&self) -> Bool;
+    fn is_array(&self) -> Bool;
+    fn is_object(&self) -> Bool;
+
+    // --- Extraction --------------------------------------------------------
+
+    /// Extract as Bool, or None if not a Bool.
+    fn as_bool(&self) -> Option<Bool>;
+
+    /// Extract as Int64, or None.
+    fn as_int(&self) -> Option<Int64>;
+
+    /// Extract as Float64, or None.
+    fn as_float(&self) -> Option<Float64>;
+
+    /// Extract as &String, or None.
+    fn as_str(&self) -> Option<&String>;
+
+    /// Extract as &Vec<JsonValue>, or None.
+    fn as_array(&self) -> Option<&Vec<JsonValue>>;
+
+    /// Extract as &HashMap<String, JsonValue>, or None.
+    fn as_object(&self) -> Option<&HashMap<String, JsonValue>>;
+
+    // --- Object access (shorthand) -----------------------------------------
+
+    /// Look up a key in a JSON object. Returns Null if self is not an object
+    /// or the key is missing.
+    fn get(&self, key: &String) -> &JsonValue;
+
+    /// Look up by index in a JSON array.
+    fn index(&self, idx: Int64) -> &JsonValue;
+
+    // --- Serialization -----------------------------------------------------
+
+    /// Serialize to a compact JSON string.
+    fn to_string(&self) -> String;
+
+    /// Serialize to a pretty-printed JSON string.
+    fn to_string_pretty(&self) -> String;
+
+    /// Serialize to a pretty-printed string with custom indentation.
+    fn to_string_indent(&self, indent: Int64) -> String;
+}
+
+// ---------------------------------------------------------------------------
+// Parsing
+// ---------------------------------------------------------------------------
+
+/// Parse a JSON string into a JsonValue.
+fn parse_json(s: &String) -> Result<JsonValue, JsonError>;
+
+/// Read and parse a JSON file.
+fn read_json(path: &String) -> Result<JsonValue, JsonError>;
+
+/// Write a JsonValue to a file.
+fn write_json(path: &String, value: &JsonValue) -> Result<(), JsonError>;
+
+/// Write a JsonValue to a file with pretty formatting.
+fn write_json_pretty(path: &String, value: &JsonValue) -> Result<(), JsonError>;
+
+// ---------------------------------------------------------------------------
+// Serialization traits
+// ---------------------------------------------------------------------------
+
+/// Types that can be serialized to JSON.
+trait ToJson {
+    fn to_json(&self) -> JsonValue;
+}
+
+/// Types that can be deserialized from JSON.
+trait FromJson: Sized {
+    fn from_json(value: &JsonValue) -> Result<Self, JsonError>;
+}
+
+// Compiler can auto-derive ToJson and FromJson for structs and enums.
+
+// ---------------------------------------------------------------------------
+// Error type
+// ---------------------------------------------------------------------------
+
+struct JsonError {
+    message: String,
+    line: Option<Int64>,
+    column: Option<Int64>,
+}
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl Display for JsonValue { ... }
+// impl Debug   for JsonValue { ... }
+// impl Clone   for JsonValue { ... }
+// impl PartialEq for JsonValue { ... }
+// impl Index<&String> for JsonValue { ... }
+// impl Index<Int64> for JsonValue { ... }
+// impl Default for JsonValue { fn default() -> Self { JsonValue::Null } }

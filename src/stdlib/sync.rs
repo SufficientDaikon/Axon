@@ -1,0 +1,117 @@
+// stdlib/sync.rs — Synchronization primitives (Mutex, RwLock, Channel, Arc).
+
+use crate::symbol::SymbolTable;
+use crate::types::*;
+
+use super::{def_method, def_struct};
+
+/// Register synchronization types and their methods.
+pub fn register_sync(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    register_mutex(interner, symbols);
+    register_rwlock(interner, symbols);
+    register_channel(interner, symbols);
+    register_arc(interner, symbols);
+    register_atomics(interner, symbols);
+}
+
+fn register_mutex(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let mutex_ty = def_struct(symbols, interner, "Mutex", vec![], vec![]);
+
+    def_method(symbols, interner, "Mutex", "new", vec![TypeId::UNIT], mutex_ty);
+    def_method(symbols, interner, "Mutex", "lock", vec![mutex_ty], TypeId::UNIT);
+    def_method(symbols, interner, "Mutex", "try_lock", vec![mutex_ty], TypeId::UNIT);
+    def_method(symbols, interner, "Mutex", "is_locked", vec![mutex_ty], TypeId::BOOL);
+}
+
+fn register_rwlock(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let rwlock_ty = def_struct(symbols, interner, "RwLock", vec![], vec![]);
+
+    def_method(symbols, interner, "RwLock", "new", vec![TypeId::UNIT], rwlock_ty);
+    def_method(symbols, interner, "RwLock", "read", vec![rwlock_ty], TypeId::UNIT);
+    def_method(symbols, interner, "RwLock", "write", vec![rwlock_ty], TypeId::UNIT);
+    def_method(symbols, interner, "RwLock", "try_read", vec![rwlock_ty], TypeId::UNIT);
+    def_method(symbols, interner, "RwLock", "try_write", vec![rwlock_ty], TypeId::UNIT);
+}
+
+fn register_channel(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let channel_ty = def_struct(symbols, interner, "Channel", vec![], vec![]);
+
+    def_method(symbols, interner, "Channel", "new", vec![], channel_ty);
+    def_method(symbols, interner, "Channel", "send", vec![channel_ty, TypeId::UNIT], TypeId::UNIT);
+    def_method(symbols, interner, "Channel", "recv", vec![channel_ty], TypeId::UNIT);
+    def_method(symbols, interner, "Channel", "try_recv", vec![channel_ty], TypeId::UNIT);
+    def_method(symbols, interner, "Channel", "is_empty", vec![channel_ty], TypeId::BOOL);
+}
+
+fn register_arc(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let arc_ty = def_struct(symbols, interner, "Arc", vec![], vec![]);
+
+    def_method(symbols, interner, "Arc", "new", vec![TypeId::UNIT], arc_ty);
+    def_method(symbols, interner, "Arc", "clone", vec![arc_ty], arc_ty);
+    def_method(symbols, interner, "Arc", "strong_count", vec![arc_ty], TypeId::INT64);
+}
+
+fn register_atomics(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let atomic_ty = def_struct(symbols, interner, "AtomicI64", vec![], vec![]);
+
+    def_method(symbols, interner, "AtomicI64", "new", vec![TypeId::INT64], atomic_ty);
+    def_method(symbols, interner, "AtomicI64", "load", vec![atomic_ty], TypeId::INT64);
+    def_method(symbols, interner, "AtomicI64", "store", vec![atomic_ty, TypeId::INT64], TypeId::UNIT);
+    def_method(symbols, interner, "AtomicI64", "fetch_add", vec![atomic_ty, TypeId::INT64], TypeId::INT64);
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::symbol::SymbolTable;
+
+    fn fresh() -> (TypeInterner, SymbolTable) {
+        (TypeInterner::new(), SymbolTable::new())
+    }
+
+    #[test]
+    fn mutex_registered() {
+        let (mut i, mut s) = fresh();
+        register_sync(&mut i, &mut s);
+        assert!(s.lookup("Mutex").is_some());
+        assert!(s.lookup("Mutex::new").is_some());
+        assert!(s.lookup("Mutex::lock").is_some());
+    }
+
+    #[test]
+    fn rwlock_registered() {
+        let (mut i, mut s) = fresh();
+        register_sync(&mut i, &mut s);
+        assert!(s.lookup("RwLock").is_some());
+        assert!(s.lookup("RwLock::read").is_some());
+        assert!(s.lookup("RwLock::write").is_some());
+    }
+
+    #[test]
+    fn channel_registered() {
+        let (mut i, mut s) = fresh();
+        register_sync(&mut i, &mut s);
+        assert!(s.lookup("Channel").is_some());
+        assert!(s.lookup("Channel::send").is_some());
+        assert!(s.lookup("Channel::recv").is_some());
+    }
+
+    #[test]
+    fn arc_registered() {
+        let (mut i, mut s) = fresh();
+        register_sync(&mut i, &mut s);
+        assert!(s.lookup("Arc").is_some());
+        assert!(s.lookup("Arc::new").is_some());
+    }
+
+    #[test]
+    fn atomics_registered() {
+        let (mut i, mut s) = fresh();
+        register_sync(&mut i, &mut s);
+        assert!(s.lookup("AtomicI64").is_some());
+    }
+}

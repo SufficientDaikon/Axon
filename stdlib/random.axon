@@ -1,0 +1,111 @@
+// std::random — Random number generation
+//
+// Seedable RNG with uniform and normal distributions, plus tensor sampling.
+
+// ---------------------------------------------------------------------------
+// RNG struct
+// ---------------------------------------------------------------------------
+
+/// A pseudorandom number generator (xoshiro256** algorithm).
+struct Rng { /* internal state */ }
+
+impl Rng {
+    /// Create a new RNG with a random seed from the OS.
+    fn new() -> Rng;
+
+    /// Create a new RNG with a specific seed (deterministic).
+    fn with_seed(seed: Int64) -> Rng;
+
+    /// Re-seed the generator.
+    fn seed(&mut self, seed: Int64);
+
+    // --- Scalar generation -------------------------------------------------
+
+    /// Generate a random Bool.
+    fn gen_bool(&mut self) -> Bool;
+
+    /// Generate a random Bool with probability `p` of being true.
+    fn gen_bool_p(&mut self, p: Float64) -> Bool;
+
+    /// Generate a random Int32 in the full range.
+    fn gen_int32(&mut self) -> Int32;
+
+    /// Generate a random Int64 in the full range.
+    fn gen_int64(&mut self) -> Int64;
+
+    /// Generate a random Float32 in [0.0, 1.0).
+    fn gen_float32(&mut self) -> Float32;
+
+    /// Generate a random Float64 in [0.0, 1.0).
+    fn gen_float64(&mut self) -> Float64;
+
+    /// Generate a random Int64 in [low, high).
+    fn gen_range_int(&mut self, low: Int64, high: Int64) -> Int64;
+
+    /// Generate a random Float64 in [low, high).
+    fn gen_range_float(&mut self, low: Float64, high: Float64) -> Float64;
+
+    // --- Distribution sampling ---------------------------------------------
+
+    /// Sample from a normal (Gaussian) distribution.
+    fn normal(&mut self, mean: Float64, std_dev: Float64) -> Float64;
+
+    /// Sample from a uniform distribution in [low, high).
+    fn uniform(&mut self, low: Float64, high: Float64) -> Float64;
+
+    /// Sample from an exponential distribution.
+    fn exponential(&mut self, lambda: Float64) -> Float64;
+
+    /// Sample from a Bernoulli distribution (0 or 1).
+    fn bernoulli(&mut self, p: Float64) -> Int64;
+
+    /// Sample from a Poisson distribution.
+    fn poisson(&mut self, lambda: Float64) -> Int64;
+
+    // --- Collection operations ---------------------------------------------
+
+    /// Shuffle a vector in place (Fisher-Yates).
+    fn shuffle<T>(&mut self, vec: &mut Vec<T>);
+
+    /// Choose a random element from a slice.
+    fn choose<T>(&mut self, slice: &[T]) -> Option<&T>;
+
+    /// Choose `n` random elements without replacement.
+    fn choose_multiple<T>(&mut self, slice: &[T], n: Int64) -> Vec<&T>;
+
+    // --- Tensor generation -------------------------------------------------
+
+    /// Generate a tensor of uniform random values in [0, 1).
+    fn rand_tensor<D: Numeric>(&mut self, shape: Vec<Int64>) -> Tensor<D, [?]>;
+
+    /// Generate a tensor of normally distributed values (mean=0, std=1).
+    fn randn_tensor<D: Numeric>(&mut self, shape: Vec<Int64>) -> Tensor<D, [?]>;
+
+    /// Generate a tensor of random integers in [low, high).
+    fn randint_tensor(&mut self, low: Int64, high: Int64, shape: Vec<Int64>) -> Tensor<Int64, [?]>;
+}
+
+// ---------------------------------------------------------------------------
+// Global convenience functions (use a thread-local default RNG)
+// ---------------------------------------------------------------------------
+
+/// Seed the global RNG.
+fn seed(s: Int64);
+
+/// Random Float64 in [0, 1).
+fn random() -> Float64;
+
+/// Random Int64 in [low, high).
+fn randint(low: Int64, high: Int64) -> Int64;
+
+/// Random Float64 in [low, high).
+fn uniform(low: Float64, high: Float64) -> Float64;
+
+/// Normal(mean, std_dev).
+fn normal(mean: Float64, std_dev: Float64) -> Float64;
+
+/// Shuffle a vector in place using the global RNG.
+fn shuffle<T>(vec: &mut Vec<T>);
+
+/// Choose a random element from a slice.
+fn choose<T>(slice: &[T]) -> Option<&T>;

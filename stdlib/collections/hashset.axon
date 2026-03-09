@@ -1,0 +1,105 @@
+// std::collections::hashset — Hash set
+//
+// HashSet<T> is a collection of unique values backed by HashMap<T, ()>.
+
+struct HashSet<T> { /* internal: HashMap<T, ()> */ }
+
+impl<T: Hash + Eq> HashSet<T> {
+    // --- Construction ------------------------------------------------------
+
+    /// Create an empty hash set.
+    fn new() -> HashSet<T>;
+
+    /// Create an empty hash set with pre-allocated capacity.
+    fn with_capacity(cap: Int64) -> HashSet<T>;
+
+    // --- Properties --------------------------------------------------------
+
+    /// Return the number of elements.
+    fn len(&self) -> Int64;
+
+    /// Return true if the set is empty.
+    fn is_empty(&self) -> Bool;
+
+    /// Return the current allocated capacity.
+    fn capacity(&self) -> Int64;
+
+    // --- Access ------------------------------------------------------------
+
+    /// Return true if the set contains `value`.
+    fn contains(&self, value: &T) -> Bool;
+
+    /// Return a reference to the matching value in the set.
+    fn get(&self, value: &T) -> Option<&T>;
+
+    // --- Modification ------------------------------------------------------
+
+    /// Insert a value. Returns true if the value was newly inserted.
+    fn insert(&mut self, value: T) -> Bool;
+
+    /// Remove a value. Returns true if the value was present.
+    fn remove(&mut self, value: &T) -> Bool;
+
+    /// Replace a value, returning the old value if present.
+    fn replace(&mut self, value: T) -> Option<T>;
+
+    /// Remove all elements.
+    fn clear(&mut self);
+
+    /// Reserve capacity for at least `additional` more elements.
+    fn reserve(&mut self, additional: Int64);
+
+    /// Keep only elements for which `f` returns true.
+    fn retain(&mut self, f: fn(&T) -> Bool);
+
+    // --- Set operations ----------------------------------------------------
+
+    /// Return a new set with elements in both self and other.
+    fn intersection(&self, other: &HashSet<T>) -> HashSet<T>;
+
+    /// Return a new set with elements in either self or other (or both).
+    fn union(&self, other: &HashSet<T>) -> HashSet<T>;
+
+    /// Return a new set with elements in self but not in other.
+    fn difference(&self, other: &HashSet<T>) -> HashSet<T>;
+
+    /// Return a new set with elements in either self or other, but not both.
+    fn symmetric_difference(&self, other: &HashSet<T>) -> HashSet<T>;
+
+    /// Return true if self has no elements in common with other.
+    fn is_disjoint(&self, other: &HashSet<T>) -> Bool;
+
+    /// Return true if self is a subset of other.
+    fn is_subset(&self, other: &HashSet<T>) -> Bool;
+
+    /// Return true if self is a superset of other.
+    fn is_superset(&self, other: &HashSet<T>) -> Bool;
+
+    // --- Iteration ---------------------------------------------------------
+
+    /// Iterate over references to the elements.
+    fn iter(&self) -> HashSetIter<T>;
+
+    /// Drain all elements, returning an iterator of owned values.
+    fn drain(&mut self) -> HashSetDrain<T>;
+}
+
+// ---------------------------------------------------------------------------
+// Trait implementations
+// ---------------------------------------------------------------------------
+
+// impl<T: Hash + Eq + Clone> Clone      for HashSet<T> { ... }
+// impl<T: Hash + Eq + Debug> Debug      for HashSet<T> { ... }
+// impl<T: Hash + Eq>         PartialEq  for HashSet<T> { ... }
+// impl<T: Hash + Eq>         Eq         for HashSet<T> { ... }
+// impl<T: Hash + Eq>         Default    for HashSet<T> { fn default() -> Self { HashSet::new() } }
+// impl<T: Hash + Eq>         IntoIterator for HashSet<T> { ... }
+// impl<T: Hash + Eq>         FromIterator<T> for HashSet<T> { ... }
+// impl<T: Hash + Eq>         Drop       for HashSet<T> { ... }
+
+// ---------------------------------------------------------------------------
+// Iterator types
+// ---------------------------------------------------------------------------
+
+struct HashSetIter<T>  { /* internal */ }
+struct HashSetDrain<T> { /* internal */ }

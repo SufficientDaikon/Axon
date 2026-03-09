@@ -1463,6 +1463,9 @@ pub fn check(source: &str, filename: &str) -> (TypeChecker, Vec<CompileError>) {
     let mut checker = TypeChecker::new();
     checker.errors.extend(parse_errors);
 
+    // Register standard library types and functions before user code
+    crate::stdlib::register_stdlib(&mut checker.interner, &mut checker.symbols);
+
     // Run name resolution first
     {
         let mut resolver = NameResolver::new(&mut checker.symbols, &mut checker.interner);

@@ -1,0 +1,141 @@
+// std::prelude — Automatically imported core types and traits
+//
+// Types: Option, Some, None, Result, Ok, Err, Vec, String, HashMap, Tensor
+// Primitives: Bool, Int32, Int64, UInt8, UInt32, UInt64, Float32, Float64
+// Traits: Display, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
+//         Hash, Iterator, Into, From, Default, Drop
+
+// ---------------------------------------------------------------------------
+// Ordering enum (returned by Ord::cmp)
+// ---------------------------------------------------------------------------
+
+enum Ordering {
+    Less,
+    Equal,
+    Greater,
+}
+
+// ---------------------------------------------------------------------------
+// Formatting support (forward-declared; see std::fmt for full API)
+// ---------------------------------------------------------------------------
+
+struct Formatter { /* internal */ }
+struct FmtError  { /* internal */ }
+
+// ---------------------------------------------------------------------------
+// Display & Debug
+// ---------------------------------------------------------------------------
+
+trait Display {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError>;
+}
+
+trait Debug {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError>;
+}
+
+// ---------------------------------------------------------------------------
+// Clone & Copy
+// ---------------------------------------------------------------------------
+
+trait Clone {
+    fn clone(&self) -> Self;
+}
+
+/// Marker trait — compiler-implemented for primitives.
+/// Types that implement Copy are duplicated via bitwise copy.
+trait Copy: Clone {}
+
+// ---------------------------------------------------------------------------
+// Default
+// ---------------------------------------------------------------------------
+
+trait Default {
+    fn default() -> Self;
+}
+
+// ---------------------------------------------------------------------------
+// Drop
+// ---------------------------------------------------------------------------
+
+trait Drop {
+    fn drop(&mut self);
+}
+
+// ---------------------------------------------------------------------------
+// Equality & Comparison
+// ---------------------------------------------------------------------------
+
+trait PartialEq {
+    fn eq(&self, other: &Self) -> Bool;
+
+    fn ne(&self, other: &Self) -> Bool;
+}
+
+/// Full equivalence relation — reflexive, symmetric, transitive.
+trait Eq: PartialEq {}
+
+trait PartialOrd: PartialEq {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>;
+
+    fn lt(&self, other: &Self) -> Bool;
+    fn le(&self, other: &Self) -> Bool;
+    fn gt(&self, other: &Self) -> Bool;
+    fn ge(&self, other: &Self) -> Bool;
+}
+
+/// Total ordering — every pair of values is comparable.
+trait Ord: PartialOrd {
+    fn cmp(&self, other: &Self) -> Ordering;
+
+    fn max(self, other: Self) -> Self;
+    fn min(self, other: Self) -> Self;
+}
+
+// ---------------------------------------------------------------------------
+// Hash
+// ---------------------------------------------------------------------------
+
+trait Hash {
+    fn hash(&self) -> Int64;
+}
+
+// ---------------------------------------------------------------------------
+// Sized (marker trait — compiler-enforced)
+// ---------------------------------------------------------------------------
+
+trait Sized {}
+
+// ---------------------------------------------------------------------------
+// Free functions available everywhere
+// ---------------------------------------------------------------------------
+
+/// Print a string followed by a newline to stdout.
+fn println(s: String);
+
+/// Print a string to stdout without a trailing newline.
+fn print(s: String);
+
+/// Print a string followed by a newline to stderr.
+fn eprintln(s: String);
+
+/// Panic if `cond` is false.
+fn assert(cond: Bool);
+
+/// Panic with a message and optional equality info.
+fn assert_eq<T: PartialEq + Debug>(left: T, right: T);
+
+/// Panic with a message and optional inequality info.
+fn assert_ne<T: PartialEq + Debug>(left: T, right: T);
+
+/// Terminate the program with an error message. Never returns.
+fn panic(msg: String) -> !;
+
+/// Placeholder for unfinished code. Never returns.
+fn todo(msg: String) -> !;
+
+/// Placeholder for unreachable code. Never returns.
+fn unreachable(msg: String) -> !;
+
+/// Debug-print a value and return it.
+fn dbg<T: Debug>(val: T) -> T;
