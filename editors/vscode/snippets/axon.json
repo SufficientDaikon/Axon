@@ -1,0 +1,105 @@
+{
+  "fn": {
+    "prefix": "fn",
+    "body": ["fn ${1:name}(${2:params}) -> ${3:ReturnType} {", "    ${0}", "}"],
+    "description": "Function declaration"
+  },
+  "struct": {
+    "prefix": "struct",
+    "body": ["struct ${1:Name} {", "    ${2:field}: ${3:Type},", "}"],
+    "description": "Struct definition"
+  },
+  "enum": {
+    "prefix": "enum",
+    "body": ["enum ${1:Name} {", "    ${2:Variant},", "}"],
+    "description": "Enum definition"
+  },
+  "trait": {
+    "prefix": "trait",
+    "body": [
+      "trait ${1:Name} {",
+      "    fn ${2:method}(&self)${3: -> ReturnType};",
+      "}"
+    ],
+    "description": "Trait definition"
+  },
+  "impl": {
+    "prefix": "impl",
+    "body": ["impl ${1:Type} {", "    ${0}", "}"],
+    "description": "Implementation block"
+  },
+  "if": {
+    "prefix": "if",
+    "body": ["if ${1:condition} {", "    ${2}", "} else {", "    ${0}", "}"],
+    "description": "If-else expression"
+  },
+  "match": {
+    "prefix": "match",
+    "body": [
+      "match ${1:value} {",
+      "    ${2:pattern} => ${3:expr},",
+      "    _ => ${0:expr},",
+      "}"
+    ],
+    "description": "Match expression"
+  },
+  "for": {
+    "prefix": "for",
+    "body": ["for ${1:item} in ${2:iter} {", "    ${0}", "}"],
+    "description": "For loop"
+  },
+  "while": {
+    "prefix": "while",
+    "body": ["while ${1:condition} {", "    ${0}", "}"],
+    "description": "While loop"
+  },
+  "let": {
+    "prefix": "let",
+    "body": "let ${1:name}: ${2:Type} = ${0:value};",
+    "description": "Let binding"
+  },
+  "letmut": {
+    "prefix": "letmut",
+    "body": "let mut ${1:name}: ${2:Type} = ${0:value};",
+    "description": "Mutable let binding"
+  },
+  "test": {
+    "prefix": "test",
+    "body": ["#[test]", "fn ${1:test_name}() {", "    ${0}", "}"],
+    "description": "Test function"
+  },
+  "main": {
+    "prefix": "main",
+    "body": ["fn main() {", "    ${0}", "}"],
+    "description": "Main function"
+  },
+  "tensor": {
+    "prefix": "tensor",
+    "body": "let ${1:t} = Tensor::${2|zeros,ones,randn|}([${3:shape}]);",
+    "description": "Tensor creation"
+  },
+  "model": {
+    "prefix": "model",
+    "body": [
+      "struct ${1:Model} {",
+      "    ${2:layer1}: Linear,",
+      "    ${3:layer2}: Linear,",
+      "}",
+      "",
+      "impl ${1:Model} {",
+      "    fn new() -> Self {",
+      "        ${1:Model} {",
+      "            ${2:layer1}: Linear(${4:784}, ${5:128}),",
+      "            ${3:layer2}: Linear(${5:128}, ${6:10}),",
+      "        }",
+      "    }",
+      "",
+      "    fn forward(&self, x: Tensor) -> Tensor {",
+      "        let x = relu(self.${2:layer1}.forward(x));",
+      "        self.${3:layer2}.forward(x)",
+      "    }",
+      "}"
+    ],
+    "description": "Neural network model"
+  }
+}

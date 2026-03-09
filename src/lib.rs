@@ -15,6 +15,12 @@ pub mod borrow;
 pub mod tast;
 pub mod mir;
 pub mod codegen;
+pub mod fmt;
+pub mod lint;
+pub mod repl;
+pub mod doc;
+pub mod lsp;
+pub mod pkg;
 
 /// Parse an Axon source fileand return the AST along with any errors.
 pub fn parse_source(source: &str, filename: &str) -> (ast::Program, Vec<error::CompileError>) {

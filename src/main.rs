@@ -51,6 +51,40 @@ enum Commands {
         emit_tast: bool,
     },
 
+    /// Format an Axon source file
+    Fmt {
+        /// The source file to format
+        file: String,
+    },
+
+    /// Lint an Axon source file
+    Lint {
+        /// The source file to lint
+        file: String,
+    },
+
+    /// Start the Axon REPL
+    Repl {},
+
+    /// Generate documentation for an Axon source file
+    Doc {
+        /// The source file to document
+        file: String,
+
+        /// Output file path (default: stdout)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
+
+    /// Start the Axon Language Server (LSP over stdio)
+    Lsp {},
+
+    /// Package manager commands
+    Pkg {
+        #[command(subcommand)]
+        action: PkgAction,
+    },
+
     /// Compile an Axon source file to a native binary
     Build {
         /// The source file to compile
@@ -86,6 +120,34 @@ enum Commands {
     },
 }
 
+#[derive(Subcommand)]
+enum PkgAction {
+    /// Create a new Axon project
+    New { name: String },
+    /// Initialize Axon project in current directory
+    Init,
+    /// Build the current project
+    Build,
+    /// Run the current project
+    Run,
+    /// Run tests
+    Test,
+    /// Add a dependency
+    Add {
+        package: String,
+        #[arg(long)]
+        version: Option<String>,
+    },
+    /// Remove a dependency
+    Remove { package: String },
+    /// Clean build artifacts
+    Clean,
+    /// Format source files
+    Fmt,
+    /// Lint source files
+    Lint,
+}
+
 fn main() {
     let cli = Cli::parse();
 
@@ -105,10 +167,50 @@ fn main() {
             let json_mode = error_format.as_deref() == Some("json");
             run_check(&file, json_mode, emit_tast);
         }
+        Commands::Fmt { file } => {
+            run_fmt(&file);
+        }
+        Commands::Lint { file } => {
+            run_lint(&file);
+        }
+        Commands::Repl {} => {
+            run_repl();
+        }
+        Commands::Doc { file, output } => {
+            run_doc(&file, output.as_deref());
+        }
+        Commands::Lsp {} => {
+            run_lsp();
+        }
+        Commands::Pkg { action } => {
+            run_pkg(action);
+        }
         Commands::Build { file, output, opt_level, emit_llvm, emit_mir, emit_obj, gpu, error_format } => {
             let json_mode = error_format.as_deref() == Some("json");
             run_build(&file, output.as_deref(), &opt_level, emit_llvm, emit_mir, emit_obj, &gpu, json_mode);
         }
+    }
+}
+
+fn run_pkg(action: PkgAction) {
+    let result = match action {
+        PkgAction::New { name } => axonc::pkg::commands::cmd_new(&name),
+        PkgAction::Init => axonc::pkg::commands::cmd_init(),
+        PkgAction::Build => axonc::pkg::commands::cmd_build(),
+        PkgAction::Run => axonc::pkg::commands::cmd_run(),
+        PkgAction::Test => axonc::pkg::commands::cmd_test(),
+        PkgAction::Add { package, version } => {
+            axonc::pkg::commands::cmd_add(&package, version.as_deref())
+        }
+        PkgAction::Remove { package } => axonc::pkg::commands::cmd_remove(&package),
+        PkgAction::Clean => axonc::pkg::commands::cmd_clean(),
+        PkgAction::Fmt => axonc::pkg::commands::cmd_fmt(),
+        PkgAction::Lint => axonc::pkg::commands::cmd_lint(),
+    };
+
+    if let Err(e) = result {
+        eprintln!("error: {}", e);
+        process::exit(1);
     }
 }
 
@@ -291,4 +393,86 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
             process::exit(1);
         }
     }
+}
+
+fn run_fmt(file: &str) {
+    let source = match fs::read_to_string(file) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("error: could not read file '{}': {}", file, e);
+            process::exit(1);
+        }
+    };
+
+    match axonc::fmt::Formatter::format(&source, file) {
+        Ok(formatted) => {
+            match fs::write(file, &formatted) {
+                Ok(_) => println!("Formatted {}", file),
+                Err(e) => {
+                    eprintln!("error: could not write file '{}': {}", file, e);
+                    process::exit(1);
+                }
+            }
+        }
+        Err(errors) => {
+            for e in &errors {
+                eprint!("{}", e.format_human());
+            }
+            process::exit(1);
+        }
+    }
+}
+
+fn run_lint(file: &str) {
+    let source = match fs::read_to_string(file) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("error: could not read file '{}': {}", file, e);
+            process::exit(1);
+        }
+    };
+
+    let warnings = axonc::lint::Linter::lint(&source, file);
+    if warnings.is_empty() {
+        println!("OK: no lint warnings");
+    } else {
+        for w in &warnings {
+            eprint!("{}", w.format_human());
+        }
+        println!("{} warning(s) emitted", warnings.len());
+    }
+}
+
+fn run_repl() {
+    let mut repl = axonc::repl::Repl::new();
+    repl.run();
+}
+
+fn run_doc(file: &str, output: Option<&str>) {
+    let source = match fs::read_to_string(file) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("error: could not read file '{}': {}", file, e);
+            process::exit(1);
+        }
+    };
+
+    let html = axonc::doc::DocGenerator::generate(&source, file);
+
+    if let Some(out_path) = output {
+        match fs::write(out_path, &html) {
+            Ok(_) => println!("Wrote documentation to {}", out_path),
+            Err(e) => {
+                eprintln!("error: could not write file '{}': {}", out_path, e);
+                process::exit(1);
+            }
+        }
+    } else {
+        println!("{}", html);
+    }
+}
+
+fn run_lsp() {
+    let mut server = axonc::lsp::LspServer::new();
+    server.run();
 }

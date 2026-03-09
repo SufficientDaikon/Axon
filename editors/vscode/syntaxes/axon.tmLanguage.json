@@ -1,0 +1,205 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Axon",
+  "scopeName": "source.axon",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#attributes" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#functions" },
+    { "include": "#operators" },
+    { "include": "#constants" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.documentation.axon",
+          "match": "///.*$"
+        },
+        {
+          "name": "comment.line.double-slash.axon",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.axon",
+          "begin": "/\\*",
+          "end": "\\*/",
+          "patterns": [{ "include": "#comments" }]
+        }
+      ]
+    },
+    "attributes": {
+      "patterns": [
+        {
+          "name": "meta.attribute.axon",
+          "match": "@(cpu|gpu|device)\\b",
+          "captures": {
+            "0": { "name": "entity.other.attribute-name.axon" }
+          }
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.axon",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.axon",
+              "match": "\\\\(n|r|t|\\\\|\"|0|x[0-9a-fA-F]{2}|u\\{[0-9a-fA-F]+\\})"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.axon",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.axon",
+              "match": "\\\\(n|r|t|\\\\|'|0|x[0-9a-fA-F]{2}|u\\{[0-9a-fA-F]+\\})"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.axon",
+          "match": "\\b0x[0-9a-fA-F_]+\\b"
+        },
+        {
+          "name": "constant.numeric.binary.axon",
+          "match": "\\b0b[01_]+\\b"
+        },
+        {
+          "name": "constant.numeric.octal.axon",
+          "match": "\\b0o[0-7_]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.axon",
+          "match": "\\b[0-9][0-9_]*(\\.[0-9][0-9_]*)?([eE][+-]?[0-9_]+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.axon",
+          "match": "\\b[0-9][0-9_]*\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.axon",
+          "match": "\\b(if|else|while|for|in|match|return|break|continue)\\b"
+        },
+        {
+          "name": "keyword.declaration.axon",
+          "match": "\\b(fn|let|mut|struct|enum|trait|impl|type|mod|use|pub)\\b"
+        },
+        {
+          "name": "keyword.other.axon",
+          "match": "\\b(as|unsafe|self|Self)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.primitive.axon",
+          "match": "\\b(Int8|Int16|Int32|Int64|UInt8|UInt16|UInt32|UInt64|Float16|Float32|Float64|Bool|Char|String)\\b"
+        },
+        {
+          "name": "storage.type.builtin.axon",
+          "match": "\\b(Tensor|Vec|HashMap|HashSet|Option|Result)\\b"
+        },
+        {
+          "name": "entity.name.type.axon",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "meta.function.definition.axon",
+          "match": "\\b(fn)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.axon" },
+            "2": { "name": "entity.name.function.axon" }
+          }
+        },
+        {
+          "name": "meta.function.call.axon",
+          "match": "\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(",
+          "captures": {
+            "1": { "name": "entity.name.function.axon" }
+          }
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.comparison.axon",
+          "match": "(==|!=|<=|>=|<|>)"
+        },
+        {
+          "name": "keyword.operator.logical.axon",
+          "match": "(&&|\\|\\||!)"
+        },
+        {
+          "name": "keyword.operator.arithmetic.axon",
+          "match": "(\\+|-|\\*|/|%|@)"
+        },
+        {
+          "name": "keyword.operator.bitwise.axon",
+          "match": "(&|\\||\\^|<<|>>)"
+        },
+        {
+          "name": "keyword.operator.assignment.axon",
+          "match": "(=|\\+=|-=|\\*=|/=)"
+        },
+        {
+          "name": "keyword.operator.arrow.axon",
+          "match": "->"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.axon",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.axon",
+          "match": "[;,]"
+        },
+        {
+          "name": "punctuation.brackets.round.axon",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.brackets.square.axon",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "punctuation.brackets.curly.axon",
+          "match": "[{}]"
+        }
+      ]
+    }
+  }
+}
