@@ -359,6 +359,38 @@ fn e2e_nested_calls_output() {
     assert_e2e_output("nested_calls_output");
 }
 
+// ── New Phase 8-9 E2E tests ─────────────────────────────────────────
+
+#[test]
+fn e2e_structs() {
+    assert_e2e_output("structs");
+}
+
+#[test]
+fn e2e_type_casts() {
+    assert_e2e_output("type_casts");
+}
+
+#[test]
+fn e2e_comparisons() {
+    assert_e2e_output("comparisons");
+}
+
+#[test]
+fn e2e_unary_ops() {
+    assert_e2e_output("unary_ops");
+}
+
+#[test]
+fn e2e_enums() {
+    assert_e2e_output("enums");
+}
+
+#[test]
+fn e2e_tuples() {
+    assert_e2e_output("tuples");
+}
+
 // ── Compile-failure E2E tests ───────────────────────────────────────
 
 #[test]

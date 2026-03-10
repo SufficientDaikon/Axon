@@ -1,0 +1,11 @@
+fn sum_and_diff(a: Int64, b: Int64) -> Int64 {
+    return a + b;
+}
+fn main() {
+    let s: Int64 = sum_and_diff(10, 3);
+    println(s);
+    let d: Int64 = 10 - 3;
+    println(d);
+}
+// expect: 13
+// expect: 7

@@ -434,6 +434,7 @@ impl<'a> LlvmCodegen<'a> {
                     Operand::Constant(MirConstant::String(name)) => format!("@{}", name),
                     _ => self.emit_operand(callee, func),
                 };
+                let is_print_bool = callee_name == "@axon_print_bool";
                 let arg_strs: Vec<String> = args
                     .iter()
                     .map(|a| {
@@ -453,6 +454,16 @@ impl<'a> LlvmCodegen<'a> {
                             let ty = self.type_of_operand(a, func);
                             self.llvm_alloca_type(ty)
                         };
+                        // ABI fix: axon_print_bool expects i8, but bools are i1 in IR.
+                        // Emit zext i1 → i8 to match the C runtime signature.
+                        if is_print_bool && ty_str == "i1" {
+                            let widened = self.fresh_name();
+                            self.output.push_str(&format!(
+                                "  {} = zext i1 {} to i8\n",
+                                widened, val
+                            ));
+                            return format!("i8 {}", widened);
+                        }
                         format!("{} {}", ty_str, val)
                     })
                     .collect();
@@ -1734,40 +1745,77 @@ pub fn compile_and_link(
     // Detect compiler
     let cc = detect_c_compiler()?;
 
-    // Step 1: Compile runtime
-    let rt_compile = Command::new(&cc)
-        .args(&["-c", &rt_c_path, "-o", &rt_o_path, "-O2"])
-        .output()
-        .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
+    // Check if using MSVC cl.exe (careful not to match "clang")
+    let is_msvc = cc.ends_with("cl") || cc.ends_with("cl.exe");
 
-    if !rt_compile.status.success() {
-        let stderr = String::from_utf8_lossy(&rt_compile.stderr);
-        return Err(format!("E5002: Runtime compilation failed:\n{}", stderr));
-    }
+    if is_msvc {
+        // ── MSVC path ────────────────────────────────────────────
+        let rt_obj_path = format!("{}/axon_runtime.obj", build_dir);
 
-    // Step 2: Compile IR + link with runtime
-    let mut link_args = vec![
-        ir_path.clone(),
-        rt_o_path.clone(),
-        "-o".to_string(),
-        output_path.to_string(),
-        opt_flag.to_string(),
-        "-lm".to_string(),
-    ];
+        // Step 1: Compile runtime with cl.exe
+        let rt_compile = Command::new(&cc)
+            .args(&["/c", &rt_c_path, &format!("/Fo:{}", rt_obj_path), "/O2", "/nologo"])
+            .output()
+            .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
 
-    // On Windows, don't pass -lm
-    if cfg!(target_os = "windows") {
-        link_args.retain(|a| a != "-lm");
-    }
+        if !rt_compile.status.success() {
+            let stderr = String::from_utf8_lossy(&rt_compile.stderr);
+            return Err(format!("E5002: Runtime compilation failed:\n{}", stderr));
+        }
 
-    let link_output = Command::new(&cc)
-        .args(&link_args)
-        .output()
-        .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
+        // Step 2: Compile IR + link with runtime
+        let link_output = Command::new(&cc)
+            .args(&[
+                &ir_path,
+                &rt_obj_path,
+                &format!("/Fe:{}", output_path),
+                "/nologo",
+            ])
+            .output()
+            .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
 
-    if !link_output.status.success() {
-        let stderr = String::from_utf8_lossy(&link_output.stderr);
-        return Err(format!("E5003: Linking failed:\n{}", stderr));
+        if !link_output.status.success() {
+            let stderr = String::from_utf8_lossy(&link_output.stderr);
+            return Err(format!("E5003: Linking failed:\n{}", stderr));
+        }
+    } else {
+        // ── GCC/Clang path ───────────────────────────────────────
+
+        // Step 1: Compile runtime
+        let rt_compile = Command::new(&cc)
+            .args(&["-c", &rt_c_path, "-o", &rt_o_path, "-O2"])
+            .output()
+            .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
+
+        if !rt_compile.status.success() {
+            let stderr = String::from_utf8_lossy(&rt_compile.stderr);
+            return Err(format!("E5002: Runtime compilation failed:\n{}", stderr));
+        }
+
+        // Step 2: Compile IR + link with runtime
+        let mut link_args = vec![
+            ir_path.clone(),
+            rt_o_path.clone(),
+            "-o".to_string(),
+            output_path.to_string(),
+            opt_flag.to_string(),
+            "-lm".to_string(),
+        ];
+
+        // On Windows, don't pass -lm
+        if cfg!(target_os = "windows") {
+            link_args.retain(|a| a != "-lm");
+        }
+
+        let link_output = Command::new(&cc)
+            .args(&link_args)
+            .output()
+            .map_err(|e| format!("E5001: Failed to invoke {}: {}", cc, e))?;
+
+        if !link_output.status.success() {
+            let stderr = String::from_utf8_lossy(&link_output.stderr);
+            return Err(format!("E5003: Linking failed:\n{}", stderr));
+        }
     }
 
     // Clean up

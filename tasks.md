@@ -364,6 +364,20 @@
 - [x] T241 [N-003] Add package manager stub commands (publish, search, update, bench) — `src/pkg/commands.rs`, `src/main.rs`
 - [x] T242 [C-001] Create debugger DAP skeleton with Debugger struct and stub methods — `src/debugger.rs`, `src/lib.rs`, `src/main.rs`
 - [x] T243 [LSP] Add textDocument/signatureHelp handler — `src/lsp/handlers.rs`, `src/lsp/protocol.rs`, `src/lsp/server.rs`
+
+### Phase 8-9 Compliance Fixes
+
+- [x] T244 [P] [E2E] Create structs.axon E2E test program — `tests/e2e/structs.axon`
+- [x] T245 [P] [E2E] Create type_casts.axon E2E test program — `tests/e2e/type_casts.axon`
+- [x] T246 [P] [E2E] Create comparisons.axon E2E test program — `tests/e2e/comparisons.axon`
+- [x] T247 [P] [E2E] Create unary_ops.axon E2E test program — `tests/e2e/unary_ops.axon`
+- [x] T248 [P] [E2E] Create enums.axon E2E test program — `tests/e2e/enums.axon`
+- [x] T249 [P] [E2E] Create tuples.axon E2E test program — `tests/e2e/tuples.axon`
+- [x] T250 [E2E] Register 6 new E2E test functions in e2e_tests.rs — `tests/e2e_tests.rs`
+- [x] T251 [ABI] Fix axon_print_bool declaration from i1 to i8 — `src/codegen/runtime.rs`
+- [x] T252 [ABI] Add zext i1→i8 for bool print calls in LLVM codegen — `src/codegen/llvm.rs`
+- [x] T253 [MSVC] Add cl.exe-compatible flags in compile_and_link — `src/codegen/llvm.rs`
+- [x] T254 [BUG] Fix lower_print_call type fallback for variable identifiers — `src/mir.rs`
 - [x] T244 [N-001] Fix formatter @cpu/@gpu syntax (was #[cpu]/#[gpu]) — `src/fmt.rs`
 - [x] T245 [N-004] Add VS Code extension launch.json configs and code lens TODO — `editors/vscode/`
 

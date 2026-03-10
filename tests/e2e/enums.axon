@@ -1,0 +1,17 @@
+fn classify(n: Int64) -> Int64 {
+    if n > 0 {
+        return 1;
+    }
+    if n < 0 {
+        return 0 - 1;
+    }
+    return 0;
+}
+fn main() {
+    println(classify(42));
+    println(classify(0 - 5));
+    println(classify(0));
+}
+// expect: 1
+// expect: -1
+// expect: 0

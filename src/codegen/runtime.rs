@@ -63,7 +63,7 @@ pub const RUNTIME_FUNCTIONS: &[RuntimeFunction] = &[
     RuntimeFunction {
         name: "print_bool",
         llvm_name: "axon_print_bool",
-        description: "Print bool to stdout: (value: i1) -> void",
+        description: "Print bool to stdout: (value: i8) -> void",
     },
     RuntimeFunction {
         name: "print_newline",
@@ -125,7 +125,7 @@ pub fn emit_runtime_declarations() -> String {
     ir.push_str("declare void @axon_print_i64(i64)\n");
     ir.push_str("declare void @axon_print_f64(double)\n");
     ir.push_str("declare void @axon_print_str(i8*, i64)\n");
-    ir.push_str("declare void @axon_print_bool(i1)\n");
+    ir.push_str("declare void @axon_print_bool(i8)\n");
     ir.push_str("declare void @axon_print_newline()\n");
     ir.push_str("declare void @axon_print_i32(i32)\n");
     ir.push_str("declare void @axon_print_f32(float)\n");

@@ -1,0 +1,9 @@
+fn main() {
+    let a: Int64 = 42;
+    let b: Int64 = 0 - a;
+    println(b);
+    let c: Bool = true;
+    println(c);
+}
+// expect: -42
+// expect: true

@@ -1,0 +1,10 @@
+fn main() {
+    let a: Int64 = 10;
+    let b: Int64 = 20;
+    println(a < b);
+    println(a > b);
+    println(a == a);
+}
+// expect: true
+// expect: false
+// expect: true

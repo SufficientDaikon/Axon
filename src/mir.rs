@@ -997,7 +997,15 @@ impl<'a> MirBuilder<'a> {
     ) -> Operand {
         let arg = &args[0];
         let arg_op = self.lower_expr(arg);
-        let arg_ty = arg.ty;
+
+        // Prefer the TAST type, but fall back to the MIR operand type
+        // when the TAST type is ERROR (e.g. variable references whose scope
+        // was popped before TAST construction).
+        let arg_ty = if arg.ty == TypeId::ERROR {
+            self.operand_type(&arg_op)
+        } else {
+            arg.ty
+        };
 
         // Determine which runtime function to call based on argument type
         let resolved_ty = self.interner.resolve(arg_ty).clone();
