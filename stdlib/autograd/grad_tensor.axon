@@ -11,15 +11,31 @@ struct GradTensor {
 }
 
 /// Create a new gradient-tracking tensor.
-fn grad_tensor_new(requires_grad: Bool) -> Int64;
+fn grad_tensor_new(requires_grad: Bool) -> Int64 {
+    // Allocates a new GradTensor with gradient tracking enabled/disabled.
+    // Implemented by the runtime (Phase 10).
+    return 0;
+}
 
 /// Compute gradients for all tensors in the computation graph
 /// by traversing it in reverse topological order.
-fn backward();
+fn backward() {
+    // Traverses the computation graph in reverse topological order,
+    // applying chain rule at each node to accumulate gradients.
+    // Implemented by the runtime (Phase 10).
+}
 
 /// Reset all accumulated gradients to zero.
-fn zero_grad();
+fn zero_grad() {
+    // Sets .grad = 0 on all parameters that have accumulated gradients.
+    // Implemented by the runtime (Phase 10).
+}
 
 /// Detach a tensor from the computation graph, returning a
 /// plain tensor with no gradient tracking.
-fn detach(tensor: Int64) -> Int64;
+fn detach(tensor: Int64) -> Int64 {
+    // Returns a new tensor sharing the same data but detached from
+    // the computation graph (requires_grad = false).
+    // Implemented by the runtime (Phase 10).
+    return tensor;
+}

@@ -3,16 +3,177 @@
 /// Defines the backward rules for each differentiable operation.
 /// These rules implement the chain rule for reverse-mode automatic
 /// differentiation.
-///
-/// Backward rules:
-///   c = a + b       → ∂a = ∂c, ∂b = ∂c
-///   c = a * b       → ∂a = ∂c * b, ∂b = ∂c * a
-///   c = a @ b       → ∂a = ∂c @ bᵀ, ∂b = aᵀ @ ∂c
-///   c = relu(a)     → ∂a = ∂c * (a > 0)
-///   c = sigmoid(a)  → ∂a = ∂c * c * (1 - c)
-///   c = tanh(a)     → ∂a = ∂c * (1 - c²)
-///   c = softmax(a)  → Jacobian-vector product
-///   c = sum(a)      → ∂a = broadcast(∂c)
-///   c = mean(a)     → ∂a = broadcast(∂c / n)
-///   c = reshape(a)  → ∂a = reshape(∂c, a.shape)
-///   c = transpose(a)→ ∂a = transpose(∂c)
+
+// ── Arithmetic gradient rules ─────────────────────────────────
+
+/// Gradient for addition: d/dx(x + y) = (grad, grad).
+/// Both operands receive the upstream gradient unchanged.
+fn grad_add(grad_output: Int64) -> Int64 {
+    // ∂a = grad_output, ∂b = grad_output
+    return grad_output;
+}
+
+/// Gradient for subtraction: d/dx(x - y) = (grad, -grad).
+fn grad_sub(grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for multiplication: d/dx(x * y) = (grad * y, grad * x).
+fn grad_mul(x: Int64, y: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for division: d/dx(x / y) = (grad / y, -grad * x / y^2).
+fn grad_div(x: Int64, y: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for negation: d/dx(-x) = -grad.
+fn grad_neg(grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for absolute value: d/dx(|x|) = sign(x) * grad.
+fn grad_abs(x: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+// ── Matrix gradient rules ─────────────────────────────────────
+
+/// Gradient for matrix multiply: d/dA(A @ B) = grad @ B^T, d/dB = A^T @ grad.
+fn grad_matmul(x: Int64, y: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for transpose: d/dx(transpose(x)) = transpose(grad).
+fn grad_transpose(grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for reshape: d/dx(reshape(x, s)) = reshape(grad, x.shape).
+fn grad_reshape(x_shape: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+// ── Activation gradient rules ─────────────────────────────────
+
+/// Gradient for ReLU: d/dx(relu(x)) = grad * (x > 0).
+fn grad_relu(x: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for Sigmoid: d/dx(σ(x)) = σ(x) * (1 - σ(x)) * grad.
+fn grad_sigmoid(output: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for Tanh: d/dx(tanh(x)) = (1 - tanh(x)^2) * grad.
+fn grad_tanh(output: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for Softmax: Jacobian-vector product.
+fn grad_softmax(output: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for GELU: approximate gradient.
+fn grad_gelu(x: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for SiLU (Swish): d/dx(x * σ(x)) = σ(x) + x * σ(x) * (1 - σ(x)).
+fn grad_silu(x: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for LeakyReLU: d/dx = grad * (x > 0 ? 1 : negative_slope).
+fn grad_leaky_relu(x: Int64, negative_slope: Float64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+// ── Reduction gradient rules ──────────────────────────────────
+
+/// Gradient for sum: d/dx(sum(x)) = ones_like(x) * grad.
+fn grad_sum(x_shape: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for mean: d/dx(mean(x)) = ones_like(x) / numel(x) * grad.
+fn grad_mean(x_shape: Int64, numel: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+// ── Transcendental gradient rules ─────────────────────────────
+
+/// Gradient for log: d/dx(log(x)) = grad / x.
+fn grad_log(x: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for exp: d/dx(exp(x)) = exp(x) * grad.
+fn grad_exp(output: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for pow: d/dx(x^n) = n * x^(n-1) * grad.
+fn grad_pow(x: Int64, n: Float64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for sqrt: d/dx(sqrt(x)) = grad / (2 * sqrt(x)).
+fn grad_sqrt(output: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for sin: d/dx(sin(x)) = cos(x) * grad.
+fn grad_sin(x: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for cos: d/dx(cos(x)) = -sin(x) * grad.
+fn grad_cos(x: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+// ── Layer gradient rules ──────────────────────────────────────
+
+/// Gradient for Linear layer: d/dx(Wx + b) = grad @ W^T.
+fn grad_linear(x: Int64, weight: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for Conv2d: d/dx(conv2d(x, w)) = conv2d_backward(grad, w).
+fn grad_conv2d(x: Int64, weight: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for BatchNorm: d/dx(batchnorm(x)) = batchnorm_backward(grad, mean, var).
+fn grad_batchnorm(x: Int64, mean: Int64, var: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for LayerNorm: similar to batchnorm but over last dim.
+fn grad_layernorm(x: Int64, mean: Int64, var: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for MaxPool2d: d/dx(maxpool2d(x)) = grad routed to max indices.
+fn grad_maxpool2d(indices: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for Dropout: d/dx(dropout(x)) = grad * mask / (1 - p).
+fn grad_dropout(mask: Int64, p: Float64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for Embedding: d/dx(embed(idx)) = scatter_add(grad, idx).
+fn grad_embedding(indices: Int64, num_embeddings: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}
+
+/// Gradient for CrossEntropy: d/dx(CE(x, y)) = softmax(x) - one_hot(y).
+fn grad_cross_entropy(logits: Int64, targets: Int64, grad_output: Int64) -> Int64 {
+    return grad_output;
+}

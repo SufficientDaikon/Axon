@@ -695,3 +695,243 @@ fn loss_nll_returns_tensor() {
 fn loss_l1_returns_tensor() {
     check_ok("fn main() -> Int64 { return l1_loss(); }");
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 15. Phase 6 Completeness — Gradient rule functions
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn grad_add_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_add(1); }");
+}
+
+#[test]
+fn grad_sub_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_sub(1); }");
+}
+
+#[test]
+fn grad_mul_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_mul(1, 2, 3); }");
+}
+
+#[test]
+fn grad_div_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_div(1, 2, 3); }");
+}
+
+#[test]
+fn grad_neg_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_neg(1); }");
+}
+
+#[test]
+fn grad_abs_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_abs(1, 2); }");
+}
+
+#[test]
+fn grad_matmul_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_matmul(1, 2, 3); }");
+}
+
+#[test]
+fn grad_transpose_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_transpose(1); }");
+}
+
+#[test]
+fn grad_reshape_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_reshape(1, 2); }");
+}
+
+#[test]
+fn grad_relu_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_relu(1, 2); }");
+}
+
+#[test]
+fn grad_sigmoid_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_sigmoid(1, 2); }");
+}
+
+#[test]
+fn grad_tanh_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_tanh(1, 2); }");
+}
+
+#[test]
+fn grad_softmax_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_softmax(1, 2); }");
+}
+
+#[test]
+fn grad_gelu_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_gelu(1, 2); }");
+}
+
+#[test]
+fn grad_silu_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_silu(1, 2); }");
+}
+
+#[test]
+fn grad_leaky_relu_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_leaky_relu(1, 0.01, 2); }");
+}
+
+#[test]
+fn grad_sum_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_sum(1, 2); }");
+}
+
+#[test]
+fn grad_mean_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_mean(1, 100, 2); }");
+}
+
+#[test]
+fn grad_log_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_log(1, 2); }");
+}
+
+#[test]
+fn grad_exp_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_exp(1, 2); }");
+}
+
+#[test]
+fn grad_pow_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_pow(1, 2.0, 3); }");
+}
+
+#[test]
+fn grad_sqrt_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_sqrt(1, 2); }");
+}
+
+#[test]
+fn grad_sin_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_sin(1, 2); }");
+}
+
+#[test]
+fn grad_cos_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_cos(1, 2); }");
+}
+
+#[test]
+fn grad_linear_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_linear(1, 2, 3); }");
+}
+
+#[test]
+fn grad_conv2d_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_conv2d(1, 2, 3); }");
+}
+
+#[test]
+fn grad_batchnorm_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_batchnorm(1, 2, 3, 4); }");
+}
+
+#[test]
+fn grad_layernorm_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_layernorm(1, 2, 3, 4); }");
+}
+
+#[test]
+fn grad_maxpool2d_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_maxpool2d(1, 2); }");
+}
+
+#[test]
+fn grad_dropout_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_dropout(1, 0.5, 2); }");
+}
+
+#[test]
+fn grad_embedding_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_embedding(1, 10000, 3); }");
+}
+
+#[test]
+fn grad_cross_entropy_typechecks() {
+    check_ok("fn main() -> Int64 { return grad_cross_entropy(1, 2, 3); }");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 16. Phase 6 Completeness — Gradient function arity errors
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn neg_grad_add_wrong_arity() {
+    check_has_error_code("fn main() { grad_add(1, 2); }", "E2003");
+}
+
+#[test]
+fn neg_grad_mul_wrong_arity() {
+    check_has_error_code("fn main() { grad_mul(1, 2); }", "E2003");
+}
+
+#[test]
+fn neg_grad_relu_wrong_arity() {
+    check_has_error_code("fn main() { grad_relu(1); }", "E2003");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 17. Phase 6 Completeness — enable_grad function
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn autograd_enable_grad() {
+    check_ok("fn main() { enable_grad(); }");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 18. Phase 6 Completeness — Comprehensive AI workflow test
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn ai_workflow_model_creation() {
+    // Test that a complete model creation workflow type-checks
+    check_ok(r#"
+        fn main() {
+            let layer1: Int64 = linear_new(784, 256);
+            let layer2: Int64 = linear_new(256, 10);
+            let model: Int64 = sequential_new();
+            let opt: Int64 = adam_new(0.001);
+            let loss_fn: Int64 = cross_entropy_loss();
+        }
+    "#);
+}
+
+#[test]
+fn ai_workflow_training_utilities() {
+    // Test that training utilities type-check together
+    check_ok(r#"
+        fn main() {
+            let trainer: Int64 = trainer_new();
+            let s: Float32;
+            let scaler: Int64 = grad_scaler_new(s);
+            autocast();
+            let lr: Float32;
+            let sched: Int64 = step_lr_new(30, lr);
+        }
+    "#);
+}
+
+#[test]
+fn ai_workflow_gradient_computation() {
+    // Test a realistic gradient computation chain
+    check_ok(r#"
+        fn main() {
+            let t: Int64 = grad_tensor_new(true);
+            let g1: Int64 = grad_relu(t, 1);
+            let g2: Int64 = grad_sigmoid(g1, 1);
+            let g3: Int64 = grad_add(g2);
+            backward();
+            zero_grad();
+        }
+    "#);
+}

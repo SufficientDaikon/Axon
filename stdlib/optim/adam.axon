@@ -11,7 +11,36 @@ struct Adam {
 }
 
 /// Create a new Adam optimizer with the given learning rate.
-fn adam_new(lr: Float32) -> Int64;
+fn adam_new(lr: Float32) -> Int64 {
+    // Initializes Adam with lr, beta1=0.9, beta2=0.999, eps=1e-8.
+    // Allocates first and second moment buffers (m, v) per parameter.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Optimizer for Adam {
+    fn step(self) {
+        // For each parameter p with gradient g:
+        //   m = beta1 * m + (1 - beta1) * g          // first moment
+        //   v = beta2 * v + (1 - beta2) * g^2        // second moment
+        //   m_hat = m / (1 - beta1^t)                 // bias correction
+        //   v_hat = v / (1 - beta2^t)                 // bias correction
+        //   p = p - lr * m_hat / (sqrt(v_hat) + eps)
+    }
+
+    fn zero_grad(self) {
+        // Sets .grad = 0 for all tracked parameters.
+    }
+
+    fn state_dict(self) -> Int64 {
+        // Returns serializable state: step count, m, v for each param.
+        return 0;
+    }
+
+    fn load_state_dict(self, state: Int64) {
+        // Restores optimizer state from saved dictionary.
+    }
+}
 
 struct AdamW {
     lr: Float32,
@@ -19,21 +48,74 @@ struct AdamW {
 
 /// Create a new AdamW optimizer with the given learning rate.
 /// Uses decoupled weight decay (default 0.01).
-fn adamw_new(lr: Float32) -> Int64;
+fn adamw_new(lr: Float32) -> Int64 {
+    // Same as Adam but with decoupled weight decay.
+    // weight_decay is applied directly to parameters, not through gradients.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Optimizer for AdamW {
+    fn step(self) {
+        // For each parameter p with gradient g:
+        //   p = p - lr * weight_decay * p             // decoupled weight decay
+        //   m = beta1 * m + (1 - beta1) * g
+        //   v = beta2 * v + (1 - beta2) * g^2
+        //   m_hat = m / (1 - beta1^t)
+        //   v_hat = v / (1 - beta2^t)
+        //   p = p - lr * m_hat / (sqrt(v_hat) + eps)
+    }
+
+    fn zero_grad(self) {}
+    fn state_dict(self) -> Int64 { return 0; }
+    fn load_state_dict(self, state: Int64) {}
+}
 
 struct RMSprop {
     lr: Float32,
 }
 
 /// Create a new RMSprop optimizer.
-fn rmsprop_new(lr: Float32) -> Int64;
+fn rmsprop_new(lr: Float32) -> Int64 {
+    // Initializes RMSprop with lr, alpha=0.99, eps=1e-8.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Optimizer for RMSprop {
+    fn step(self) {
+        // For each parameter p with gradient g:
+        //   v = alpha * v + (1 - alpha) * g^2
+        //   p = p - lr * g / (sqrt(v) + eps)
+    }
+
+    fn zero_grad(self) {}
+    fn state_dict(self) -> Int64 { return 0; }
+    fn load_state_dict(self, state: Int64) {}
+}
 
 struct Adagrad {
     lr: Float32,
 }
 
 /// Create a new Adagrad optimizer.
-fn adagrad_new(lr: Float32) -> Int64;
+fn adagrad_new(lr: Float32) -> Int64 {
+    // Initializes Adagrad with lr and accumulator initialized to 0.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Optimizer for Adagrad {
+    fn step(self) {
+        // For each parameter p with gradient g:
+        //   accumulator += g^2
+        //   p = p - lr * g / (sqrt(accumulator) + eps)
+    }
+
+    fn zero_grad(self) {}
+    fn state_dict(self) -> Int64 { return 0; }
+    fn load_state_dict(self, state: Int64) {}
+}
 
 /// Optimizer trait implemented by all optimizers.
 trait Optimizer {

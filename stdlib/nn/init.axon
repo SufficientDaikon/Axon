@@ -6,29 +6,74 @@
 
 /// Xavier (Glorot) uniform initialization.
 /// Fills tensor with values from U(-a, a) where a = gain * sqrt(6 / (fan_in + fan_out)).
-fn xavier_uniform(tensor: Int64);
+fn xavier_uniform(tensor: Int64) {
+    // Computes fan_in and fan_out from tensor shape.
+    // Fills with uniform random values in [-a, a].
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Xavier (Glorot) normal initialization.
 /// Fills tensor with values from N(0, std) where std = gain * sqrt(2 / (fan_in + fan_out)).
-fn xavier_normal(tensor: Int64);
+fn xavier_normal(tensor: Int64) {
+    // Computes fan_in and fan_out from tensor shape.
+    // Fills with normal random values with computed std.
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Kaiming (He) uniform initialization for ReLU networks.
-fn kaiming_uniform(tensor: Int64);
+fn kaiming_uniform(tensor: Int64) {
+    // bound = sqrt(6 / fan_in) for ReLU nonlinearity.
+    // Fills with uniform random values in [-bound, bound].
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Kaiming (He) normal initialization for ReLU networks.
-fn kaiming_normal(tensor: Int64);
+fn kaiming_normal(tensor: Int64) {
+    // std = sqrt(2 / fan_in) for ReLU nonlinearity.
+    // Fills with normal random values N(0, std).
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Uniform initialization with explicit bounds.
-fn init_uniform(tensor: Int64, low: Float64, high: Float64);
+fn init_uniform(tensor: Int64, low: Float64, high: Float64) {
+    // Fills tensor with values from U(low, high).
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Normal initialization with explicit mean and standard deviation.
-fn init_normal(tensor: Int64, mean: Float64, std: Float64);
+fn init_normal(tensor: Int64, mean: Float64, std: Float64) {
+    // Fills tensor with values from N(mean, std).
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Zero initialization.
-fn init_zeros(tensor: Int64);
+fn init_zeros(tensor: Int64) {
+    // Fills tensor with zeros.
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Ones initialization.
-fn init_ones(tensor: Int64);
+fn init_ones(tensor: Int64) {
+    // Fills tensor with ones.
+    // Requires CPU tensor runtime (Phase 10).
+}
 
 /// Constant value initialization.
-fn init_constant(tensor: Int64, value: Float64);
+fn init_constant(tensor: Int64, value: Float64) {
+    // Fills tensor with the given constant value.
+    // Requires CPU tensor runtime (Phase 10).
+}
+
+/// Orthogonal initialization.
+/// Fills the tensor with a (semi) orthogonal matrix using SVD.
+fn init_orthogonal(tensor: Int64) {
+    // Computes SVD of a random matrix and uses U or V^T.
+    // Requires CPU tensor runtime (Phase 10).
+}
+
+/// Sparse initialization.
+/// Fills with a sparse matrix where non-zero entries are from N(0, std).
+fn init_sparse(tensor: Int64, sparsity: Float64) {
+    // Each column has (1 - sparsity) fraction of non-zero entries.
+    // Requires CPU tensor runtime (Phase 10).
+}

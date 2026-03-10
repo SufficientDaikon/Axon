@@ -1036,47 +1036,119 @@ impl<'a> LlvmCodegen<'a> {
         operands: &[Operand],
         func: &MirFunction,
     ) -> String {
-        // Tensor ops delegate to runtime calls.
-        let tensor_ty = "{ i8*, i64*, i64, i8 }";
+        // Tensor ops delegate to runtime function call stubs.
+        // Each op emits a call to @axon_tensor_<op>(i8*, ...) -> i8*
+        // which returns an opaque tensor pointer. The actual implementation
+        // is provided by the tensor runtime library (linked at compile time).
         match kind {
             TensorOpKind::MatMul => {
                 let lhs = self.emit_operand(&operands[0], func);
                 let rhs = self.emit_operand(&operands[1], func);
                 let lhs_ptr = self.fresh_name();
                 let rhs_ptr = self.fresh_name();
+                let result = self.fresh_name();
                 self.output.push_str(&format!(
-                    "  {} = bitcast {} {} to i8*\n",
-                    lhs_ptr, tensor_ty, lhs
+                    "  {} = inttoptr i64 {} to i8*\n",
+                    lhs_ptr, lhs
                 ));
                 self.output.push_str(&format!(
-                    "  {} = bitcast {} {} to i8*\n",
-                    rhs_ptr, tensor_ty, rhs
+                    "  {} = inttoptr i64 {} to i8*\n",
+                    rhs_ptr, rhs
                 ));
-                // Placeholder: return lhs (real impl would call BLAS/runtime)
-                lhs
+                self.output.push_str(&format!(
+                    "  {} = call i8* @axon_tensor_matmul(i8* {}, i8* {})\n",
+                    result, lhs_ptr, rhs_ptr
+                ));
+                result
             }
             TensorOpKind::Add
             | TensorOpKind::Sub
             | TensorOpKind::Mul
             | TensorOpKind::Div => {
+                let op_name = match kind {
+                    TensorOpKind::Add => "add",
+                    TensorOpKind::Sub => "sub",
+                    TensorOpKind::Mul => "mul",
+                    TensorOpKind::Div => "div",
+                    _ => unreachable!(),
+                };
                 if operands.len() >= 2 {
-                    let _lhs = self.emit_operand(&operands[0], func);
-                    let _rhs = self.emit_operand(&operands[1], func);
-                }
-                // Placeholder: return first operand
-                if !operands.is_empty() {
+                    let lhs = self.emit_operand(&operands[0], func);
+                    let rhs = self.emit_operand(&operands[1], func);
+                    let lhs_ptr = self.fresh_name();
+                    let rhs_ptr = self.fresh_name();
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = inttoptr i64 {} to i8*\n",
+                        lhs_ptr, lhs
+                    ));
+                    self.output.push_str(&format!(
+                        "  {} = inttoptr i64 {} to i8*\n",
+                        rhs_ptr, rhs
+                    ));
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_tensor_{}(i8* {}, i8* {})\n",
+                        result, op_name, lhs_ptr, rhs_ptr
+                    ));
+                    result
+                } else if !operands.is_empty() {
                     self.emit_operand(&operands[0], func)
                 } else {
-                    "undef".to_string()
+                    "zeroinitializer".to_string()
                 }
             }
-            TensorOpKind::Reshape(_)
-            | TensorOpKind::Transpose
-            | TensorOpKind::Broadcast => {
+            TensorOpKind::Reshape(_) => {
                 if !operands.is_empty() {
-                    self.emit_operand(&operands[0], func)
+                    let src = self.emit_operand(&operands[0], func);
+                    let src_ptr = self.fresh_name();
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = inttoptr i64 {} to i8*\n",
+                        src_ptr, src
+                    ));
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_tensor_reshape(i8* {})\n",
+                        result, src_ptr
+                    ));
+                    result
                 } else {
-                    "undef".to_string()
+                    "zeroinitializer".to_string()
+                }
+            }
+            TensorOpKind::Transpose => {
+                if !operands.is_empty() {
+                    let src = self.emit_operand(&operands[0], func);
+                    let src_ptr = self.fresh_name();
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = inttoptr i64 {} to i8*\n",
+                        src_ptr, src
+                    ));
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_tensor_transpose(i8* {})\n",
+                        result, src_ptr
+                    ));
+                    result
+                } else {
+                    "zeroinitializer".to_string()
+                }
+            }
+            TensorOpKind::Broadcast => {
+                if !operands.is_empty() {
+                    let src = self.emit_operand(&operands[0], func);
+                    let src_ptr = self.fresh_name();
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = inttoptr i64 {} to i8*\n",
+                        src_ptr, src
+                    ));
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_tensor_broadcast(i8* {})\n",
+                        result, src_ptr
+                    ));
+                    result
+                } else {
+                    "zeroinitializer".to_string()
                 }
             }
         }

@@ -6,30 +6,80 @@
 // ── Classification metrics ──────────────────────────────────
 
 /// Fraction of correct predictions.
-fn accuracy(predictions: Int64, targets: Int64) -> Float32;
+fn accuracy(predictions: Int64, targets: Int64) -> Float32 {
+    // accuracy = sum(predictions == targets) / len(predictions)
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}
 
 /// Positive predictive value: TP / (TP + FP).
-fn precision(predictions: Int64, targets: Int64) -> Float32;
+fn precision(predictions: Int64, targets: Int64) -> Float32 {
+    // For each class, compute TP / (TP + FP).
+    // Returns macro-averaged precision across classes.
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}
 
 /// Sensitivity / true positive rate: TP / (TP + FN).
-fn recall(predictions: Int64, targets: Int64) -> Float32;
+fn recall(predictions: Int64, targets: Int64) -> Float32 {
+    // For each class, compute TP / (TP + FN).
+    // Returns macro-averaged recall across classes.
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}
 
 /// Harmonic mean of precision and recall.
-fn f1_score(predictions: Int64, targets: Int64) -> Float32;
+fn f1_score(predictions: Int64, targets: Int64) -> Float32 {
+    // f1 = 2 * precision * recall / (precision + recall)
+    // Returns macro-averaged F1 score.
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}
 
 /// NxN matrix of predicted vs actual class counts.
-fn confusion_matrix(predictions: Int64, targets: Int64, num_classes: Int64) -> Int64;
+fn confusion_matrix(predictions: Int64, targets: Int64, num_classes: Int64) -> Int64 {
+    // matrix[i][j] = count of samples with true label i predicted as j.
+    // Returns [num_classes x num_classes] tensor.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
 
 /// Area under the Receiver Operating Characteristic curve.
-fn roc_auc(predictions: Int64, targets: Int64) -> Float32;
+fn roc_auc(predictions: Int64, targets: Int64) -> Float32 {
+    // Computes AUC using the trapezoidal rule over sorted thresholds.
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}
 
 // ── Regression metrics ──────────────────────────────────────
 
 /// Mean squared error: (1/n) Σ(pred - target)².
-fn mean_squared_error(predictions: Int64, targets: Int64) -> Float32;
+fn mean_squared_error(predictions: Int64, targets: Int64) -> Float32 {
+    // mse = mean((predictions - targets)^2)
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}
 
 /// Mean absolute error: (1/n) Σ|pred - target|.
-fn mean_absolute_error(predictions: Int64, targets: Int64) -> Float32;
+fn mean_absolute_error(predictions: Int64, targets: Int64) -> Float32 {
+    // mae = mean(abs(predictions - targets))
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}
 
 /// Coefficient of determination: 1 - SS_res / SS_tot.
-fn r2_score(predictions: Int64, targets: Int64) -> Float32;
+fn r2_score(predictions: Int64, targets: Int64) -> Float32 {
+    // ss_res = sum((targets - predictions)^2)
+    // ss_tot = sum((targets - mean(targets))^2)
+    // r2 = 1 - ss_res / ss_tot
+    // Requires CPU tensor runtime (Phase 10).
+    let result: Float32;
+    return result;
+}

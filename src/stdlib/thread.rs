@@ -23,9 +23,21 @@ pub fn register_thread(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
 
     // Thread utility functions
     def_fn(symbols, interner, "sleep", vec![TypeId::INT64], TypeId::UNIT);
+    def_fn(symbols, interner, "sleep_ms", vec![TypeId::INT64], TypeId::UNIT);
     def_fn(symbols, interner, "yield_now", vec![], TypeId::UNIT);
     def_fn(symbols, interner, "current_thread_id", vec![], TypeId::INT64);
     def_fn(symbols, interner, "available_parallelism", vec![], TypeId::INT64);
+    def_fn(symbols, interner, "park", vec![], TypeId::UNIT);
+    def_fn(symbols, interner, "unpark", vec![join_handle_ty], TypeId::UNIT);
+
+    // Thread pool (simplified)
+    let pool_ty = def_struct(symbols, interner, "ThreadPool", vec![], vec![]);
+    def_method(symbols, interner, "ThreadPool", "new", vec![TypeId::INT64], pool_ty);
+    def_method(symbols, interner, "ThreadPool", "execute", vec![pool_ty, closure_ty], TypeId::UNIT);
+    def_method(symbols, interner, "ThreadPool", "shutdown", vec![pool_ty], TypeId::UNIT);
+
+    // Scoped threads
+    def_fn(symbols, interner, "scope", vec![closure_ty], TypeId::UNIT);
 }
 
 // ---------------------------------------------------------------------------
@@ -85,5 +97,18 @@ mod tests {
         register_thread(&mut i, &mut s);
         assert!(s.lookup("yield_now").is_some());
         assert!(s.lookup("available_parallelism").is_some());
+        assert!(s.lookup("sleep_ms").is_some());
+        assert!(s.lookup("park").is_some());
+        assert!(s.lookup("scope").is_some());
+    }
+
+    #[test]
+    fn thread_pool_registered() {
+        let (mut i, mut s) = fresh();
+        register_thread(&mut i, &mut s);
+        assert!(s.lookup("ThreadPool").is_some());
+        assert!(s.lookup("ThreadPool::new").is_some());
+        assert!(s.lookup("ThreadPool::execute").is_some());
+        assert!(s.lookup("ThreadPool::shutdown").is_some());
     }
 }

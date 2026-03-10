@@ -2,6 +2,7 @@
 ///
 /// Provides Linear, Conv2d, BatchNorm, LayerNorm, Dropout,
 /// MaxPool2d, AvgPool2d, and AdaptiveAvgPool2d layers.
+/// All layers implement the Module trait with forward() and parameters().
 
 /// Fully connected (dense) layer: y = x @ W^T + b.
 struct Linear {
@@ -10,7 +11,37 @@ struct Linear {
 }
 
 /// Create a new Linear layer.
-fn linear_new(in_features: Int64, out_features: Int64) -> Int64;
+fn linear_new(in_features: Int64, out_features: Int64) -> Int64 {
+    // Allocates weight matrix [out_features x in_features] and bias [out_features].
+    // Weight initialized with Kaiming uniform, bias with uniform(-1/sqrt(fan_in), 1/sqrt(fan_in)).
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for Linear {
+    fn forward(self, input: Int64) -> Int64 {
+        // y = input @ self.weight^T + self.bias
+        // matmul(input, transpose(self.weight)) + self.bias
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns [self.weight, self.bias]
+        return 0;
+    }
+
+    fn train(self) {
+        // Linear has no training/eval mode distinction.
+    }
+
+    fn eval(self) {
+        // Linear has no training/eval mode distinction.
+    }
+
+    fn to_device(self, device: Int64) {
+        // Move weight and bias tensors to the specified device.
+    }
+}
 
 /// 2D convolution layer.
 struct Conv2d {
@@ -20,7 +51,29 @@ struct Conv2d {
 }
 
 /// Create a new Conv2d layer.
-fn conv2d_new(in_channels: Int64, out_channels: Int64, kernel_size: Int64) -> Int64;
+fn conv2d_new(in_channels: Int64, out_channels: Int64, kernel_size: Int64) -> Int64 {
+    // Allocates kernel [out_channels x in_channels x kernel_size x kernel_size]
+    // and bias [out_channels]. Kaiming uniform initialization.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for Conv2d {
+    fn forward(self, input: Int64) -> Int64 {
+        // output = conv2d(input, self.weight, self.bias, stride=1, padding=0)
+        // Sliding window cross-correlation + bias.
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns [self.weight, self.bias]
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// Batch normalization over a mini-batch of inputs.
 struct BatchNorm {
@@ -28,7 +81,30 @@ struct BatchNorm {
 }
 
 /// Create a new BatchNorm layer.
-fn batchnorm_new(num_features: Int64) -> Int64;
+fn batchnorm_new(num_features: Int64) -> Int64 {
+    // Allocates gamma (scale) and beta (shift) of size [num_features].
+    // Tracks running mean and variance for eval mode.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for BatchNorm {
+    fn forward(self, input: Int64) -> Int64 {
+        // Training: normalize over batch using batch mean/var, update running stats.
+        // Eval: normalize using running mean/var.
+        // output = gamma * (input - mean) / sqrt(var + eps) + beta
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns [self.gamma, self.beta]
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// Layer normalization over the last dimension.
 struct LayerNorm {
@@ -36,7 +112,28 @@ struct LayerNorm {
 }
 
 /// Create a new LayerNorm layer.
-fn layernorm_new(normalized_shape: Int64) -> Int64;
+fn layernorm_new(normalized_shape: Int64) -> Int64 {
+    // Allocates gamma and beta of size [normalized_shape].
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for LayerNorm {
+    fn forward(self, input: Int64) -> Int64 {
+        // Normalize over last dimension:
+        // output = gamma * (input - mean) / sqrt(var + eps) + beta
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns [self.gamma, self.beta]
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// Randomly zeroes elements with probability p during training.
 struct Dropout {
@@ -44,7 +141,29 @@ struct Dropout {
 }
 
 /// Create a new Dropout layer.
-fn dropout_new(p: Float32) -> Int64;
+fn dropout_new(p: Float32) -> Int64 {
+    // Stores dropout probability p.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for Dropout {
+    fn forward(self, input: Int64) -> Int64 {
+        // Training: randomly zero elements with probability p,
+        //   scale remaining by 1/(1-p) to preserve expected value.
+        // Eval: identity (no dropout).
+        return input;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Dropout has no learnable parameters.
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// 2D max pooling.
 struct MaxPool2d {
@@ -52,7 +171,28 @@ struct MaxPool2d {
 }
 
 /// Create a new MaxPool2d layer.
-fn maxpool2d_new(kernel_size: Int64) -> Int64;
+fn maxpool2d_new(kernel_size: Int64) -> Int64 {
+    // Stores kernel size for max pooling windows.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for MaxPool2d {
+    fn forward(self, input: Int64) -> Int64 {
+        // For each kernel_size x kernel_size window, output the maximum value.
+        // Also records indices for backward pass (grad routing).
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // MaxPool2d has no learnable parameters.
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// 2D average pooling.
 struct AvgPool2d {
@@ -60,7 +200,27 @@ struct AvgPool2d {
 }
 
 /// Create a new AvgPool2d layer.
-fn avgpool2d_new(kernel_size: Int64) -> Int64;
+fn avgpool2d_new(kernel_size: Int64) -> Int64 {
+    // Stores kernel size for average pooling windows.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for AvgPool2d {
+    fn forward(self, input: Int64) -> Int64 {
+        // For each kernel_size x kernel_size window, output the average value.
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // AvgPool2d has no learnable parameters.
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// Adaptive average pooling that produces a fixed output size.
 struct AdaptiveAvgPool2d {
@@ -68,4 +228,24 @@ struct AdaptiveAvgPool2d {
 }
 
 /// Create a new AdaptiveAvgPool2d layer.
-fn adaptive_avgpool2d_new(output_size: Int64) -> Int64;
+fn adaptive_avgpool2d_new(output_size: Int64) -> Int64 {
+    // Automatically computes kernel_size and stride to achieve output_size.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for AdaptiveAvgPool2d {
+    fn forward(self, input: Int64) -> Int64 {
+        // Adaptively pools input to produce output of fixed spatial size.
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // AdaptiveAvgPool2d has no learnable parameters.
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}

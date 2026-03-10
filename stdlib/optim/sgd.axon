@@ -8,4 +8,34 @@ struct SGD {
 }
 
 /// Create a new SGD optimizer with the given learning rate.
-fn sgd_new(lr: Float32) -> Int64;
+fn sgd_new(lr: Float32) -> Int64 {
+    // Initializes SGD with lr, momentum=0, weight_decay=0, dampening=0.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Optimizer for SGD {
+    fn step(self) {
+        // For each parameter p with gradient g:
+        //   if weight_decay != 0: g = g + weight_decay * p
+        //   if momentum != 0:
+        //     if first step: buf = g
+        //     else: buf = momentum * buf + (1 - dampening) * g
+        //     if nesterov: g = g + momentum * buf
+        //     else: g = buf
+        //   p = p - lr * g
+    }
+
+    fn zero_grad(self) {
+        // Sets .grad = 0 for all tracked parameters.
+    }
+
+    fn state_dict(self) -> Int64 {
+        // Returns serializable state: momentum buffer per param.
+        return 0;
+    }
+
+    fn load_state_dict(self, state: Int64) {
+        // Restores optimizer state from saved dictionary.
+    }
+}

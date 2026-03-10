@@ -8,4 +8,48 @@ struct Sequential {}
 
 /// Create a new empty Sequential container.
 /// Layers are added via the `add` method after construction.
-fn sequential_new() -> Int64;
+fn sequential_new() -> Int64 {
+    // Allocates an empty list of layers.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for Sequential {
+    fn forward(self, input: Int64) -> Int64 {
+        // Passes input through each layer in order:
+        // let x = input;
+        // for layer in self.layers { x = layer.forward(x); }
+        // return x;
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Concatenates parameters from all contained layers.
+        return 0;
+    }
+
+    fn train(self) {
+        // Sets all contained layers to training mode.
+    }
+
+    fn eval(self) {
+        // Sets all contained layers to evaluation mode.
+    }
+
+    fn to_device(self, device: Int64) {
+        // Moves all contained layers to the specified device.
+    }
+}
+
+/// Add a layer to the sequential container (builder pattern).
+fn sequential_add(seq: Int64, layer: Int64) -> Int64 {
+    // Appends layer to the sequential's layer list.
+    // Returns the sequential for chaining.
+    return seq;
+}
+
+/// Return the number of layers in the sequential container.
+fn sequential_len(seq: Int64) -> Int64 {
+    // Returns the count of layers.
+    return 0;
+}

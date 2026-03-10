@@ -96,6 +96,22 @@ fn register_file(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     def_method(symbols, interner, "File", "write_all", vec![file_ty, TypeId::STRING], TypeId::UNIT);
     def_method(symbols, interner, "File", "flush", vec![file_ty], TypeId::UNIT);
     def_method(symbols, interner, "File", "close", vec![file_ty], TypeId::UNIT);
+    def_method(symbols, interner, "File", "metadata", vec![file_ty], TypeId::UNIT);
+    def_method(symbols, interner, "File", "seek", vec![file_ty, TypeId::INT64], TypeId::UNIT);
+    def_method(symbols, interner, "File", "read_bytes", vec![file_ty, TypeId::INT64], TypeId::UNIT);
+    def_method(symbols, interner, "File", "write_bytes", vec![file_ty, TypeId::UNIT], TypeId::UNIT);
+    def_method(symbols, interner, "File", "exists", vec![TypeId::STRING], TypeId::BOOL);
+    def_method(symbols, interner, "File", "remove", vec![TypeId::STRING], TypeId::BOOL);
+    def_method(symbols, interner, "File", "copy", vec![TypeId::STRING, TypeId::STRING], TypeId::BOOL);
+    def_method(symbols, interner, "File", "rename", vec![TypeId::STRING, TypeId::STRING], TypeId::BOOL);
+
+    // Path utilities as free functions
+    def_fn(symbols, interner, "path_exists", vec![TypeId::STRING], TypeId::BOOL);
+    def_fn(symbols, interner, "path_join", vec![TypeId::STRING, TypeId::STRING], TypeId::STRING);
+    def_fn(symbols, interner, "path_parent", vec![TypeId::STRING], TypeId::STRING);
+    def_fn(symbols, interner, "path_extension", vec![TypeId::STRING], TypeId::STRING);
+    def_fn(symbols, interner, "read_to_string", vec![TypeId::STRING], TypeId::STRING);
+    def_fn(symbols, interner, "write_string", vec![TypeId::STRING, TypeId::STRING], TypeId::UNIT);
 }
 
 // -- Standard streams ---------------------------------------------------------
@@ -168,6 +184,9 @@ mod tests {
         assert!(s.lookup("File").is_some());
         assert!(s.lookup("File::open").is_some());
         assert!(s.lookup("File::create").is_some());
+        assert!(s.lookup("File::exists").is_some());
+        assert!(s.lookup("File::copy").is_some());
+        assert!(s.lookup("File::seek").is_some());
     }
 
     #[test]
@@ -184,6 +203,16 @@ mod tests {
         let (mut i, mut s) = fresh();
         register_io(&mut i, &mut s);
         assert!(s.lookup("format").is_some());
+    }
+
+    #[test]
+    fn path_utilities_registered() {
+        let (mut i, mut s) = fresh();
+        register_io(&mut i, &mut s);
+        assert!(s.lookup("path_exists").is_some());
+        assert!(s.lookup("path_join").is_some());
+        assert!(s.lookup("read_to_string").is_some());
+        assert!(s.lookup("write_string").is_some());
     }
 
     #[test]

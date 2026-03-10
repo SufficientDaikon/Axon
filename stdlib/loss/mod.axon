@@ -2,58 +2,224 @@
 ///
 /// Each loss function computes a scalar measure of the discrepancy
 /// between model predictions and ground-truth targets. All implement
-/// the LossFn trait.
+/// the LossFn trait with forward() and backward() methods.
 
 /// Loss function trait.
 trait LossFn {
     /// Compute loss given predictions and targets.
     fn forward(&self, prediction: Int64, target: Int64) -> Float32;
+    /// Compute gradient of the loss with respect to predictions.
+    fn backward(&self) -> Int64;
 }
 
 /// Mean Squared Error loss: (1/n) Σ(pred - target)².
 struct MSELoss {}
-fn mse_loss() -> Int64;
+fn mse_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for MSELoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // diff = prediction - target
+        // loss = mean(diff * diff)
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // d/d(pred) MSE = 2 * (pred - target) / n
+        return 0;
+    }
+}
 
 /// Mean Absolute Error loss: (1/n) Σ|pred - target|.
 struct L1Loss {}
-fn l1_loss() -> Int64;
+fn l1_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for L1Loss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // loss = mean(abs(prediction - target))
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // d/d(pred) L1 = sign(pred - target) / n
+        return 0;
+    }
+}
 
 /// Cross-entropy loss (softmax + NLL) for multi-class classification.
 struct CrossEntropyLoss {}
-fn cross_entropy_loss() -> Int64;
+fn cross_entropy_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for CrossEntropyLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // log_probs = log_softmax(prediction, dim=-1)
+        // loss = -sum(one_hot(target) * log_probs) / batch_size
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // d/d(pred) CE = softmax(pred) - one_hot(target)
+        return 0;
+    }
+}
 
 /// Binary cross-entropy loss for binary classification.
 struct BCELoss {}
-fn bce_loss() -> Int64;
+fn bce_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for BCELoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // loss = -mean(target * log(pred) + (1 - target) * log(1 - pred))
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // d/d(pred) BCE = -(target / pred - (1 - target) / (1 - pred)) / n
+        return 0;
+    }
+}
 
 /// Binary cross-entropy with built-in sigmoid for numerical stability.
 struct BCEWithLogitsLoss {}
-fn bce_with_logits_loss() -> Int64;
+fn bce_with_logits_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for BCEWithLogitsLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // Numerically stable: max(x, 0) - x * target + log(1 + exp(-|x|))
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // d/d(logits) = sigmoid(logits) - target
+        return 0;
+    }
+}
 
 /// Negative log-likelihood loss.
 struct NLLLoss {}
-fn nll_loss() -> Int64;
+fn nll_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for NLLLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // loss = -prediction[target] averaged over batch
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // Gradient is -1 at the target class index, 0 elsewhere.
+        return 0;
+    }
+}
 
 /// Huber loss (smooth L1): quadratic for small errors, linear for large.
 struct HuberLoss {
     delta: Float32,
 }
-fn huber_loss(delta: Float32) -> Int64;
+fn huber_loss(delta: Float32) -> Int64 {
+    return 0;
+}
+
+impl LossFn for HuberLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // diff = pred - target
+        // loss = 0.5 * diff^2           if |diff| <= delta
+        //        delta * (|diff| - 0.5 * delta)  otherwise
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // d/d(pred) = diff              if |diff| <= delta
+        //             delta * sign(diff) otherwise
+        return 0;
+    }
+}
 
 /// Kullback-Leibler divergence loss.
 struct KLDivLoss {}
-fn kl_div_loss() -> Int64;
+fn kl_div_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for KLDivLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // loss = sum(target * (log(target) - prediction))
+        // Note: prediction should be log-probabilities.
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // d/d(pred) KL = -target
+        return 0;
+    }
+}
 
 /// Cosine embedding loss for similarity learning.
 struct CosineEmbeddingLoss {}
-fn cosine_embedding_loss() -> Int64;
+fn cosine_embedding_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for CosineEmbeddingLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // cos_sim = dot(x1, x2) / (||x1|| * ||x2||)
+        // loss = 1 - cos_sim        if y == 1
+        //        max(0, cos_sim - margin)  if y == -1
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // Gradient of cosine similarity with respect to inputs.
+        return 0;
+    }
+}
 
 /// Triplet margin loss for metric learning.
 struct TripletMarginLoss {
     margin: Float32,
 }
-fn triplet_margin_loss(margin: Float32) -> Int64;
+fn triplet_margin_loss(margin: Float32) -> Int64 {
+    return 0;
+}
+
+impl LossFn for TripletMarginLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // loss = max(0, d(anchor, positive) - d(anchor, negative) + margin)
+        // where d is the distance function (default: Euclidean).
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // Gradient pushes anchor closer to positive, farther from negative.
+        return 0;
+    }
+}
 
 /// Connectionist Temporal Classification loss for sequence labeling.
 struct CTCLoss {}
-fn ctc_loss() -> Int64;
+fn ctc_loss() -> Int64 {
+    return 0;
+}
+
+impl LossFn for CTCLoss {
+    fn forward(self, prediction: Int64, target: Int64) -> Int64 {
+        // Marginalizes over all valid alignments between input and target.
+        // Uses dynamic programming (forward-backward algorithm).
+        return 0;
+    }
+
+    fn backward(self) -> Int64 {
+        // Gradient computed via the forward-backward algorithm.
+        return 0;
+    }
+}

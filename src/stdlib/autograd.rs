@@ -124,6 +124,55 @@ fn register_functions(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     def_fn(symbols, interner, "detach", vec![TypeId::INT64], TypeId::INT64);
     def_fn(symbols, interner, "no_grad", vec![], TypeId::UNIT);
     def_fn(symbols, interner, "grad_checkpoint", vec![TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "enable_grad", vec![], TypeId::UNIT);
+
+    // ── Gradient rule functions ──────────────────────────────────
+    // Each function computes the gradient for a specific operation.
+    // Tensor values are represented as Int64 (stdlib convention).
+
+    // Arithmetic gradient rules
+    def_fn(symbols, interner, "grad_add", vec![TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_sub", vec![TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_mul", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_div", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_neg", vec![TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_abs", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+
+    // Matrix gradient rules
+    def_fn(symbols, interner, "grad_matmul", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_transpose", vec![TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_reshape", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+
+    // Activation gradient rules
+    def_fn(symbols, interner, "grad_relu", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_sigmoid", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_tanh", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_softmax", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_gelu", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_silu", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_leaky_relu", vec![TypeId::INT64, TypeId::FLOAT64, TypeId::INT64], TypeId::INT64);
+
+    // Reduction gradient rules
+    def_fn(symbols, interner, "grad_sum", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_mean", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+
+    // Transcendental gradient rules
+    def_fn(symbols, interner, "grad_log", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_exp", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_pow", vec![TypeId::INT64, TypeId::FLOAT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_sqrt", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_sin", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_cos", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+
+    // Layer gradient rules
+    def_fn(symbols, interner, "grad_linear", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_conv2d", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_batchnorm", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_layernorm", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_maxpool2d", vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_dropout", vec![TypeId::INT64, TypeId::FLOAT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_embedding", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    def_fn(symbols, interner, "grad_cross_entropy", vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
 }
 
 // -- Tensor autograd methods --------------------------------------------------
@@ -277,8 +326,34 @@ mod tests {
         let (mut i, mut s) = fresh();
         register_autograd(&mut i, &mut s);
         for name in &["grad_tensor_new", "backward", "zero_grad", "detach", "no_grad",
-                       "grad_checkpoint", "autograd_context_new"] {
+                       "grad_checkpoint", "autograd_context_new", "enable_grad"] {
             assert!(s.lookup(name).is_some(), "{} should be registered", name);
+        }
+    }
+
+    #[test]
+    fn gradient_rule_functions_registered() {
+        let (mut i, mut s) = fresh();
+        register_autograd(&mut i, &mut s);
+        let grad_fns = [
+            // Arithmetic
+            "grad_add", "grad_sub", "grad_mul", "grad_div", "grad_neg", "grad_abs",
+            // Matrix
+            "grad_matmul", "grad_transpose", "grad_reshape",
+            // Activation
+            "grad_relu", "grad_sigmoid", "grad_tanh", "grad_softmax",
+            "grad_gelu", "grad_silu", "grad_leaky_relu",
+            // Reduction
+            "grad_sum", "grad_mean",
+            // Transcendental
+            "grad_log", "grad_exp", "grad_pow", "grad_sqrt", "grad_sin", "grad_cos",
+            // Layer
+            "grad_linear", "grad_conv2d", "grad_batchnorm", "grad_layernorm",
+            "grad_maxpool2d", "grad_dropout", "grad_embedding", "grad_cross_entropy",
+        ];
+        assert!(grad_fns.len() >= 25, "Must have at least 25 gradient rule functions, got {}", grad_fns.len());
+        for name in &grad_fns {
+            assert!(s.lookup(name).is_some(), "gradient function {} should be registered", name);
         }
     }
 

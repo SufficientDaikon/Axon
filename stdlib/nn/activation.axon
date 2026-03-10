@@ -6,18 +6,103 @@
 /// Rectified Linear Unit: max(0, x).
 struct ReLU {}
 
+impl Module for ReLU {
+    fn forward(self, input: Int64) -> Int64 {
+        // output = max(0, input)  element-wise
+        return 0;
+    }
+    fn parameters(self) -> Int64 { return 0; }
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
+
 /// Gaussian Error Linear Unit.
 struct GELU {}
 
+impl Module for GELU {
+    fn forward(self, input: Int64) -> Int64 {
+        // output = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
+        return 0;
+    }
+    fn parameters(self) -> Int64 { return 0; }
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
+
 /// Sigmoid Linear Unit (Swish): x * sigmoid(x).
 struct SiLU {}
+
+impl Module for SiLU {
+    fn forward(self, input: Int64) -> Int64 {
+        // output = input * sigmoid(input)
+        return 0;
+    }
+    fn parameters(self) -> Int64 { return 0; }
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// Softmax along a specified dimension.
 struct Softmax {
     dim: Int64,
 }
 
+impl Module for Softmax {
+    fn forward(self, input: Int64) -> Int64 {
+        // exp_x = exp(input - max(input, dim))  (for numerical stability)
+        // output = exp_x / sum(exp_x, dim)
+        return 0;
+    }
+    fn parameters(self) -> Int64 { return 0; }
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
+
 /// Log-Softmax: log(softmax(x)), numerically stable.
 struct LogSoftmax {
     dim: Int64,
+}
+
+impl Module for LogSoftmax {
+    fn forward(self, input: Int64) -> Int64 {
+        // output = input - log(sum(exp(input), dim))
+        // Computed in a numerically stable way using the log-sum-exp trick.
+        return 0;
+    }
+    fn parameters(self) -> Int64 { return 0; }
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
+
+/// Sigmoid activation: 1 / (1 + exp(-x)).
+struct SigmoidActivation {}
+
+impl Module for SigmoidActivation {
+    fn forward(self, input: Int64) -> Int64 {
+        // output = 1 / (1 + exp(-input))
+        return 0;
+    }
+    fn parameters(self) -> Int64 { return 0; }
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
+
+/// Tanh activation: (exp(x) - exp(-x)) / (exp(x) + exp(-x)).
+struct TanhActivation {}
+
+impl Module for TanhActivation {
+    fn forward(self, input: Int64) -> Int64 {
+        // output = tanh(input)
+        return 0;
+    }
+    fn parameters(self) -> Int64 { return 0; }
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
 }

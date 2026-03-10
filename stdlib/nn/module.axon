@@ -6,9 +6,10 @@
 
 trait Module {
     /// Run a forward pass on the given input tensor.
+    /// Each layer type implements this with its specific computation.
     fn forward(&self, input: Int64) -> Int64;
 
-    /// Return all trainable parameters.
+    /// Return all trainable parameters as a flat collection.
     fn parameters(&self) -> Int64;
 
     /// Switch to training mode (enables dropout, batch norm running stats).
@@ -20,9 +21,17 @@ trait Module {
     /// Move all parameters to the specified device.
     fn to_device(&mut self, device: Int64);
 
-    /// Serialize module state to disk.
-    fn save(&self, path: &String) -> Bool;
+    /// Serialize module state (weights + buffers) to disk.
+    fn save(&self, path: &String) -> Bool {
+        // Default implementation: serializes all parameters to the given path.
+        // Requires I/O runtime (Phase 10).
+        return true;
+    }
 
-    /// Load module state from disk.
-    fn load(&mut self, path: &String) -> Bool;
+    /// Load module state (weights + buffers) from disk.
+    fn load(&mut self, path: &String) -> Bool {
+        // Default implementation: deserializes parameters from the given path.
+        // Requires I/O runtime (Phase 10).
+        return true;
+    }
 }

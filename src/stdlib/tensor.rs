@@ -160,17 +160,50 @@ fn register_comparison_and_conversion(
     // eq(self, other: Tensor) -> Tensor  — element-wise equality
     def_method(symbols, interner, "Tensor", "eq", vec![tensor_ty, tensor_ty], tensor_ty);
 
+    // ne(self, other: Tensor) -> Tensor  — element-wise inequality
+    def_method(symbols, interner, "Tensor", "ne", vec![tensor_ty, tensor_ty], tensor_ty);
+
     // lt(self, other: Tensor) -> Tensor  — element-wise less-than
     def_method(symbols, interner, "Tensor", "lt", vec![tensor_ty, tensor_ty], tensor_ty);
 
+    // le(self, other: Tensor) -> Tensor  — element-wise less-or-equal
+    def_method(symbols, interner, "Tensor", "le", vec![tensor_ty, tensor_ty], tensor_ty);
+
     // gt(self, other: Tensor) -> Tensor  — element-wise greater-than
     def_method(symbols, interner, "Tensor", "gt", vec![tensor_ty, tensor_ty], tensor_ty);
+
+    // ge(self, other: Tensor) -> Tensor  — element-wise greater-or-equal
+    def_method(symbols, interner, "Tensor", "ge", vec![tensor_ty, tensor_ty], tensor_ty);
 
     // sum_dim(self, dim: Int64) -> Tensor  — sum along a specific dimension
     def_method(symbols, interner, "Tensor", "sum_dim", vec![tensor_ty, TypeId::INT64], tensor_ty);
 
     // mean_dim(self, dim: Int64) -> Tensor  — mean along a specific dimension
     def_method(symbols, interner, "Tensor", "mean_dim", vec![tensor_ty, TypeId::INT64], tensor_ty);
+
+    // Slicing operations
+    def_method(symbols, interner, "Tensor", "slice", vec![tensor_ty, TypeId::INT64, TypeId::INT64, TypeId::INT64], tensor_ty);
+    def_method(symbols, interner, "Tensor", "narrow", vec![tensor_ty, TypeId::INT64, TypeId::INT64, TypeId::INT64], tensor_ty);
+    def_method(symbols, interner, "Tensor", "select", vec![tensor_ty, TypeId::INT64, TypeId::INT64], tensor_ty);
+    def_method(symbols, interner, "Tensor", "index_select", vec![tensor_ty, TypeId::INT64, tensor_ty], tensor_ty);
+    def_method(symbols, interner, "Tensor", "masked_select", vec![tensor_ty, tensor_ty], tensor_ty);
+    def_method(symbols, interner, "Tensor", "where_cond", vec![tensor_ty, tensor_ty, tensor_ty], tensor_ty);
+
+    // Concatenation / stacking
+    def_fn(symbols, interner, "cat", vec![TypeId::UNIT, TypeId::INT64], tensor_ty);
+    def_fn(symbols, interner, "stack", vec![TypeId::UNIT, TypeId::INT64], tensor_ty);
+
+    // Type casting
+    def_method(symbols, interner, "Tensor", "to_float32", vec![tensor_ty], tensor_ty);
+    def_method(symbols, interner, "Tensor", "to_float64", vec![tensor_ty], tensor_ty);
+    def_method(symbols, interner, "Tensor", "to_int64", vec![tensor_ty], tensor_ty);
+    def_method(symbols, interner, "Tensor", "to_int32", vec![tensor_ty], tensor_ty);
+
+    // Copying
+    def_method(symbols, interner, "Tensor", "clone", vec![tensor_ty], tensor_ty);
+    def_method(symbols, interner, "Tensor", "copy_from", vec![tensor_ty, tensor_ty], TypeId::UNIT);
+    def_method(symbols, interner, "Tensor", "fill", vec![tensor_ty, TypeId::FLOAT64], TypeId::UNIT);
+    def_method(symbols, interner, "Tensor", "zero_", vec![tensor_ty], TypeId::UNIT);
 }
 
 // -- Device operations --------------------------------------------------------
@@ -258,12 +291,34 @@ mod tests {
             "Tensor::item",
             "Tensor::to_vec",
             "Tensor::eq",
+            "Tensor::ne",
             "Tensor::lt",
+            "Tensor::le",
             "Tensor::gt",
+            "Tensor::ge",
             "Tensor::sum_dim",
             "Tensor::mean_dim",
+            "Tensor::slice",
+            "Tensor::narrow",
+            "Tensor::select",
+            "Tensor::index_select",
+            "Tensor::masked_select",
+            "Tensor::where_cond",
+            "Tensor::to_float32",
+            "Tensor::to_float64",
+            "Tensor::clone",
+            "Tensor::fill",
+            "Tensor::zero_",
         ] {
             assert!(s.lookup(method).is_some(), "{} should be registered", method);
         }
+    }
+
+    #[test]
+    fn tensor_concat_stack_registered() {
+        let (mut i, mut s) = fresh();
+        register_tensor(&mut i, &mut s);
+        assert!(s.lookup("cat").is_some());
+        assert!(s.lookup("stack").is_some());
     }
 }

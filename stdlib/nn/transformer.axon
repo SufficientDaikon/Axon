@@ -10,7 +10,32 @@ struct MultiHeadAttention {
 }
 
 /// Create a new MultiHeadAttention module.
-fn multihead_attention_new(embed_dim: Int64, num_heads: Int64) -> Int64;
+fn multihead_attention_new(embed_dim: Int64, num_heads: Int64) -> Int64 {
+    // Allocates Q, K, V projection matrices [embed_dim x embed_dim] each,
+    // and output projection [embed_dim x embed_dim].
+    // head_dim = embed_dim / num_heads.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for MultiHeadAttention {
+    fn forward(self, input: Int64) -> Int64 {
+        // Q = input @ W_q, K = input @ W_k, V = input @ W_v
+        // Split into num_heads, compute scaled dot-product attention:
+        //   attention = softmax(Q @ K^T / sqrt(head_dim)) @ V
+        // Concatenate heads and project: output = concat(heads) @ W_o
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns [W_q, W_k, W_v, W_o, bias_q, bias_k, bias_v, bias_o]
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// A single transformer encoder layer (self-attention + feed-forward).
 struct TransformerEncoderLayer {
@@ -19,7 +44,30 @@ struct TransformerEncoderLayer {
 }
 
 /// Create a new TransformerEncoderLayer.
-fn transformer_encoder_layer_new(d_model: Int64, nhead: Int64) -> Int64;
+fn transformer_encoder_layer_new(d_model: Int64, nhead: Int64) -> Int64 {
+    // Creates MultiHeadAttention + 2-layer FFN + 2 LayerNorm layers.
+    // FFN dim defaults to 4 * d_model.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for TransformerEncoderLayer {
+    fn forward(self, input: Int64) -> Int64 {
+        // Pre-norm architecture:
+        // x = input + self_attn(layernorm1(input))
+        // output = x + ffn(layernorm2(x))
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns parameters from attention, FFN, and both layernorms.
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}
 
 /// Stack of TransformerEncoderLayer modules.
 struct TransformerEncoder {
@@ -27,4 +75,25 @@ struct TransformerEncoder {
 }
 
 /// Create a new TransformerEncoder.
-fn transformer_encoder_new(num_layers: Int64) -> Int64;
+fn transformer_encoder_new(num_layers: Int64) -> Int64 {
+    // Creates num_layers TransformerEncoderLayer instances.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for TransformerEncoder {
+    fn forward(self, input: Int64) -> Int64 {
+        // Passes input through each encoder layer sequentially:
+        // for layer in self.layers: input = layer.forward(input)
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns parameters from all encoder layers.
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}

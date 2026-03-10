@@ -10,7 +10,15 @@ struct Checkpoint {
 }
 
 /// Save a checkpoint with the model state and current epoch.
-fn checkpoint_save(path: String, epoch: Int64);
+fn checkpoint_save(path: String, epoch: Int64) {
+    // Serializes model parameters, optimizer state, and epoch number
+    // to the given file path.
+    // Requires I/O runtime (Phase 10).
+}
 
 /// Load a checkpoint from disk, returning the saved state.
-fn checkpoint_load(path: String) -> Int64;
+fn checkpoint_load(path: String) -> Int64 {
+    // Deserializes and returns the saved training state.
+    // Requires I/O runtime (Phase 10).
+    return 0;
+}

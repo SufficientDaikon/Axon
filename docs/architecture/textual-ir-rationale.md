@@ -90,6 +90,41 @@ require an in-memory IR representation. This is acceptable for v1.0.
 - **v2.0:** Evaluate inkwell for in-memory IR if compilation speed or debug info
   quality becomes a bottleneck
 
+## Optimization Passes
+
+Axon **does not implement its own optimization passes** for v1.0. Instead, all
+optimization is delegated to `clang` via its standard flag interface:
+
+| Flag    | Description                                      |
+|---------|--------------------------------------------------|
+| `-O0`   | No optimization (fastest compilation, for debug) |
+| `-O1`   | Basic optimizations (inlining, mem2reg)          |
+| `-O2`   | Standard optimizations (GVN, loop unroll, SROA)  |
+| `-O3`   | Aggressive optimizations (vectorization, etc.)   |
+| `-Os`   | Size-optimized                                   |
+| `-Oz`   | Minimum size                                     |
+
+The Axon compiler passes the user-requested optimization level directly to `clang`
+when compiling the generated `.ll` file:
+
+```
+clang -O2 output.ll -o output
+```
+
+This is sufficient for v1.0 because:
+
+1. **LLVM's optimization pipeline is world-class** — it handles mem2reg, SROA, GVN,
+   loop invariant code motion, inlining, dead code elimination, and hundreds of
+   other passes automatically.
+2. **No redundant work** — implementing custom MIR-level optimizations would
+   duplicate what LLVM already does better.
+3. **Correctness first** — custom optimization passes are a source of subtle bugs.
+   Delegating to a battle-tested optimizer reduces our bug surface.
+
+The only MIR-level "optimization" Axon performs is **constant folding** during
+lowering (e.g., `3 + 4` → `7`), which is safe and trivial. All other optimization
+is left to `clang`.
+
 ## Debug Information
 
 The textual IR approach does **not** emit DWARF debug info directly. LLVM's debug

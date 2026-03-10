@@ -13,7 +13,16 @@ struct GradScaler {
 }
 
 /// Create a new GradScaler with the given initial scale factor.
-fn grad_scaler_new(init_scale: Float32) -> Int64;
+fn grad_scaler_new(init_scale: Float32) -> Int64 {
+    // Initializes with the given scale factor (typically 2^16).
+    // Tracks growth interval and backoff factor for dynamic scaling.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
 
 /// Enable automatic casting to Float16 for supported operations.
-fn autocast();
+fn autocast() {
+    // Sets a thread-local flag that causes eligible operations
+    // to automatically cast inputs to Float16.
+    // Requires CPU tensor runtime (Phase 10).
+}

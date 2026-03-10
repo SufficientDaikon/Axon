@@ -19,7 +19,24 @@ struct StepLR {
 }
 
 /// Create a new StepLR scheduler.
-fn step_lr_new(step_size: Int64, gamma: Float32) -> Int64;
+fn step_lr_new(step_size: Int64, gamma: Float32) -> Int64 {
+    // lr = initial_lr * gamma^(epoch // step_size)
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl LrScheduler for StepLR {
+    fn step(self) {
+        // Increment epoch counter.
+        // If epoch % step_size == 0, multiply lr by gamma.
+    }
+
+    fn get_lr(self) -> Float32 {
+        // Returns current learning rate.
+        let lr: Float32;
+        return lr;
+    }
+}
 
 /// Cosine annealing: smoothly decrease LR following a cosine curve.
 struct CosineAnnealingLR {
@@ -27,7 +44,22 @@ struct CosineAnnealingLR {
 }
 
 /// Create a new CosineAnnealingLR scheduler.
-fn cosine_annealing_lr_new(t_max: Int64) -> Int64;
+fn cosine_annealing_lr_new(t_max: Int64) -> Int64 {
+    // lr = eta_min + 0.5 * (eta_max - eta_min) * (1 + cos(pi * epoch / t_max))
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl LrScheduler for CosineAnnealingLR {
+    fn step(self) {
+        // Increment epoch counter and recompute lr using cosine schedule.
+    }
+
+    fn get_lr(self) -> Float32 {
+        let lr: Float32;
+        return lr;
+    }
+}
 
 /// Reduce LR when a metric has stopped improving.
 struct ReduceLROnPlateau {
@@ -35,7 +67,24 @@ struct ReduceLROnPlateau {
 }
 
 /// Create a new ReduceLROnPlateau scheduler.
-fn reduce_lr_on_plateau_new(patience: Int64) -> Int64;
+fn reduce_lr_on_plateau_new(patience: Int64) -> Int64 {
+    // Monitors a metric and reduces lr by factor when it plateaus
+    // for `patience` epochs. Default factor = 0.1.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl LrScheduler for ReduceLROnPlateau {
+    fn step(self) {
+        // Check if metric improved. If not improved for `patience` steps,
+        // multiply lr by factor.
+    }
+
+    fn get_lr(self) -> Float32 {
+        let lr: Float32;
+        return lr;
+    }
+}
 
 /// Super-convergence schedule: ramp up then anneal over total_steps.
 struct OneCycleLR {
@@ -44,4 +93,21 @@ struct OneCycleLR {
 }
 
 /// Create a new OneCycleLR scheduler.
-fn one_cycle_lr_new(max_lr: Float32, total_steps: Int64) -> Int64;
+fn one_cycle_lr_new(max_lr: Float32, total_steps: Int64) -> Int64 {
+    // Phase 1 (0 to 30%): linear warmup from initial_lr to max_lr
+    // Phase 2 (30% to 100%): cosine annealing from max_lr to min_lr
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl LrScheduler for OneCycleLR {
+    fn step(self) {
+        // Advance one step in the one-cycle schedule.
+        // Compute lr based on current position in the cycle.
+    }
+
+    fn get_lr(self) -> Float32 {
+        let lr: Float32;
+        return lr;
+    }
+}

@@ -8,15 +8,29 @@
 struct Trainer {}
 
 /// Create a new Trainer instance.
-fn trainer_new() -> Int64;
+fn trainer_new() -> Int64 {
+    // Allocates a new Trainer with default configuration.
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
 
 /// Callback trait for hooking into training events.
 trait Callback {
-    fn on_epoch_start(&mut self, epoch: Int64);
-    fn on_epoch_end(&mut self, epoch: Int64, loss: Float32);
-    fn on_batch_start(&mut self, batch: Int64);
-    fn on_batch_end(&mut self, batch: Int64, loss: Float32);
-    fn on_train_end(&mut self);
+    fn on_epoch_start(&mut self, epoch: Int64) {
+        // Called at the start of each epoch. Default: no-op.
+    }
+    fn on_epoch_end(&mut self, epoch: Int64, loss: Float32) {
+        // Called at the end of each epoch with the epoch loss. Default: no-op.
+    }
+    fn on_batch_start(&mut self, batch: Int64) {
+        // Called at the start of each batch. Default: no-op.
+    }
+    fn on_batch_end(&mut self, batch: Int64, loss: Float32) {
+        // Called at the end of each batch with the batch loss. Default: no-op.
+    }
+    fn on_train_end(&mut self) {
+        // Called when training completes. Default: no-op.
+    }
 }
 
 /// Early stopping callback: halt training when validation loss
@@ -25,12 +39,34 @@ struct EarlyStopping {
     patience: Int64,
 }
 
+impl Callback for EarlyStopping {
+    fn on_epoch_end(self, epoch: Int64, loss: Float32) {
+        // Track best loss. If loss hasn't improved for `patience` epochs,
+        // signal training to stop.
+    }
+}
+
 /// Model checkpoint callback: save best model during training.
 struct ModelCheckpoint {
     path: String,
 }
 
+impl Callback for ModelCheckpoint {
+    fn on_epoch_end(self, epoch: Int64, loss: Float32) {
+        // If loss is the best so far, save model state to self.path.
+    }
+}
+
 /// TensorBoard logging callback.
 struct TensorBoard {
     log_dir: String,
+}
+
+impl Callback for TensorBoard {
+    fn on_batch_end(self, batch: Int64, loss: Float32) {
+        // Write loss scalar to TensorBoard log directory.
+    }
+    fn on_epoch_end(self, epoch: Int64, loss: Float32) {
+        // Write epoch summary to TensorBoard log directory.
+    }
 }

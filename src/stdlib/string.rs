@@ -34,6 +34,22 @@ pub fn register_string(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     def_method(symbols, interner, "String", "char_at", vec![s, TypeId::INT64], TypeId::CHAR);
     def_method(symbols, interner, "String", "concat", vec![s, s], s);
     def_method(symbols, interner, "String", "lines", vec![s], TypeId::UNIT);
+    def_method(symbols, interner, "String", "to_bytes", vec![s], TypeId::UNIT);
+    def_method(symbols, interner, "String", "from_bytes", vec![TypeId::UNIT], s);
+    def_method(symbols, interner, "String", "split_at", vec![s, TypeId::INT64], TypeId::UNIT);
+    def_method(symbols, interner, "String", "splitn", vec![s, TypeId::INT64, s], TypeId::UNIT);
+    def_method(symbols, interner, "String", "matches", vec![s, s], TypeId::UNIT);
+    def_method(symbols, interner, "String", "insert_str", vec![s, TypeId::INT64, s], TypeId::UNIT);
+    def_method(symbols, interner, "String", "remove_range", vec![s, TypeId::INT64, TypeId::INT64], s);
+    def_method(symbols, interner, "String", "is_ascii", vec![s], TypeId::BOOL);
+    def_method(symbols, interner, "String", "is_numeric", vec![s], TypeId::BOOL);
+    def_method(symbols, interner, "String", "is_alphabetic", vec![s], TypeId::BOOL);
+    def_method(symbols, interner, "String", "pad_left", vec![s, TypeId::INT64, TypeId::CHAR], s);
+    def_method(symbols, interner, "String", "pad_right", vec![s, TypeId::INT64, TypeId::CHAR], s);
+    def_method(symbols, interner, "String", "strip_prefix", vec![s, s], s);
+    def_method(symbols, interner, "String", "strip_suffix", vec![s, s], s);
+    def_method(symbols, interner, "String", "count", vec![s, s], TypeId::INT64);
+    def_method(symbols, interner, "String", "replacen", vec![s, s, s, TypeId::INT64], s);
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +95,8 @@ mod tests {
         assert!(s.lookup("String::starts_with").is_some());
         assert!(s.lookup("String::ends_with").is_some());
         assert!(s.lookup("String::find").is_some());
+        assert!(s.lookup("String::count").is_some());
+        assert!(s.lookup("String::matches").is_some());
     }
 
     #[test]
@@ -87,6 +105,21 @@ mod tests {
         register_string(&mut i, &mut s);
         assert!(s.lookup("String::parse_int").is_some());
         assert!(s.lookup("String::parse_float").is_some());
+    }
+
+    #[test]
+    fn string_extended_methods() {
+        let (mut i, mut s) = fresh();
+        register_string(&mut i, &mut s);
+        for method in &[
+            "String::split_at", "String::splitn", "String::is_ascii",
+            "String::is_numeric", "String::is_alphabetic",
+            "String::pad_left", "String::pad_right",
+            "String::strip_prefix", "String::strip_suffix",
+            "String::replacen", "String::from_bytes",
+        ] {
+            assert!(s.lookup(method).is_some(), "{} should be registered", method);
+        }
     }
 
     #[test]

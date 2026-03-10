@@ -5,9 +5,23 @@
 
 /// Disable gradient tracking for subsequent operations.
 /// Use during inference to reduce memory usage.
-fn no_grad();
+fn no_grad() {
+    // Disables gradient tracking globally.
+    // Implemented by the runtime (Phase 10).
+}
 
 /// Gradient checkpointing: recompute forward activations during
 /// backward pass instead of storing them, trading compute for memory.
 /// Essential for training very large models.
-fn grad_checkpoint(tensor: Int64) -> Int64;
+fn grad_checkpoint(tensor: Int64) -> Int64 {
+    // Marks the tensor for checkpointed recomputation.
+    // Implemented by the runtime (Phase 10).
+    return tensor;
+}
+
+/// Enable gradient tracking for subsequent operations.
+/// Restores gradient computation after a no_grad block.
+fn enable_grad() {
+    // Re-enables gradient tracking globally.
+    // Implemented by the runtime (Phase 10).
+}

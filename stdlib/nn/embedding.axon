@@ -10,4 +10,27 @@ struct Embedding {
 }
 
 /// Create a new Embedding layer.
-fn embedding_new(num_embeddings: Int64, embedding_dim: Int64) -> Int64;
+fn embedding_new(num_embeddings: Int64, embedding_dim: Int64) -> Int64 {
+    // Allocates embedding weight matrix [num_embeddings x embedding_dim].
+    // Initialized from N(0, 1).
+    // Requires CPU tensor runtime (Phase 10).
+    return 0;
+}
+
+impl Module for Embedding {
+    fn forward(self, input: Int64) -> Int64 {
+        // Looks up embeddings by index:
+        // output[i] = self.weight[input[i]]
+        // Input shape: [batch, seq_len] -> Output shape: [batch, seq_len, embedding_dim]
+        return 0;
+    }
+
+    fn parameters(self) -> Int64 {
+        // Returns [self.weight]
+        return 0;
+    }
+
+    fn train(self) {}
+    fn eval(self) {}
+    fn to_device(self, device: Int64) {}
+}

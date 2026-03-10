@@ -29,6 +29,9 @@ pub fn register_random(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     def_method(symbols, interner, "Rng", "next_int", vec![rng_ty, TypeId::INT64, TypeId::INT64], TypeId::INT64);
     def_method(symbols, interner, "Rng", "shuffle", vec![rng_ty, TypeId::UNIT], TypeId::UNIT);
     def_method(symbols, interner, "Rng", "choice", vec![rng_ty, TypeId::UNIT], TypeId::UNIT);
+    def_method(symbols, interner, "Rng", "sample", vec![rng_ty, TypeId::INT64], TypeId::UNIT);
+    def_method(symbols, interner, "Rng", "next_bool", vec![rng_ty], TypeId::BOOL);
+    def_method(symbols, interner, "Rng", "next_normal", vec![rng_ty, TypeId::FLOAT64, TypeId::FLOAT64], TypeId::FLOAT64);
 }
 
 // ---------------------------------------------------------------------------

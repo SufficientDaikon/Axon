@@ -101,6 +101,47 @@ pub const RUNTIME_FUNCTIONS: &[RuntimeFunction] = &[
         llvm_name: "axon_rc_count",
         description: "Get current reference count: (ptr: *u8) -> i64",
     },
+    // Tensor operations — runtime stubs for element-wise and shape ops
+    RuntimeFunction {
+        name: "tensor_matmul",
+        llvm_name: "axon_tensor_matmul",
+        description: "Tensor matrix multiply: (a: *u8, b: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_add",
+        llvm_name: "axon_tensor_add",
+        description: "Tensor element-wise add: (a: *u8, b: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_sub",
+        llvm_name: "axon_tensor_sub",
+        description: "Tensor element-wise sub: (a: *u8, b: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_mul",
+        llvm_name: "axon_tensor_mul",
+        description: "Tensor element-wise mul: (a: *u8, b: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_div",
+        llvm_name: "axon_tensor_div",
+        description: "Tensor element-wise div: (a: *u8, b: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_reshape",
+        llvm_name: "axon_tensor_reshape",
+        description: "Tensor reshape: (src: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_transpose",
+        llvm_name: "axon_tensor_transpose",
+        description: "Tensor transpose: (src: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_broadcast",
+        llvm_name: "axon_tensor_broadcast",
+        description: "Tensor broadcast: (src: *u8) -> *u8",
+    },
 ];
 
 /// Generate LLVM IR declarations for all runtime functions.
@@ -136,6 +177,17 @@ pub fn emit_runtime_declarations() -> String {
     ir.push_str("declare void @axon_rc_inc(i8*)\n");
     ir.push_str("declare void @axon_rc_dec(i8*)\n");
     ir.push_str("declare i64 @axon_rc_count(i8*)\n");
+
+    // Tensor operations runtime
+    ir.push_str("\n; Tensor operations runtime\n");
+    ir.push_str("declare i8* @axon_tensor_matmul(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_add(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_sub(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_mul(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_div(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_reshape(i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_transpose(i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_broadcast(i8*)\n");
 
     // C stdlib (for printf-based I/O)
     ir.push_str("\n; C standard library\n");
@@ -302,6 +354,48 @@ int64_t axon_rc_count(void* ptr) {
     int64_t* rc = ((int64_t*)ptr) - 1;
     return *rc;
 }
+
+// ── Tensor Operations (stubs) ───────────────────────────────
+// These are placeholder implementations for tensor operations.
+// They return a copy of the input pointer. A real implementation
+// would call into BLAS, cuBLAS, or a custom tensor kernel library.
+
+void* axon_tensor_matmul(void* a, void* b) {
+    (void)b;
+    return a;  // stub: real impl calls BLAS sgemm/dgemm
+}
+
+void* axon_tensor_add(void* a, void* b) {
+    (void)b;
+    return a;  // stub: real impl does element-wise addition
+}
+
+void* axon_tensor_sub(void* a, void* b) {
+    (void)b;
+    return a;  // stub: real impl does element-wise subtraction
+}
+
+void* axon_tensor_mul(void* a, void* b) {
+    (void)b;
+    return a;  // stub: real impl does element-wise multiplication
+}
+
+void* axon_tensor_div(void* a, void* b) {
+    (void)b;
+    return a;  // stub: real impl does element-wise division
+}
+
+void* axon_tensor_reshape(void* src) {
+    return src;  // stub: real impl validates and returns reshaped view
+}
+
+void* axon_tensor_transpose(void* src) {
+    return src;  // stub: real impl returns transposed view
+}
+
+void* axon_tensor_broadcast(void* src) {
+    return src;  // stub: real impl returns broadcast-expanded view
+}
 "#.to_string()
 }
 
@@ -311,7 +405,7 @@ mod tests {
 
     #[test]
     fn runtime_functions_count() {
-        assert_eq!(RUNTIME_FUNCTIONS.len(), 18);
+        assert_eq!(RUNTIME_FUNCTIONS.len(), 26);
     }
 
     #[test]
@@ -355,6 +449,15 @@ mod tests {
         assert!(ir.contains("@axon_rc_inc"));
         assert!(ir.contains("@axon_rc_dec"));
         assert!(ir.contains("@axon_rc_count"));
+        // Tensor operation stubs
+        assert!(ir.contains("@axon_tensor_matmul"));
+        assert!(ir.contains("@axon_tensor_add"));
+        assert!(ir.contains("@axon_tensor_sub"));
+        assert!(ir.contains("@axon_tensor_mul"));
+        assert!(ir.contains("@axon_tensor_div"));
+        assert!(ir.contains("@axon_tensor_reshape"));
+        assert!(ir.contains("@axon_tensor_transpose"));
+        assert!(ir.contains("@axon_tensor_broadcast"));
     }
 
     #[test]
@@ -394,6 +497,15 @@ mod tests {
         assert!(src.contains("void axon_rc_inc("));
         assert!(src.contains("void axon_rc_dec("));
         assert!(src.contains("int64_t axon_rc_count("));
+        // Tensor operation stubs
+        assert!(src.contains("void* axon_tensor_matmul("));
+        assert!(src.contains("void* axon_tensor_add("));
+        assert!(src.contains("void* axon_tensor_sub("));
+        assert!(src.contains("void* axon_tensor_mul("));
+        assert!(src.contains("void* axon_tensor_div("));
+        assert!(src.contains("void* axon_tensor_reshape("));
+        assert!(src.contains("void* axon_tensor_transpose("));
+        assert!(src.contains("void* axon_tensor_broadcast("));
     }
 
     #[test]
