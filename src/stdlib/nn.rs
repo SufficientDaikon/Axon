@@ -12,6 +12,9 @@ pub fn register_nn(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     register_activation_structs(interner, symbols);
     register_construction_fns(interner, symbols);
     register_init_fns(interner, symbols);
+    register_layer_methods(interner, symbols);
+    register_activation_methods(interner, symbols);
+    register_sequential_methods(interner, symbols);
 }
 
 // -- Module trait --------------------------------------------------------------
@@ -132,6 +135,8 @@ fn register_activation_structs(interner: &mut TypeInterner, symbols: &mut Symbol
     def_struct(symbols, interner, "ReLU", vec![], vec![]);
     def_struct(symbols, interner, "GELU", vec![], vec![]);
     def_struct(symbols, interner, "SiLU", vec![], vec![]);
+    def_struct(symbols, interner, "Sigmoid", vec![], vec![]);
+    def_struct(symbols, interner, "Tanh", vec![], vec![]);
     def_struct(symbols, interner, "Softmax", vec![("dim".into(), TypeId::INT64)], vec![]);
     def_struct(symbols, interner, "LogSoftmax", vec![("dim".into(), TypeId::INT64)], vec![]);
 }
@@ -182,6 +187,67 @@ fn register_init_fns(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     def_fn(symbols, interner, "init_constant", vec![TypeId::INT64, TypeId::FLOAT64], TypeId::UNIT);
 }
 
+// -- Layer methods (Module interface) -----------------------------------------
+// Register forward(self, input) -> Tensor and parameters(self) -> Vec<Tensor>
+// on every layer struct, plus train(self), eval(self), to_device(self, device).
+// Tensor proxy type is INT64 (consistent with stdlib conventions).
+
+fn register_module_methods_for(interner: &mut TypeInterner, symbols: &mut SymbolTable, type_name: &str) {
+    // forward(self, input: Tensor) -> Tensor
+    def_method(symbols, interner, type_name, "forward",
+        vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    // parameters(self) -> Vec<Tensor>  (Vec<Tensor> approximated as INT64)
+    def_method(symbols, interner, type_name, "parameters",
+        vec![TypeId::INT64], TypeId::INT64);
+    // train(self) -> Unit
+    def_method(symbols, interner, type_name, "train",
+        vec![TypeId::INT64], TypeId::UNIT);
+    // eval(self) -> Unit
+    def_method(symbols, interner, type_name, "eval",
+        vec![TypeId::INT64], TypeId::UNIT);
+    // to_device(self, device: Int64) -> Unit
+    def_method(symbols, interner, type_name, "to_device",
+        vec![TypeId::INT64, TypeId::INT64], TypeId::UNIT);
+}
+
+fn register_layer_methods(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let layer_types = [
+        "Linear", "Conv2d", "BatchNorm", "LayerNorm", "Dropout",
+        "MaxPool2d", "AvgPool2d", "AdaptiveAvgPool2d",
+        "LSTM", "GRU", "MultiHeadAttention",
+        "TransformerEncoderLayer", "TransformerEncoder",
+        "Embedding",
+    ];
+    for type_name in &layer_types {
+        register_module_methods_for(interner, symbols, type_name);
+    }
+}
+
+fn register_activation_methods(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let activation_types = [
+        "ReLU", "GELU", "SiLU", "Sigmoid", "Tanh", "Softmax", "LogSoftmax",
+    ];
+    for type_name in &activation_types {
+        register_module_methods_for(interner, symbols, type_name);
+    }
+}
+
+// -- Sequential methods -------------------------------------------------------
+
+fn register_sequential_methods(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    // Sequential gets all Module methods
+    register_module_methods_for(interner, symbols, "Sequential");
+
+    // Sequential::add(self, layer: Module) -> Sequential (builder pattern)
+    // layer is represented as INT64 (Tensor proxy), returns INT64 (Sequential proxy)
+    def_method(symbols, interner, "Sequential", "add",
+        vec![TypeId::INT64, TypeId::INT64], TypeId::INT64);
+
+    // Sequential::len(self) -> Int64 — number of layers
+    def_method(symbols, interner, "Sequential", "len",
+        vec![TypeId::INT64], TypeId::INT64);
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -221,7 +287,7 @@ mod tests {
     fn activation_structs_registered() {
         let (mut i, mut s) = fresh();
         register_nn(&mut i, &mut s);
-        for name in &["ReLU", "GELU", "SiLU", "Softmax", "LogSoftmax"] {
+        for name in &["ReLU", "GELU", "SiLU", "Sigmoid", "Tanh", "Softmax", "LogSoftmax"] {
             assert!(s.lookup(name).is_some(), "{} should be registered", name);
         }
     }
@@ -244,6 +310,63 @@ mod tests {
             "init_zeros", "init_ones", "init_constant",
         ] {
             assert!(s.lookup(name).is_some(), "{} should be registered", name);
+        }
+    }
+
+    #[test]
+    fn layer_forward_methods_registered() {
+        let (mut i, mut s) = fresh();
+        register_nn(&mut i, &mut s);
+        for type_name in &[
+            "Linear", "Conv2d", "BatchNorm", "LayerNorm", "Dropout",
+            "LSTM", "MultiHeadAttention", "Embedding", "Sequential",
+        ] {
+            let method = format!("{}::forward", type_name);
+            assert!(s.lookup(&method).is_some(), "{} should be registered", method);
+        }
+    }
+
+    #[test]
+    fn layer_parameters_methods_registered() {
+        let (mut i, mut s) = fresh();
+        register_nn(&mut i, &mut s);
+        for type_name in &[
+            "Linear", "Conv2d", "BatchNorm", "Embedding", "Sequential",
+        ] {
+            let method = format!("{}::parameters", type_name);
+            assert!(s.lookup(&method).is_some(), "{} should be registered", method);
+        }
+    }
+
+    #[test]
+    fn activation_forward_methods_registered() {
+        let (mut i, mut s) = fresh();
+        register_nn(&mut i, &mut s);
+        for type_name in &["ReLU", "Sigmoid", "Tanh", "Softmax", "GELU", "SiLU", "LogSoftmax"] {
+            let method = format!("{}::forward", type_name);
+            assert!(s.lookup(&method).is_some(), "{} should be registered", method);
+        }
+    }
+
+    #[test]
+    fn sequential_add_method_registered() {
+        let (mut i, mut s) = fresh();
+        register_nn(&mut i, &mut s);
+        assert!(s.lookup("Sequential::add").is_some(), "Sequential::add should be registered");
+        assert!(s.lookup("Sequential::len").is_some(), "Sequential::len should be registered");
+    }
+
+    #[test]
+    fn layer_train_eval_methods_registered() {
+        let (mut i, mut s) = fresh();
+        register_nn(&mut i, &mut s);
+        for type_name in &["Linear", "Sequential"] {
+            let train_m = format!("{}::train", type_name);
+            let eval_m = format!("{}::eval", type_name);
+            let device_m = format!("{}::to_device", type_name);
+            assert!(s.lookup(&train_m).is_some(), "{} should be registered", train_m);
+            assert!(s.lookup(&eval_m).is_some(), "{} should be registered", eval_m);
+            assert!(s.lookup(&device_m).is_some(), "{} should be registered", device_m);
         }
     }
 }

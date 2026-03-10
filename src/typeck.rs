@@ -134,7 +134,12 @@ impl TypeChecker {
                             self.type_name(b)
                         ),
                         span.clone(),
-                    ));
+                    )
+                    .with_suggestion(format!(
+                        "tuple has {} elements, but expected {}",
+                        bs.len(),
+                        as_.len()
+                    )));
                 }
                 let as_ = as_.clone();
                 let bs = bs.clone();
@@ -155,7 +160,11 @@ impl TypeChecker {
                             self.type_name(b)
                         ),
                         span.clone(),
-                    ));
+                    )
+                    .with_suggestion(format!(
+                        "array sizes differ: expected {}, found {}",
+                        s1, s2
+                    )));
                 }
                 let (e1, e2, s) = (*e1, *e2, *s1);
                 let elem = self.unify(e1, e2, span)?;
@@ -229,7 +238,12 @@ impl TypeChecker {
                     self.type_name(b)
                 ),
                 span.clone(),
-            )),
+            )
+            .with_suggestion(format!(
+                "expected `{}`, found `{}`; consider adding an explicit type annotation or cast",
+                self.type_name(a),
+                self.type_name(b)
+            ))),
         }
     }
 

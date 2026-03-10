@@ -255,6 +255,79 @@ impl Repl {
         println!("Expressions display their inferred type (e.g. `1 + 2` → `1 + 2 : Int64`).");
         // NOTE: JIT evaluation is deferred to Phase 12.
     }
+
+    /// Get tab completions for a partial input prefix.
+    /// Returns a sorted list of matching identifiers from keywords, built-in types,
+    /// built-in functions, and currently defined session bindings.
+    pub fn tab_complete(&self, prefix: &str) -> Vec<String> {
+        let prefix = prefix.trim();
+        if prefix.is_empty() {
+            return Vec::new();
+        }
+
+        let keywords = [
+            "fn", "let", "mut", "if", "else", "while", "for", "in",
+            "match", "return", "struct", "enum", "trait", "impl",
+            "pub", "use", "mod", "type", "as", "true", "false", "self",
+            "break", "continue", "unsafe",
+        ];
+
+        let builtin_types = [
+            "Int8", "Int16", "Int32", "Int64",
+            "UInt8", "UInt16", "UInt32", "UInt64",
+            "Float16", "Float32", "Float64",
+            "Bool", "Char", "String", "Tensor",
+            "Vec", "HashMap", "HashSet", "Option", "Result",
+        ];
+
+        let builtin_functions = [
+            "print", "println", "sin", "cos", "sqrt", "abs",
+            "zeros", "ones", "randn", "matmul", "relu", "softmax",
+        ];
+
+        let mut completions: Vec<String> = Vec::new();
+
+        for kw in &keywords {
+            if kw.starts_with(prefix) {
+                completions.push(kw.to_string());
+            }
+        }
+        for ty in &builtin_types {
+            if ty.starts_with(prefix) {
+                completions.push(ty.to_string());
+            }
+        }
+        for func in &builtin_functions {
+            if func.starts_with(prefix) {
+                completions.push(func.to_string());
+            }
+        }
+
+        // Add session-defined names
+        for binding in &self.bindings {
+            let trimmed = binding.trim();
+            if trimmed.starts_with("let ") || trimmed.starts_with("let\t") {
+                let name = extract_let_name(trimmed);
+                if name.starts_with(prefix) && name != "?" {
+                    completions.push(name);
+                }
+            } else if trimmed.starts_with("fn ") || trimmed.starts_with("fn\t") {
+                let name = extract_fn_name(trimmed);
+                if name.starts_with(prefix) && name != "?" {
+                    completions.push(name);
+                }
+            } else if trimmed.starts_with("struct ") || trimmed.starts_with("enum ") || trimmed.starts_with("trait ") {
+                let name = trimmed.split_whitespace().nth(1).unwrap_or("").to_string();
+                if name.starts_with(prefix) && !name.is_empty() {
+                    completions.push(name);
+                }
+            }
+        }
+
+        completions.sort();
+        completions.dedup();
+        completions
+    }
 }
 
 fn extract_let_name(s: &str) -> String {
@@ -388,5 +461,59 @@ mod tests {
             ReplResult::Error(e) => assert!(e.contains("usage")),
             other => panic!("expected Error, got {:?}", other),
         }
+    }
+
+    #[test]
+    fn test_tab_complete_keywords() {
+        let repl = Repl::new();
+        let completions = repl.tab_complete("fn");
+        assert!(completions.contains(&"fn".to_string()));
+    }
+
+    #[test]
+    fn test_tab_complete_partial_keyword() {
+        let repl = Repl::new();
+        let completions = repl.tab_complete("wh");
+        assert!(completions.contains(&"while".to_string()));
+    }
+
+    #[test]
+    fn test_tab_complete_types() {
+        let repl = Repl::new();
+        let completions = repl.tab_complete("Int");
+        assert!(completions.contains(&"Int32".to_string()));
+        assert!(completions.contains(&"Int64".to_string()));
+    }
+
+    #[test]
+    fn test_tab_complete_builtins() {
+        let repl = Repl::new();
+        let completions = repl.tab_complete("pr");
+        assert!(completions.contains(&"print".to_string()));
+        assert!(completions.contains(&"println".to_string()));
+    }
+
+    #[test]
+    fn test_tab_complete_session_bindings() {
+        let mut repl = Repl::new();
+        repl.eval_line("let my_var: Int32 = 42;");
+        repl.eval_line("fn my_func() {}");
+        let completions = repl.tab_complete("my");
+        assert!(completions.contains(&"my_var".to_string()));
+        assert!(completions.contains(&"my_func".to_string()));
+    }
+
+    #[test]
+    fn test_tab_complete_empty_prefix() {
+        let repl = Repl::new();
+        let completions = repl.tab_complete("");
+        assert!(completions.is_empty(), "empty prefix should return no completions");
+    }
+
+    #[test]
+    fn test_tab_complete_no_matches() {
+        let repl = Repl::new();
+        let completions = repl.tab_complete("zzz_nonexistent");
+        assert!(completions.is_empty(), "should have no matches");
     }
 }

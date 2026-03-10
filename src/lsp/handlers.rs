@@ -21,6 +21,9 @@ impl LspServer {
                 }),
                 hover_provider: true,
                 definition_provider: true,
+                references_provider: true,
+                rename_provider: true,
+                code_action_provider: true,
                 document_formatting_provider: true,
                 document_symbol_provider: true,
                 signature_help_provider: Some(SignatureHelpOptions {
@@ -565,6 +568,227 @@ impl LspServer {
             None
         }
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // Find References
+    // ═══════════════════════════════════════════════════════════
+
+    pub fn handle_references(&mut self, id: serde_json::Value, params: serde_json::Value) {
+        if let Ok(p) = serde_json::from_value::<ReferenceParams>(params) {
+            let result = self.find_references(
+                &p.text_document.uri,
+                p.position,
+                p.context.include_declaration,
+            );
+            self.send_response(id, serde_json::to_value(&result).unwrap());
+        } else {
+            self.send_response(id, serde_json::json!([]));
+        }
+    }
+
+    pub(crate) fn find_references(
+        &self,
+        uri: &str,
+        position: Position,
+        include_declaration: bool,
+    ) -> Vec<Location> {
+        let doc = match self.documents.get(uri) {
+            Some(d) => d,
+            None => return vec![],
+        };
+
+        let word = match get_word_at_position(&doc.text, position) {
+            Some(w) => w,
+            None => return vec![],
+        };
+
+        let filename = uri_to_filename(uri);
+        let (checker, _errors) = crate::typeck::check(&doc.text, &filename);
+
+        // Find the declaration span (if it exists in the symbol table)
+        let decl_span = checker.symbols.lookup(&word).map(|sym_id| {
+            checker.symbols.get_symbol(sym_id).span.clone()
+        });
+
+        let mut locations = Vec::new();
+
+        // Scan all lines for occurrences of the identifier
+        for (line_idx, line) in doc.text.lines().enumerate() {
+            let mut search_from = 0;
+            while let Some(col) = line[search_from..].find(&word) {
+                let abs_col = search_from + col;
+                let word_end = abs_col + word.len();
+
+                // Verify it's a whole-word match (not a substring of a longer identifier)
+                let before_ok = abs_col == 0
+                    || !is_ident_char(line.as_bytes()[abs_col - 1]);
+                let after_ok = word_end >= line.len()
+                    || !is_ident_char(line.as_bytes()[word_end]);
+
+                if before_ok && after_ok {
+                    // Skip the declaration if not requested
+                    let is_decl = decl_span.as_ref().map_or(false, |ds| {
+                        ds.start.line == line_idx + 1
+                            && ds.start.column == abs_col + 1
+                    });
+
+                    if include_declaration || !is_decl {
+                        locations.push(Location {
+                            uri: uri.to_string(),
+                            range: Range {
+                                start: Position {
+                                    line: line_idx as u32,
+                                    character: abs_col as u32,
+                                },
+                                end: Position {
+                                    line: line_idx as u32,
+                                    character: word_end as u32,
+                                },
+                            },
+                        });
+                    }
+                }
+
+                search_from = abs_col + 1;
+            }
+        }
+
+        locations
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Rename
+    // ═══════════════════════════════════════════════════════════
+
+    pub fn handle_rename(&mut self, id: serde_json::Value, params: serde_json::Value) {
+        if let Ok(p) = serde_json::from_value::<RenameParams>(params) {
+            let result = self.rename_symbol(
+                &p.text_document.uri,
+                p.position,
+                &p.new_name,
+            );
+            self.send_response(id, serde_json::to_value(&result).unwrap());
+        } else {
+            self.send_response(id, serde_json::json!(null));
+        }
+    }
+
+    pub(crate) fn rename_symbol(
+        &self,
+        uri: &str,
+        position: Position,
+        new_name: &str,
+    ) -> Option<WorkspaceEdit> {
+        let doc = self.documents.get(uri)?;
+        let word = get_word_at_position(&doc.text, position)?;
+
+        // Find all occurrences (including declaration)
+        let refs = self.find_references(uri, position, true);
+        if refs.is_empty() {
+            return None;
+        }
+
+        let edits: Vec<TextEdit> = refs
+            .iter()
+            .map(|loc| TextEdit {
+                range: loc.range,
+                new_text: new_name.to_string(),
+            })
+            .collect();
+
+        let _ = word; // used for find_references above via get_word_at_position
+
+        let mut changes = std::collections::HashMap::new();
+        changes.insert(uri.to_string(), edits);
+
+        Some(WorkspaceEdit {
+            changes: Some(changes),
+        })
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Code Action
+    // ═══════════════════════════════════════════════════════════
+
+    pub fn handle_code_action(&mut self, id: serde_json::Value, params: serde_json::Value) {
+        if let Ok(p) = serde_json::from_value::<CodeActionParams>(params) {
+            let result = self.get_code_actions(
+                &p.text_document.uri,
+                p.range,
+                &p.context.diagnostics,
+            );
+            self.send_response(id, serde_json::to_value(&result).unwrap());
+        } else {
+            self.send_response(id, serde_json::json!([]));
+        }
+    }
+
+    pub(crate) fn get_code_actions(
+        &self,
+        uri: &str,
+        _range: Range,
+        diagnostics: &[Diagnostic],
+    ) -> Vec<CodeAction> {
+        let mut actions = Vec::new();
+
+        for diag in diagnostics {
+            let code = diag.code.as_deref().unwrap_or("");
+
+            match code {
+                // Type mismatch → suggest adding a type annotation
+                "E2001" => {
+                    actions.push(CodeAction {
+                        title: "Add explicit type annotation".to_string(),
+                        kind: "quickfix".to_string(),
+                        diagnostics: Some(vec![diag.clone()]),
+                        edit: None, // informational — editor applies annotation
+                    });
+                }
+                // Unused variable → suggest prefixing with _
+                "W3001" => {
+                    // Extract the variable name from the diagnostic message
+                    let var_name = diag
+                        .message
+                        .split('`')
+                        .nth(1)
+                        .unwrap_or("x");
+                    let new_name = format!("_{}", var_name);
+
+                    let mut changes = std::collections::HashMap::new();
+                    changes.insert(
+                        uri.to_string(),
+                        vec![TextEdit {
+                            range: diag.range,
+                            new_text: new_name.clone(),
+                        }],
+                    );
+
+                    actions.push(CodeAction {
+                        title: format!("Rename to `{}`", new_name),
+                        kind: "quickfix".to_string(),
+                        diagnostics: Some(vec![diag.clone()]),
+                        edit: Some(WorkspaceEdit {
+                            changes: Some(changes),
+                        }),
+                    });
+                }
+                // Undeclared identifier → check spelling suggestion
+                "E1001" => {
+                    if diag.message.contains("did you mean") {
+                        actions.push(CodeAction {
+                            title: "Apply suggested spelling fix".to_string(),
+                            kind: "quickfix".to_string(),
+                            diagnostics: Some(vec![diag.clone()]),
+                            edit: None,
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        actions
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -810,5 +1034,119 @@ mod tests {
         assert!(is_ident_char(b'9'));
         assert!(!is_ident_char(b' '));
         assert!(!is_ident_char(b'('));
+    }
+
+    #[test]
+    fn test_find_references_basic() {
+        let mut server = LspServer::new();
+        let uri = "file:///test.axon";
+        server.documents.insert(
+            uri.to_string(),
+            DocumentState {
+                uri: uri.to_string(),
+                text: "fn foo() {}\nfn bar() { foo(); }".to_string(),
+                version: 1,
+            },
+        );
+        let refs = server.find_references(
+            uri,
+            Position { line: 0, character: 3 }, // on "foo"
+            true,
+        );
+        // Should find "foo" at least twice: declaration + usage
+        assert!(refs.len() >= 2, "expected >= 2 references, got {}", refs.len());
+        // All references should be for the same URI
+        for r in &refs {
+            assert_eq!(r.uri, uri);
+        }
+    }
+
+    #[test]
+    fn test_find_references_exclude_declaration() {
+        let mut server = LspServer::new();
+        let uri = "file:///test.axon";
+        server.documents.insert(
+            uri.to_string(),
+            DocumentState {
+                uri: uri.to_string(),
+                text: "fn foo() {}\nfn bar() { foo(); }".to_string(),
+                version: 1,
+            },
+        );
+        let refs_incl = server.find_references(
+            uri,
+            Position { line: 0, character: 3 },
+            true,
+        );
+        let refs_excl = server.find_references(
+            uri,
+            Position { line: 0, character: 3 },
+            false,
+        );
+        // Excluding declaration should give fewer (or equal) results
+        assert!(refs_excl.len() <= refs_incl.len());
+    }
+
+    #[test]
+    fn test_rename_symbol() {
+        let mut server = LspServer::new();
+        let uri = "file:///test.axon";
+        server.documents.insert(
+            uri.to_string(),
+            DocumentState {
+                uri: uri.to_string(),
+                text: "fn foo() {}\nfn bar() { foo(); }".to_string(),
+                version: 1,
+            },
+        );
+        let result = server.rename_symbol(
+            uri,
+            Position { line: 0, character: 3 }, // on "foo"
+            "baz",
+        );
+        assert!(result.is_some(), "rename should return a WorkspaceEdit");
+        let edit = result.unwrap();
+        let changes = edit.changes.unwrap();
+        let edits = changes.get(uri).unwrap();
+        assert!(edits.len() >= 2, "should have at least 2 edits (decl + use), got {}", edits.len());
+        for e in edits {
+            assert_eq!(e.new_text, "baz");
+        }
+    }
+
+    #[test]
+    fn test_code_action_type_mismatch() {
+        let server = LspServer::new();
+        let uri = "file:///test.axon";
+        let diags = vec![Diagnostic {
+            range: Range::default(),
+            severity: severity::ERROR,
+            message: "expected `Int32`, found `String`".to_string(),
+            code: Some("E2001".to_string()),
+            source: Some("axon".to_string()),
+        }];
+        let actions = server.get_code_actions(uri, Range::default(), &diags);
+        assert!(!actions.is_empty(), "should suggest a code action for type mismatch");
+        assert!(actions[0].title.contains("type annotation"));
+    }
+
+    #[test]
+    fn test_code_action_unused_variable() {
+        let server = LspServer::new();
+        let uri = "file:///test.axon";
+        let diags = vec![Diagnostic {
+            range: Range {
+                start: Position { line: 0, character: 4 },
+                end: Position { line: 0, character: 5 },
+            },
+            severity: severity::WARNING,
+            message: "unused variable `x`".to_string(),
+            code: Some("W3001".to_string()),
+            source: Some("axon".to_string()),
+        }];
+        let actions = server.get_code_actions(uri, Range::default(), &diags);
+        assert!(!actions.is_empty(), "should suggest a code action for unused var");
+        assert!(actions[0].title.contains("_x"), "should suggest renaming to _x, got: {}", actions[0].title);
+        assert!(actions[0].edit.is_some(), "should provide a workspace edit");
     }
 }

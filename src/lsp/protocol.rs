@@ -82,6 +82,9 @@ pub struct ServerCapabilities {
     pub completion_provider: Option<CompletionOptions>,
     pub hover_provider: bool,
     pub definition_provider: bool,
+    pub references_provider: bool,
+    pub rename_provider: bool,
+    pub code_action_provider: bool,
     pub document_formatting_provider: bool,
     pub document_symbol_provider: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -334,6 +337,72 @@ pub struct ParameterInformation {
     pub label: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub documentation: Option<String>,
+}
+
+// ═══════════════════════════════════════════════════════════════
+// References
+// ═══════════════════════════════════════════════════════════════
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReferenceParams {
+    pub text_document: TextDocumentIdentifier,
+    pub position: Position,
+    pub context: ReferenceContext,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReferenceContext {
+    pub include_declaration: bool,
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Rename
+// ═══════════════════════════════════════════════════════════════
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenameParams {
+    pub text_document: TextDocumentIdentifier,
+    pub position: Position,
+    pub new_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceEdit {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub changes: Option<std::collections::HashMap<String, Vec<TextEdit>>>,
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Code Action
+// ═══════════════════════════════════════════════════════════════
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeActionParams {
+    pub text_document: TextDocumentIdentifier,
+    pub range: Range,
+    pub context: CodeActionContext,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeActionContext {
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CodeAction {
+    pub title: String,
+    pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diagnostics: Option<Vec<Diagnostic>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub edit: Option<WorkspaceEdit>,
 }
 
 // ═══════════════════════════════════════════════════════════════

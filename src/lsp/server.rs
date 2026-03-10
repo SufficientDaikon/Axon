@@ -163,6 +163,21 @@ impl LspServer {
                     self.handle_signature_help(id, params);
                 }
             }
+            "textDocument/references" => {
+                if let Some(id) = id {
+                    self.handle_references(id, params);
+                }
+            }
+            "textDocument/rename" => {
+                if let Some(id) = id {
+                    self.handle_rename(id, params);
+                }
+            }
+            "textDocument/codeAction" => {
+                if let Some(id) = id {
+                    self.handle_code_action(id, params);
+                }
+            }
             _ => {
                 // Unknown method — respond with MethodNotFound for requests
                 if let Some(id) = id {

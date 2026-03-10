@@ -3,27 +3,35 @@
 use crate::symbol::SymbolTable;
 use crate::types::*;
 
-use super::{def_fn, def_struct, def_trait};
+use super::{def_fn, def_method, def_struct, def_trait};
 
 /// Register loss function types and constructors.
 pub fn register_loss(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     register_trait(interner, symbols);
     register_structs(interner, symbols);
     register_functions(interner, symbols);
+    register_loss_methods(interner, symbols);
 }
 
 // -- LossFn trait -------------------------------------------------------------
 
 fn register_trait(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     let forward_ty = interner.intern(Type::Function {
-        params: vec![TypeId::INT64, TypeId::INT64],
-        ret: TypeId::FLOAT32,
+        params: vec![TypeId::INT64, TypeId::INT64],  // pred: Tensor, target: Tensor
+        ret: TypeId::INT64,                          // -> Tensor (loss scalar)
+    });
+    let backward_ty = interner.intern(Type::Function {
+        params: vec![],
+        ret: TypeId::INT64,  // -> Tensor (gradient)
     });
     def_trait(
         symbols,
         interner,
         "LossFn",
-        vec![("forward".into(), forward_ty)],
+        vec![
+            ("forward".into(), forward_ty),
+            ("backward".into(), backward_ty),
+        ],
         vec![],
     );
 }
@@ -60,6 +68,30 @@ fn register_functions(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
     def_fn(symbols, interner, "ctc_loss", vec![], TypeId::INT64);
 }
 
+// -- Loss type methods --------------------------------------------------------
+// Each loss type gets forward(self, pred: Tensor, target: Tensor) -> Tensor
+// and backward(self) -> Tensor methods.
+
+fn register_loss_methods_for(interner: &mut TypeInterner, symbols: &mut SymbolTable, type_name: &str) {
+    // forward(self, pred: Tensor, target: Tensor) -> Tensor
+    def_method(symbols, interner, type_name, "forward",
+        vec![TypeId::INT64, TypeId::INT64, TypeId::INT64], TypeId::INT64);
+    // backward(self) -> Tensor
+    def_method(symbols, interner, type_name, "backward",
+        vec![TypeId::INT64], TypeId::INT64);
+}
+
+fn register_loss_methods(interner: &mut TypeInterner, symbols: &mut SymbolTable) {
+    let loss_types = [
+        "MSELoss", "L1Loss", "CrossEntropyLoss", "BCELoss",
+        "BCEWithLogitsLoss", "NLLLoss", "HuberLoss", "KLDivLoss",
+        "CosineEmbeddingLoss", "TripletMarginLoss", "CTCLoss",
+    ];
+    for type_name in &loss_types {
+        register_loss_methods_for(interner, symbols, type_name);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -77,7 +109,16 @@ mod tests {
     fn loss_trait_registered() {
         let (mut i, mut s) = fresh();
         register_loss(&mut i, &mut s);
-        assert!(s.lookup("LossFn").is_some());
+        let sym_id = s.lookup("LossFn").unwrap();
+        let sym = s.get_symbol(sym_id);
+        match i.resolve(sym.ty) {
+            Type::Trait { methods, .. } => {
+                let names: Vec<&str> = methods.iter().map(|(n, _)| n.as_str()).collect();
+                assert!(names.contains(&"forward"), "LossFn should have forward");
+                assert!(names.contains(&"backward"), "LossFn should have backward");
+            }
+            _ => panic!("LossFn should be a trait"),
+        }
     }
 
     #[test]
@@ -118,6 +159,26 @@ mod tests {
                 assert_eq!(*ret, TypeId::INT64);
             }
             _ => panic!("huber_loss should be a function"),
+        }
+    }
+
+    #[test]
+    fn loss_forward_methods_registered() {
+        let (mut i, mut s) = fresh();
+        register_loss(&mut i, &mut s);
+        for type_name in &["MSELoss", "CrossEntropyLoss", "BCELoss", "L1Loss", "NLLLoss"] {
+            let method = format!("{}::forward", type_name);
+            assert!(s.lookup(&method).is_some(), "{} should be registered", method);
+        }
+    }
+
+    #[test]
+    fn loss_backward_methods_registered() {
+        let (mut i, mut s) = fresh();
+        register_loss(&mut i, &mut s);
+        for type_name in &["MSELoss", "CrossEntropyLoss", "BCELoss", "L1Loss", "NLLLoss"] {
+            let method = format!("{}::backward", type_name);
+            assert!(s.lookup(&method).is_some(), "{} should be registered", method);
         }
     }
 }

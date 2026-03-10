@@ -62,6 +62,18 @@ impl DocGenerator {
         gen.render_html(filename)
     }
 
+    /// Generate Markdown documentation from Axon source.
+    pub fn generate_markdown(source: &str, filename: &str) -> String {
+        let (program, errors) = crate::parse_source(source, filename);
+        if !errors.is_empty() {
+            return format!("<!-- parse errors: {} -->\n", errors.len());
+        }
+        let mut gen = DocGenerator::new();
+        let doc_comments = gen.extract_doc_comments(source);
+        gen.collect_items(&program, &doc_comments);
+        gen.render_markdown(filename)
+    }
+
     /// Extract doc comments (lines starting with `///`) and map line number -> comment text.
     fn extract_doc_comments(&self, source: &str) -> Vec<(usize, String)> {
         let mut result = Vec::new();
@@ -361,6 +373,50 @@ impl DocGenerator {
         html
     }
 
+    fn render_markdown(&self, filename: &str) -> String {
+        let module_name = filename.trim_end_matches(".axon");
+        let mut md = String::new();
+
+        md.push_str(&format!("# Module `{}`\n\n", module_name));
+
+        // Table of contents
+        if !self.items.is_empty() {
+            md.push_str("## Contents\n\n");
+            for item in &self.items {
+                md.push_str(&format!("- {} `{}`\n", item.kind.label(), item.name));
+            }
+            md.push('\n');
+        }
+
+        // Items
+        for item in &self.items {
+            md.push_str(&self.render_item_markdown(item));
+        }
+
+        md
+    }
+
+    fn render_item_markdown(&self, item: &DocItem) -> String {
+        let mut md = String::new();
+
+        md.push_str(&format!("## {} `{}`\n\n", item.kind.label(), item.name));
+        md.push_str(&format!("```axon\n{}\n```\n\n", item.signature));
+
+        if let Some(ref doc) = item.doc_comment {
+            md.push_str(doc);
+            md.push_str("\n\n");
+        }
+
+        if !item.children.is_empty() {
+            for child in &item.children {
+                md.push_str(&format!("- **{}** `{}`\n", child.kind.label(), child.signature));
+            }
+            md.push('\n');
+        }
+
+        md
+    }
+
     fn render_item(&self, item: &DocItem) -> String {
         let mut html = String::new();
 
@@ -570,5 +626,36 @@ mod tests {
         let gen = DocGenerator::new();
         let result = gen.markdown_to_html("Use `foo()` to call");
         assert!(result.contains("<code>foo()</code>"));
+    }
+
+    #[test]
+    fn test_generate_markdown_output() {
+        let src = "/// Adds two numbers.\npub fn add(a: Int32, b: Int32) -> Int32 { return a + b; }";
+        let md = DocGenerator::generate_markdown(src, "math.axon");
+        assert!(md.contains("# Module `math`"), "should have module header");
+        assert!(md.contains("## Function `add`"), "should have function section");
+        assert!(md.contains("```axon"), "should have code block");
+        assert!(md.contains("fn add(a: Int32, b: Int32) -> Int32"), "should have signature");
+        assert!(md.contains("Adds two numbers."), "should have doc comment");
+    }
+
+    #[test]
+    fn test_generate_markdown_struct() {
+        let src = "/// A point.\npub struct Point { pub x: Float64, pub y: Float64, }";
+        let md = DocGenerator::generate_markdown(src, "geom.axon");
+        assert!(md.contains("# Module `geom`"));
+        assert!(md.contains("## Struct `Point`"));
+        assert!(md.contains("A point."));
+        assert!(md.contains("**Field**"));
+    }
+
+    #[test]
+    fn test_generate_markdown_enum() {
+        let src = "pub enum Color { Red, Green, Blue, }";
+        let md = DocGenerator::generate_markdown(src, "colors.axon");
+        assert!(md.contains("## Enum `Color`"));
+        assert!(md.contains("Red"));
+        assert!(md.contains("Green"));
+        assert!(md.contains("Blue"));
     }
 }

@@ -121,7 +121,11 @@ impl SymbolTable {
                 "E1002",
                 format!("duplicate definition of `{}` in the same scope", name),
                 info.span.clone(),
-            ));
+            )
+            .with_suggestion(format!(
+                "a previous definition of `{}` exists in this scope; consider renaming one of them",
+                name
+            )));
         }
         let id = SymbolId(self.symbols.len() as u32);
         self.symbols.push(info);

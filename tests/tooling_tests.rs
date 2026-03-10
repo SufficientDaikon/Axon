@@ -444,6 +444,9 @@ mod lsp_tests {
             }),
             hover_provider: true,
             definition_provider: true,
+            references_provider: true,
+            rename_provider: true,
+            code_action_provider: true,
             document_formatting_provider: true,
             document_symbol_provider: true,
             signature_help_provider: None,
@@ -452,11 +455,17 @@ mod lsp_tests {
         assert!(json.contains("\"textDocumentSync\":1"));
         assert!(json.contains("\"hoverProvider\":true"));
         assert!(json.contains("\"definitionProvider\":true"));
+        assert!(json.contains("\"referencesProvider\":true"));
+        assert!(json.contains("\"renameProvider\":true"));
+        assert!(json.contains("\"codeActionProvider\":true"));
 
         // Round-trip
         let parsed: ServerCapabilities = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.text_document_sync, 1);
         assert!(parsed.hover_provider);
+        assert!(parsed.references_provider);
+        assert!(parsed.rename_provider);
+        assert!(parsed.code_action_provider);
     }
 
     #[test]
