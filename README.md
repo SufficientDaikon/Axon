@@ -7,9 +7,10 @@
 _Compile-time tensor shapes · Ownership-based safety · Native GPU execution_
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Tests](https://img.shields.io/badge/tests-863%2B%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-1034%20passing-brightgreen)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 [![Version](https://img.shields.io/badge/version-0.1.0--alpha.1-orange)]()
+[![Docs](https://img.shields.io/badge/docs-online-blue)](https://sufficientdaikon.github.io/Axon/documentation.html)
 
 </div>
 
@@ -129,7 +130,7 @@ axon/
 │   ├── repl.rs             # REPL
 │   └── doc.rs              # Doc generator
 ├── stdlib/                 # Axon source stubs (.axon)
-├── tests/                  # 863+ tests
+├── tests/                  # 1,034 tests
 ├── editors/vscode/         # VS Code extension
 ├── benches/                # Benchmarks
 ├── fuzz/                   # Fuzz testing
@@ -172,7 +173,7 @@ The compiler binary is at `target/release/axonc`.
 ## Running Tests
 
 ```bash
-# Full test suite (863+ tests)
+# Full test suite (1,034 tests)
 cargo test
 
 # Specific phases
@@ -188,6 +189,8 @@ cargo test --test tooling_tests  # Tooling tests
 ---
 
 ## Documentation
+
+**[Read the full documentation online](https://sufficientdaikon.github.io/Axon/documentation.html)**
 
 | Document                                                   | Description                          |
 | ---------------------------------------------------------- | ------------------------------------ |
