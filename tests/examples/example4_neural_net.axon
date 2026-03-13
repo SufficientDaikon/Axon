@@ -1,22 +1,22 @@
 // Example 4: Neural Network Definition
-struct NeuralNet {
+model NeuralNet {
     fc1: Linear<784, 256>,
     fc2: Linear<256, 128>,
     fc3: Linear<128, 10>,
 }
 
-impl NeuralNet {
-    fn forward(&self, x: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]> {
-        let h1 = relu(self.fc1.forward(x));
-        let h2 = relu(self.fc2.forward(h1));
-        let output = self.fc3.forward(h2);
+extend NeuralNet {
+    fn forward(&self, x: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]> {
+        val h1 = relu(self.fc1.forward(x));
+        val h2 = relu(self.fc2.forward(h1));
+        val output = self.fc3.forward(h2);
         return output;
     }
 }
 
 fn main() {
-    let model = NeuralNet::new();
-    let input = randn([32, 784]);
-    let output = model.forward(input);
+    val net = NeuralNet.new();
+    val input = randn([32, 784]);
+    val output = net.forward(input);
     println("Output shape: {}", output.shape);
 }

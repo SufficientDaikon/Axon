@@ -1,0 +1,10 @@
+// Test: Tensor elementwise multiply — ones * ones = ones, sum of 4 ones is 4
+// expect: 1
+
+fn main() {
+    val a = tensor_ones(4);
+    val b = tensor_ones(4);
+    val c = a * b;
+    val v = tensor_item(c);
+    println(v);
+}

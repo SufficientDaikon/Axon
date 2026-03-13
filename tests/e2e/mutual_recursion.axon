@@ -1,11 +1,11 @@
-fn is_even(n: Int64) -> Bool {
+fn is_even(n: Int64): Bool {
     if n == 0 {
         return true;
     }
     return is_odd(n - 1);
 }
 
-fn is_odd(n: Int64) -> Bool {
+fn is_odd(n: Int64): Bool {
     if n == 0 {
         return false;
     }
@@ -13,6 +13,6 @@ fn is_odd(n: Int64) -> Bool {
 }
 
 fn main() {
-    let a: Bool = is_even(4);
-    let b: Bool = is_odd(3);
+    val a: Bool = is_even(4);
+    val b: Bool = is_odd(3);
 }

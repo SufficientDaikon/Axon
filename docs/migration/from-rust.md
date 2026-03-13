@@ -31,7 +31,7 @@ fn add(x: i32, y: i32) -> i32 {
 
 ```axon
 // Axon — explicit return required, types use PascalCase
-fn add(x: Int32, y: Int32) -> Int32 {
+fn add(x: Int32, y: Int32): Int32 {
     return x + y;
 }
 ```
@@ -62,9 +62,9 @@ let mut y = 10;     // mutable
 ```
 
 ```axon
-// Axon — same syntax
-let x = 5;
-let mut y = 10;
+// Axon — val for immutable, var for mutable
+val x = 5;
+var y = 10;
 ```
 
 ## Ownership Model
@@ -95,13 +95,13 @@ The biggest difference from Rust: tensors are a **built-in type** with shape tra
 
 ```axon
 // Axon — tensors are first-class citizens
-let x: Tensor<Float32, [3, 3]> = tensor([[1.0, 2.0, 3.0],
+val x: Tensor<Float32, [3, 3]> = tensor([[1.0, 2.0, 3.0],
                                           [4.0, 5.0, 6.0],
                                           [7.0, 8.0, 9.0]]);
 
 // Shape-checked matrix multiply (compiler verifies dimensions)
-let y: Tensor<Float32, [3, 1]> = tensor([[1.0], [0.0], [1.0]]);
-let result = x @ y;  // result: Tensor<Float32, [3, 1]>
+val y: Tensor<Float32, [3, 1]> = tensor([[1.0], [0.0], [1.0]]);
+val result = x @ y;  // result: Tensor<Float32, [3, 1]>
 ```
 
 In Rust, you'd need an external crate:
@@ -117,7 +117,7 @@ let x = Array2::<f32>::from_shape_vec((3, 3), vec![...]).unwrap();
 Use `_` for dimensions known only at runtime:
 
 ```axon
-fn process_batch(input: Tensor<Float32, [_, 784]>) -> Tensor<Float32, [_, 10]> {
+fn process_batch(input: Tensor<Float32, [_, 784]>): Tensor<Float32, [_, 10]> {
     // batch size (_) is dynamic, feature dimensions are static
     return model.forward(input);
 }
@@ -129,11 +129,11 @@ Axon has built-in device management — no external CUDA bindings needed:
 
 ```axon
 // Move tensor to GPU
-let gpu_data = data.to(Device::GPU(0));
+val gpu_data = data.to(Device.GPU(0));
 
 // GPU-annotated functions
 @device(GPU)
-fn matmul_kernel(a: Tensor<Float32, [_, _]>, b: Tensor<Float32, [_, _]>) -> Tensor<Float32, [_, _]> {
+fn matmul_kernel(a: Tensor<Float32, [_, _]>, b: Tensor<Float32, [_, _]>): Tensor<Float32, [_, _]> {
     return a @ b;
 }
 ```
@@ -148,7 +148,7 @@ Coming from Rust, you'll miss these features (planned for future releases):
 - **Macros** — No compile-time metaprogramming yet
 - **Async/Await** — No async runtime yet
 - **Closures** — Limited closure support (planned)
-- **Pattern matching in let** — `let (a, b) = tuple;` not yet supported
+- **Pattern matching in val** — `val (a, b) = tuple;` not yet supported
 - **Crate ecosystem** — Axon's package registry is young
 
 ## Build & Run Comparison

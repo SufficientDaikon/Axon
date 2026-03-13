@@ -1,0 +1,8 @@
+// Test: Create a tensor with ones and print a scalar value
+// expect: 1
+
+fn main() {
+    val a = tensor_ones(1);
+    val v = tensor_item(a);
+    println(v);
+}

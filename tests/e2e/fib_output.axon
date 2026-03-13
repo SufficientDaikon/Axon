@@ -7,7 +7,7 @@
 // expect: 5
 // expect: 8
 
-fn fib(n: Int64) -> Int64 {
+fn fib(n: Int64): Int64 {
     if n < 2 {
         return n;
     }

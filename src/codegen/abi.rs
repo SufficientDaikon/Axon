@@ -23,7 +23,7 @@ impl NameMangler {
         let mut mangled = String::from("_AX");
 
         // Hash of full path (first 8 hex chars of a simple hash)
-        let full_path = format!("{}::{}", namespace.join("::"), name);
+        let full_path = format!("{}.{}", namespace.join("."), name);
         let hash = simple_hash(&full_path);
         mangled.push_str(&format!("{:08x}", hash));
 

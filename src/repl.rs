@@ -75,9 +75,11 @@ impl Repl {
         }
 
         // Check if this is a let/fn definition
-        if trimmed.starts_with("let ") || trimmed.starts_with("let\t") {
+        if trimmed.starts_with("val ") || trimmed.starts_with("val\t")
+            || trimmed.starts_with("var ") || trimmed.starts_with("var\t")
+        {
             self.bindings.push(trimmed.to_string());
-            let name = extract_let_name(trimmed);
+            let name = extract_binding_name(trimmed);
             return ReplResult::Definition(name);
         }
 
@@ -87,7 +89,7 @@ impl Repl {
             return ReplResult::Definition(name);
         }
 
-        if trimmed.starts_with("struct ") || trimmed.starts_with("enum ") || trimmed.starts_with("trait ") {
+        if trimmed.starts_with("model ") || trimmed.starts_with("enum ") || trimmed.starts_with("trait ") {
             self.bindings.push(trimmed.to_string());
             let name = trimmed.split_whitespace().nth(1).unwrap_or("?").to_string();
             return ReplResult::Definition(name);
@@ -251,7 +253,7 @@ impl Repl {
         println!("  :save <file>    Save REPL history to a file");
         println!("  :quit, :q       Exit the REPL");
         println!();
-        println!("Enter expressions, let bindings, or function definitions.");
+        println!("Enter expressions, val bindings, or function definitions.");
         println!("Expressions display their inferred type (e.g. `1 + 2` → `1 + 2 : Int64`).");
         // NOTE: JIT evaluation is deferred to Phase 12.
     }
@@ -306,8 +308,10 @@ impl Repl {
         // Add session-defined names
         for binding in &self.bindings {
             let trimmed = binding.trim();
-            if trimmed.starts_with("let ") || trimmed.starts_with("let\t") {
-                let name = extract_let_name(trimmed);
+            if trimmed.starts_with("val ") || trimmed.starts_with("val\t")
+                || trimmed.starts_with("var ") || trimmed.starts_with("var\t")
+            {
+                let name = extract_binding_name(trimmed);
                 if name.starts_with(prefix) && name != "?" {
                     completions.push(name);
                 }
@@ -316,7 +320,7 @@ impl Repl {
                 if name.starts_with(prefix) && name != "?" {
                     completions.push(name);
                 }
-            } else if trimmed.starts_with("struct ") || trimmed.starts_with("enum ") || trimmed.starts_with("trait ") {
+            } else if trimmed.starts_with("model ") || trimmed.starts_with("enum ") || trimmed.starts_with("trait ") {
                 let name = trimmed.split_whitespace().nth(1).unwrap_or("").to_string();
                 if name.starts_with(prefix) && !name.is_empty() {
                     completions.push(name);
@@ -330,10 +334,13 @@ impl Repl {
     }
 }
 
-fn extract_let_name(s: &str) -> String {
-    // "let x: Int32 = 5;" -> "x"
-    let rest = s.strip_prefix("let").unwrap_or(s).trim();
-    let rest = rest.strip_prefix("mut").map(|r| r.trim()).unwrap_or(rest);
+fn extract_binding_name(s: &str) -> String {
+    // "val x: Int32 = 5;" -> "x"
+    // "var y: Int32 = 10;" -> "y"
+    let rest = s.strip_prefix("val")
+        .or_else(|| s.strip_prefix("var"))
+        .unwrap_or(s)
+        .trim();
     rest.split(|c: char| !c.is_alphanumeric() && c != '_')
         .next()
         .unwrap_or("?")
@@ -380,7 +387,7 @@ mod tests {
     #[test]
     fn test_eval_let_binding() {
         let mut repl = Repl::new();
-        let result = repl.eval_line("let x: Int32 = 42;");
+        let result = repl.eval_line("val x: Int32 = 42;");
         assert_eq!(result, ReplResult::Definition("x".to_string()));
         assert_eq!(repl.bindings.len(), 1);
     }
@@ -388,7 +395,7 @@ mod tests {
     #[test]
     fn test_eval_function_def() {
         let mut repl = Repl::new();
-        let result = repl.eval_line("fn add(a: Int32, b: Int32) -> Int32 { return a + b; }");
+        let result = repl.eval_line("fn add(a: Int32, b: Int32): Int32 { return a + b; }");
         assert_eq!(result, ReplResult::Definition("add".to_string()));
     }
 
@@ -419,7 +426,7 @@ mod tests {
     #[test]
     fn test_command_clear() {
         let mut repl = Repl::new();
-        repl.eval_line("let x: Int32 = 1;");
+        repl.eval_line("val x: Int32 = 1;");
         assert_eq!(repl.bindings.len(), 1);
         repl.eval_line(":clear");
         assert_eq!(repl.bindings.len(), 0);
@@ -438,7 +445,7 @@ mod tests {
     #[test]
     fn test_command_save() {
         let mut repl = Repl::new();
-        repl.history.push("let x: Int32 = 1;".to_string());
+        repl.history.push("val x: Int32 = 1;".to_string());
         repl.history.push("x + 2".to_string());
 
         let tmp = std::env::temp_dir().join("axon_repl_test.axon");
@@ -446,7 +453,7 @@ mod tests {
         assert_eq!(result, ReplResult::Command);
 
         let content = std::fs::read_to_string(&tmp).unwrap();
-        assert!(content.contains("let x: Int32 = 1;"));
+        assert!(content.contains("val x: Int32 = 1;"));
         assert!(content.contains("x + 2"));
 
         // Cleanup
@@ -496,7 +503,7 @@ mod tests {
     #[test]
     fn test_tab_complete_session_bindings() {
         let mut repl = Repl::new();
-        repl.eval_line("let my_var: Int32 = 42;");
+        repl.eval_line("val my_var: Int32 = 42;");
         repl.eval_line("fn my_func() {}");
         let completions = repl.tab_complete("my");
         assert!(completions.contains(&"my_var".to_string()));

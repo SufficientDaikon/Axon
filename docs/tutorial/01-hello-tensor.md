@@ -23,7 +23,7 @@ Open `src/main.axon` and replace its contents:
 ```axon
 fn main() {
     // Create a 1D tensor from values
-    let numbers = Tensor::from_vec([1.0, 2.0, 3.0, 4.0, 5.0], [5]);
+    val numbers = Tensor.from_vec([1.0, 2.0, 3.0, 4.0, 5.0], [5]);
     println("Numbers: {}", numbers);
     println("Shape:   {}", numbers.shape);
     println("Sum:     {}", numbers.sum());
@@ -50,22 +50,22 @@ Axon offers several tensor constructors:
 ```axon
 fn main() {
     // Zeros and ones
-    let z: Tensor<Float32, [2, 3]> = zeros([2, 3]);
+    val z: Tensor<Float32, [2, 3]> = zeros([2, 3]);
     println("Zeros:\n{}", z);
 
-    let o: Tensor<Float32, [3]> = ones([3]);
+    val o: Tensor<Float32, [3]> = ones([3]);
     println("Ones: {}", o);
 
     // Random tensors
-    let r = randn([2, 2]);     // normal distribution
+    val r = randn([2, 2]);     // normal distribution
     println("Random:\n{}", r);
 
     // Range
-    let seq = arange(0, 5);
+    val seq = arange(0, 5);
     println("Range: {}", seq);   // [0, 1, 2, 3, 4]
 
     // Identity matrix
-    let eye = Tensor::eye(3);
+    val eye = Tensor.eye(3);
     println("Identity:\n{}", eye);
 }
 ```
@@ -78,15 +78,15 @@ Tensors support element-wise arithmetic:
 
 ```axon
 fn main() {
-    let a = Tensor::from_vec([1.0, 2.0, 3.0], [3]);
-    let b = Tensor::from_vec([4.0, 5.0, 6.0], [3]);
+    val a = Tensor.from_vec([1.0, 2.0, 3.0], [3]);
+    val b = Tensor.from_vec([4.0, 5.0, 6.0], [3]);
 
     println("a + b = {}", a + b);    // [5.0, 7.0, 9.0]
     println("a * b = {}", a * b);    // [4.0, 10.0, 18.0]
     println("a * 2 = {}", a * 2.0);  // [2.0, 4.0, 6.0]
 
     // Math functions
-    let x = Tensor::from_vec([0.0, 1.5708, 3.1416], [3]);
+    val x = Tensor.from_vec([0.0, 1.5708, 3.1416], [3]);
     println("sin(x) = {}", x.sin());
     println("exp(x) = {}", x.exp());
 }
@@ -100,18 +100,18 @@ The `@` operator performs matrix multiplication:
 
 ```axon
 fn main() {
-    let A: Tensor<Float32, [2, 3]> = Tensor::from_vec(
+    val A: Tensor<Float32, [2, 3]> = Tensor.from_vec(
         [1.0, 2.0, 3.0,
          4.0, 5.0, 6.0], [2, 3]
     );
 
-    let B: Tensor<Float32, [3, 2]> = Tensor::from_vec(
+    val B: Tensor<Float32, [3, 2]> = Tensor.from_vec(
         [7.0,  8.0,
          9.0,  10.0,
          11.0, 12.0], [3, 2]
     );
 
-    let C = A @ B;   // [2, 3] @ [3, 2] → [2, 2]
+    val C = A @ B;   // [2, 3] @ [3, 2] → [2, 2]
     println("A @ B =\n{}", C);
     println("Shape: {}", C.shape);
     // A @ B =
@@ -126,22 +126,22 @@ fn main() {
 
 ```axon
 fn main() {
-    let t: Tensor<Float32, [2, 6]> = arange(0, 12).reshape([2, 6]);
+    val t: Tensor<Float32, [2, 6]> = arange(0, 12).reshape([2, 6]);
     println("Original [2, 6]:\n{}", t);
 
     // Reshape
-    let r = t.reshape([3, 4]);
+    val r = t.reshape([3, 4]);
     println("Reshaped [3, 4]:\n{}", r);
 
-    let flat = t.reshape([12]);
+    val flat = t.reshape([12]);
     println("Flat: {}", flat);
 
     // Transpose
-    let m: Tensor<Float32, [2, 3]> = Tensor::from_vec(
+    val m: Tensor<Float32, [2, 3]> = Tensor.from_vec(
         [1.0, 2.0, 3.0,
          4.0, 5.0, 6.0], [2, 3]
     );
-    let mt = m.transpose();
+    val mt = m.transpose();
     println("Transposed [3, 2]:\n{}", mt);
 }
 ```
@@ -152,7 +152,7 @@ fn main() {
 
 ```axon
 fn main() {
-    let data: Tensor<Float32, [3, 4]> = Tensor::from_vec(
+    val data: Tensor<Float32, [3, 4]> = Tensor.from_vec(
         [1.0, 2.0, 3.0, 4.0,
          5.0, 6.0, 7.0, 8.0,
          9.0, 10.0, 11.0, 12.0], [3, 4]
@@ -173,20 +173,20 @@ fn main() {
 A small program that normalizes a dataset:
 
 ```axon
-fn normalize(data: Tensor<Float32, [?, ?]>) -> Tensor<Float32, [?, ?]> {
-    let mean = data.mean(dim: 0);
-    let std = data.std(dim: 0);
+fn normalize(data: Tensor<Float32, [?, ?]>): Tensor<Float32, [?, ?]> {
+    val mean = data.mean(dim: 0);
+    val std = data.std(dim: 0);
     (data - mean) / std
 }
 
 fn main() {
     // Simulate a dataset: 100 samples, 4 features
-    let dataset = randn([100, 4]);
+    val dataset = randn([100, 4]);
 
     println("Before normalization:");
     println("  Mean: {}", dataset.mean(dim: 0));
 
-    let normed = normalize(dataset);
+    val normed = normalize(dataset);
 
     println("After normalization:");
     println("  Mean: {}", normed.mean(dim: 0));   // ≈ [0, 0, 0, 0]

@@ -53,32 +53,32 @@ fn test_simple_function() {
 
 #[test]
 fn test_function_with_return_type() {
-    check_ok!("fn add(a: Int64, b: Int64) -> Int64 { return a + b; }");
+    check_ok!("fn add(a: Int64, b: Int64): Int64 { return a + b; }");
 }
 
 #[test]
 fn test_let_binding() {
-    check_ok!("fn main() { let x: Int64 = 42; }");
+    check_ok!("fn main() { val x: Int64 = 42; }");
 }
 
 #[test]
 fn test_let_with_inference() {
-    check_ok!("fn main() { let x = 42; }");
+    check_ok!("fn main() { val x = 42; }");
 }
 
 #[test]
 fn test_if_else() {
-    check_ok!("fn main() -> Int64 { if true { return 1; } else { return 2; } }");
+    check_ok!("fn main(): Int64 { if true { return 1; } else { return 2; } }");
 }
 
 #[test]
 fn test_while_loop() {
-    check_ok!("fn main() { let mut x: Int64 = 0; while x < 10 { x = x + 1; } }");
+    check_ok!("fn main() { var x: Int64 = 0; while x < 10 { x = x + 1; } }");
 }
 
 #[test]
 fn test_struct_definition() {
-    check_ok!("struct Point { x: Float64, y: Float64 }");
+    check_ok!("model Point { x: Float64, y: Float64 }");
 }
 
 #[test]
@@ -89,36 +89,36 @@ fn test_enum_definition() {
 #[test]
 fn test_function_calls() {
     check_ok!(
-        "fn add(a: Int64, b: Int64) -> Int64 { return a + b; }\nfn main() { let x = add(1, 2); }"
+        "fn add(a: Int64, b: Int64): Int64 { return a + b; }\nfn main() { val x = add(1, 2); }"
     );
 }
 
 #[test]
 fn test_mutable_variable() {
-    check_ok!("fn main() { let mut x: Int64 = 1; x = 2; }");
+    check_ok!("fn main() { var x: Int64 = 1; x = 2; }");
 }
 
 #[test]
 fn test_bool_operations() {
-    check_ok!("fn main() { let a: Bool = true; let b: Bool = false; let c = a && b; }");
+    check_ok!("fn main() { val a: Bool = true; val b: Bool = false; val c = a && b; }");
 }
 
 #[test]
 fn test_string_literal() {
-    check_ok!(r#"fn main() { let s: String = "hello"; }"#);
+    check_ok!(r#"fn main() { val s: String = "hello"; }"#);
 }
 
 #[test]
 fn test_nested_blocks() {
-    check_ok!("fn main() -> Int64 { return 42; }");
+    check_ok!("fn main(): Int64 { return 42; }");
 }
 
 #[test]
 fn test_multiple_functions() {
     check_ok!(
-        "fn double(x: Int64) -> Int64 { return x + x; }\n\
-         fn triple(x: Int64) -> Int64 { return x + double(x); }\n\
-         fn main() { let r = triple(5); }"
+        "fn double(x: Int64): Int64 { return x + x; }\n\
+         fn triple(x: Int64): Int64 { return x + double(x); }\n\
+         fn main() { val r = triple(5); }"
     );
 }
 
@@ -128,7 +128,7 @@ fn test_multiple_functions() {
 
 #[test]
 fn test_undefined_variable() {
-    check_err!("fn main() { let x = y; }", "E1001");
+    check_err!("fn main() { val x = y; }", "E1001");
 }
 
 #[test]
@@ -141,7 +141,7 @@ fn test_undefined_type() {
     // Using an unknown type in a let binding — name resolver reports E1001
     // on the expression side if Foo is used as value, but type resolution
     // may silently produce ERROR. We verify no panic at minimum.
-    let (_, errors) = axonc::check_source("fn main() { let x: Foo = 1; }", "test.axon");
+    let (_, errors) = axonc::check_source("fn main() { val x: Foo = 1; }", "test.axon");
     // Should either succeed with type error or report undefined type
     let _ = errors;
 }
@@ -154,14 +154,14 @@ fn test_duplicate_function() {
 #[test]
 fn test_variable_shadowing_not_allowed() {
     // Axon does not allow shadowing in the same scope — reports E1002
-    check_err!("fn main() { let x: Int64 = 1; let x: Int64 = 2; }", "E1002");
+    check_err!("fn main() { val x: Int64 = 1; val x: Int64 = 2; }", "E1002");
 }
 
 #[test]
 fn test_scope_isolation() {
     // Variable defined in inner block is not visible outside
     check_err!(
-        "fn main() { { let inner: Int64 = 1; } let y = inner; }",
+        "fn main() { { val inner: Int64 = 1; } val y = inner; }",
         "E1001"
     );
 }
@@ -170,8 +170,8 @@ fn test_scope_isolation() {
 fn test_function_visible_before_definition() {
     // Functions should be visible to each other regardless of order
     check_ok!(
-        "fn caller() -> Int64 { return callee(); }\n\
-         fn callee() -> Int64 { return 42; }"
+        "fn caller(): Int64 { return callee(); }\n\
+         fn callee(): Int64 { return 42; }"
     );
 }
 
@@ -179,7 +179,7 @@ fn test_function_visible_before_definition() {
 fn test_undefined_variable_with_suggestion() {
     // The error should contain a suggestion if a similar name exists
     let (_, errors) = axonc::check_source(
-        "fn main() { let value: Int64 = 1; let x = valeu; }",
+        "fn main() { val value: Int64 = 1; val x = valeu; }",
         "test.axon",
     );
     assert!(
@@ -195,12 +195,12 @@ fn test_undefined_variable_with_suggestion() {
 
 #[test]
 fn test_type_mismatch_let() {
-    check_err!("fn main() { let x: Bool = 42; }", "E2001");
+    check_err!("fn main() { val x: Bool = 42; }", "E2001");
 }
 
 #[test]
 fn test_type_mismatch_return() {
-    check_err!("fn foo() -> Bool { return 42; }", "E2001");
+    check_err!("fn foo(): Bool { return 42; }", "E2001");
 }
 
 #[test]
@@ -212,14 +212,14 @@ fn test_binary_op_mismatch() {
 #[test]
 fn test_wrong_arg_count() {
     check_err!(
-        "fn foo(a: Int64) -> Int64 { return a; }\nfn main() { foo(1, 2); }",
+        "fn foo(a: Int64): Int64 { return a; }\nfn main() { foo(1, 2); }",
         "E2003"
     );
 }
 
 #[test]
 fn test_not_a_function() {
-    check_err!("fn main() { let x: Int64 = 1; x(2); }", "E2004");
+    check_err!("fn main() { val x: Int64 = 1; x(2); }", "E2004");
 }
 
 #[test]
@@ -231,20 +231,20 @@ fn test_if_condition_not_bool() {
 #[test]
 fn test_if_else_branch_mismatch() {
     check_err!(
-        "fn pick(c: Bool) -> Int64 { if c { return 1; } else { return true; } }",
+        "fn pick(c: Bool): Int64 { if c { return 1; } else { return true; } }",
         "E2001"
     );
 }
 
 #[test]
 fn test_comparison_returns_bool() {
-    check_ok!("fn main() -> Bool { return 1 < 2; }");
+    check_ok!("fn main(): Bool { return 1 < 2; }");
 }
 
 #[test]
 fn test_logical_op_requires_bool() {
     // && on Int64 operands should fail
-    let (_, errors) = axonc::check_source("fn main() { let x = 1 && 2; }", "test.axon");
+    let (_, errors) = axonc::check_source("fn main() { val x = 1 && 2; }", "test.axon");
     assert!(
         errors.iter().any(|e| e.error_code == "E2001"),
         "Expected type error on logical op with non-Bool operands, got: {:?}",
@@ -259,14 +259,14 @@ fn test_negation_requires_numeric() {
 
 #[test]
 fn test_not_requires_bool() {
-    check_err!("fn main() -> Bool { return !42; }", "E2001");
+    check_err!("fn main(): Bool { return !42; }", "E2001");
 }
 
 #[test]
 fn test_assignment_type_mismatch() {
     // Assigning Bool to an Int64 variable
     let (_, errors) = axonc::check_source(
-        "fn main() { let mut x: Int64 = 1; x = true; }",
+        "fn main() { var x: Int64 = 1; x = true; }",
         "test.axon",
     );
     assert!(
@@ -316,7 +316,7 @@ fn test_matmul_operator() {
     // The @ operator on tensors
     let (_, errors) = axonc::check_source(
         "fn mul(a: Tensor<Float32, [128, 256]>, b: Tensor<Float32, [256, 64]>) {\n\
-         let c = a @ b;\n\
+         val c = a @ b;\n\
          }",
         "test.axon",
     );
@@ -326,7 +326,7 @@ fn test_matmul_operator() {
 #[test]
 fn test_matmul_on_non_tensor_fails() {
     check_err!(
-        "fn main() { let a: Int64 = 1; let b: Int64 = 2; let c = a @ b; }",
+        "fn main() { val a: Int64 = 1; val b: Int64 = 2; val c = a @ b; }",
         "E2002"
     );
 }
@@ -338,7 +338,7 @@ fn test_matmul_on_non_tensor_fails() {
 #[test]
 fn test_copy_type_reuse() {
     // Int64 is Copy — using after "move" is fine
-    check_ok!("fn main() { let x: Int64 = 1; let y = x; let z = x; }");
+    check_ok!("fn main() { val x: Int64 = 1; val y = x; val z = x; }");
 }
 
 #[test]
@@ -346,7 +346,7 @@ fn test_assign_immutable() {
     // Assigning to an immutable variable should be an error.
     // The typeck reports E2015, borrow checker reports E4004. Either is acceptable.
     let (_, errors) = axonc::check_source(
-        "fn main() { let x: Int64 = 1; x = 2; }",
+        "fn main() { val x: Int64 = 1; x = 2; }",
         "test.axon",
     );
     assert!(
@@ -360,14 +360,14 @@ fn test_assign_immutable() {
 
 #[test]
 fn test_assign_mutable_ok() {
-    check_ok!("fn main() { let mut x: Int64 = 1; x = 2; }");
+    check_ok!("fn main() { var x: Int64 = 1; x = 2; }");
 }
 
 #[test]
 fn test_use_after_move_string() {
     // String is not Copy. Using after move should trigger E4001.
     let (_, errors) = axonc::check_source(
-        r#"fn main() { let s: String = "hi"; let t = s; let u = s; }"#,
+        r#"fn main() { val s: String = "hi"; val t = s; val u = s; }"#,
         "test.axon",
     );
     // The borrow checker may or may not detect this through check_source
@@ -378,25 +378,25 @@ fn test_use_after_move_string() {
 #[test]
 fn test_multiple_immutable_borrows_ok() {
     check_ok!(
-        "fn main() { let x: Int64 = 1; let a = &x; let b = &x; }"
+        "fn main() { val x: Int64 = 1; val a = &x; val b = &x; }"
     );
 }
 
 #[test]
 fn test_single_mutable_borrow_ok() {
     check_ok!(
-        "fn main() { let mut x: Int64 = 1; let a = &mut x; }"
+        "fn main() { var x: Int64 = 1; val a = &mut x; }"
     );
 }
 
 #[test]
 fn test_bool_copy_reuse() {
-    check_ok!("fn main() { let b: Bool = true; let c = b; let d = b; }");
+    check_ok!("fn main() { val b: Bool = true; val c = b; val d = b; }");
 }
 
 #[test]
 fn test_float_copy_reuse() {
-    check_ok!("fn main() { let f: Float64 = 3.14; let g = f; let h = f; }");
+    check_ok!("fn main() { val f: Float64 = 3.14; val g = f; val h = f; }");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -437,7 +437,7 @@ fn test_tast_empty_program() {
 
 #[test]
 fn test_error_has_span() {
-    let (_, errors) = axonc::check_source("fn main() { let x: Bool = 42; }", "test.axon");
+    let (_, errors) = axonc::check_source("fn main() { val x: Bool = 42; }", "test.axon");
     assert!(!errors.is_empty());
     for err in &errors {
         assert!(
@@ -450,7 +450,7 @@ fn test_error_has_span() {
 
 #[test]
 fn test_error_has_code() {
-    let (_, errors) = axonc::check_source("fn main() { let x = y; }", "test.axon");
+    let (_, errors) = axonc::check_source("fn main() { val x = y; }", "test.axon");
     assert!(!errors.is_empty());
     for err in &errors {
         assert!(
@@ -471,7 +471,7 @@ fn test_error_has_code() {
 fn test_error_has_suggestion_for_typo() {
     // If we have a similar variable name, the error should have a suggestion
     let (_, errors) = axonc::check_source(
-        "fn main() { let value: Int64 = 1; let x = valeu; }",
+        "fn main() { val value: Int64 = 1; val x = valeu; }",
         "test.axon",
     );
     let e1001 = errors.iter().find(|e| e.error_code == "E1001");
@@ -497,7 +497,7 @@ fn test_multiple_errors_reported() {
 
 #[test]
 fn test_error_json_format() {
-    let (_, errors) = axonc::check_source("fn main() { let x: Bool = 42; }", "test.axon");
+    let (_, errors) = axonc::check_source("fn main() { val x: Bool = 42; }", "test.axon");
     assert!(!errors.is_empty());
     for err in &errors {
         let json = err.format_json();
@@ -515,7 +515,7 @@ fn test_error_json_format() {
 #[test]
 fn test_deeply_nested_expressions() {
     check_ok!(
-        "fn main() -> Int64 { return ((((1 + 2) + 3) + 4) + 5); }"
+        "fn main(): Int64 { return ((((1 + 2) + 3) + 4) + 5); }"
     );
 }
 
@@ -532,7 +532,7 @@ fn test_unit_return() {
 #[test]
 fn test_many_parameters() {
     check_ok!(
-        "fn many(a: Int64, b: Int64, c: Int64, d: Int64, e: Int64, f: Int64) -> Int64 {\n\
+        "fn many(a: Int64, b: Int64, c: Int64, d: Int64, e: Int64, f: Int64): Int64 {\n\
          return a + b + c + d + e + f;\n\
          }"
     );
@@ -541,12 +541,12 @@ fn test_many_parameters() {
 #[test]
 fn test_complex_program() {
     check_ok!(
-        "struct Point { x: Float64, y: Float64 }\n\
-         fn distance(p: Point) -> Float64 { return p.x + p.y; }\n\
-         fn make_point() -> Point { return Point { x: 1.0, y: 2.0 }; }\n\
+        "model Point { x: Float64, y: Float64 }\n\
+         fn distance(p: Point): Float64 { return p.x + p.y; }\n\
+         fn make_point(): Point { return Point { x: 1.0, y: 2.0 }; }\n\
          fn main() {\n\
-             let p = make_point();\n\
-             let d = distance(p);\n\
+             val p = make_point();\n\
+             val d = distance(p);\n\
          }"
     );
 }
@@ -558,7 +558,7 @@ fn test_complex_program() {
 #[test]
 fn test_match_expression() {
     check_ok!(
-        "fn test(x: Int64) -> Int64 { return match x { 1 => 10, 2 => 20, _ => 0, }; }"
+        "fn test(x: Int64): Int64 { return match x { 1 => 10, 2 => 20, _ => 0, }; }"
     );
 }
 
@@ -572,13 +572,13 @@ fn test_match_arm_type_mismatch() {
 
 #[test]
 fn test_tuple_type_check() {
-    check_ok!("fn test() -> (Int64, Bool) { return (42, true); }");
+    check_ok!("fn test(): (Int64, Bool) { return (42, true); }");
 }
 
 #[test]
 fn test_struct_literal_type_check() {
     check_ok!(
-        "struct Point { x: Int64, y: Int64 }\nfn make() { let p = Point { x: 1, y: 2 }; }"
+        "model Point { x: Int64, y: Int64 }\nfn make() { val p = Point { x: 1, y: 2 }; }"
     );
 }
 
@@ -589,67 +589,67 @@ fn test_while_condition_must_be_bool() {
 
 #[test]
 fn test_logical_and_ok() {
-    check_ok!("fn main() -> Bool { let a: Bool = true; let b: Bool = false; return a && b; }");
+    check_ok!("fn main(): Bool { val a: Bool = true; val b: Bool = false; return a && b; }");
 }
 
 #[test]
 fn test_logical_or_ok() {
-    check_ok!("fn main() -> Bool { let a: Bool = true; let b: Bool = false; return a || b; }");
+    check_ok!("fn main(): Bool { val a: Bool = true; val b: Bool = false; return a || b; }");
 }
 
 #[test]
 fn test_comparison_operators() {
     check_ok!(
-        "fn test(a: Int64, b: Int64) -> Bool { return a < b; }"
+        "fn test(a: Int64, b: Int64): Bool { return a < b; }"
     );
 }
 
 #[test]
 fn test_equality_operators() {
     check_ok!(
-        "fn test(a: Int64, b: Int64) -> Bool { return a == b; }"
+        "fn test(a: Int64, b: Int64): Bool { return a == b; }"
     );
 }
 
 #[test]
 fn test_not_equals() {
     check_ok!(
-        "fn test(a: Int64, b: Int64) -> Bool { return a != b; }"
+        "fn test(a: Int64, b: Int64): Bool { return a != b; }"
     );
 }
 
 #[test]
 fn test_boolean_not_ok() {
-    check_ok!("fn test(a: Bool) -> Bool { return !a; }");
+    check_ok!("fn test(a: Bool): Bool { return !a; }");
 }
 
 #[test]
 fn test_reference_type_check() {
     check_ok!(
-        "fn test(x: Int64) { let r = &x; }"
+        "fn test(x: Int64) { val r = &x; }"
     );
 }
 
 #[test]
 fn test_type_cast_numeric() {
     // Numeric-to-numeric cast should be valid
-    check_ok!("fn main() { let x: Int64 = 42; let y = x as Float64; }");
+    check_ok!("fn main() { val x: Int64 = 42; val y = x as Float64; }");
 }
 
 #[test]
 fn test_wrong_arg_count_too_few() {
     check_err!(
-        "fn foo(a: Int64, b: Int64) -> Int64 { return a + b; }\nfn main() { foo(1); }",
+        "fn foo(a: Int64, b: Int64): Int64 { return a + b; }\nfn main() { foo(1); }",
         "E2003"
     );
 }
 
 #[test]
 fn test_return_type_inference_int() {
-    check_ok!("fn main() -> Int64 { return 42; }");
+    check_ok!("fn main(): Int64 { return 42; }");
 }
 
 #[test]
 fn test_return_type_inference_float() {
-    check_ok!("fn main() -> Float64 { return 3.14; }");
+    check_ok!("fn main(): Float64 { return 3.14; }");
 }

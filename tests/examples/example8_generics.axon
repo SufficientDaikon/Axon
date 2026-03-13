@@ -1,12 +1,12 @@
 // Example 8: Generic Function with Trait Bounds
-fn squared_sum<T: Numeric>(values: Tensor<T, [?]>) -> T {
-    let squared = values * values;
+fn squared_sum<T: Numeric>(values: Tensor<T, [?]>): T {
+    val squared = values * values;
     return squared.sum();
 }
 
 fn main() {
-    let int_values: Tensor<Int32, [10]> = arange(0, 10);
-    let int_result = squared_sum(int_values);
-    let float_values: Tensor<Float32, [10]> = randn([10]);
-    let float_result = squared_sum(float_values);
+    val int_values: Tensor<Int32, [10]> = arange(0, 10);
+    val int_result = squared_sum(int_values);
+    val float_values: Tensor<Float32, [10]> = randn([10]);
+    val float_result = squared_sum(float_values);
 }

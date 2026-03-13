@@ -168,8 +168,9 @@ impl Parser {
                     self.advance();
                     return;
                 }
-                TokenKind::Fn | TokenKind::Let | TokenKind::Struct | TokenKind::Enum
-                | TokenKind::Impl | TokenKind::Trait | TokenKind::Pub
+                TokenKind::Fn | TokenKind::Val | TokenKind::Var
+                | TokenKind::Model | TokenKind::Enum
+                | TokenKind::Extend | TokenKind::Trait | TokenKind::Pub
                 | TokenKind::Use | TokenKind::Mod | TokenKind::Type
                 | TokenKind::Unsafe => return,
                 TokenKind::RBrace => {
@@ -261,9 +262,9 @@ impl Parser {
 
         let kind = match self.peek() {
             TokenKind::Fn => ItemKind::Function(self.parse_fn_decl()?),
-            TokenKind::Struct => ItemKind::Struct(self.parse_struct_decl()?),
+            TokenKind::Model => ItemKind::Struct(self.parse_struct_decl()?),
             TokenKind::Enum => ItemKind::Enum(self.parse_enum_decl()?),
-            TokenKind::Impl => ItemKind::Impl(self.parse_impl_block()?),
+            TokenKind::Extend => ItemKind::Impl(self.parse_impl_block()?),
             TokenKind::Trait => ItemKind::Trait(self.parse_trait_decl()?),
             TokenKind::Type => ItemKind::TypeAlias(self.parse_type_alias()?),
             TokenKind::Mod => ItemKind::Module(self.parse_module_decl()?),
@@ -285,7 +286,7 @@ impl Parser {
             _ => {
                 return Err(CompileError::new(
                     "E0102",
-                    format!("expected item (fn, struct, enum, impl, trait, type, mod, use), found '{}'", self.peek()),
+                    format!("expected item (fn, struct, model, enum, extend, impl, trait, type, mod, use), found '{}'", self.peek()),
                     self.current_span(),
                 ).with_suggestion("top-level items must be declarations"));
             }
@@ -319,21 +320,60 @@ impl Parser {
         let params = self.parse_fn_params()?;
         self.expect_exact(TokenKind::RParen)?;
 
-        // Optional return type
-        let return_type = if self.at(&TokenKind::Arrow) {
+        // Optional return type (: Type)
+        let return_type = if self.at(&TokenKind::Colon) {
             self.advance();
             Some(self.parse_type()?)
         } else {
             None
         };
 
-        // Body (optional — trait methods may lack one)
-        let body = if self.at(&TokenKind::LBrace) {
+        // Body: block, expression shorthand (= expr;), or semicolon (trait method)
+        let mut body = if self.at(&TokenKind::LBrace) {
             Some(self.parse_block()?)
+        } else if self.eat(&TokenKind::Eq) {
+            // Expression shorthand: fn foo(): i32 = expr;
+            let expr = self.parse_expression()?;
+            self.expect_exact(TokenKind::Semicolon)?;
+            let span = expr.span.clone();
+            Some(Block {
+                stmts: vec![Stmt {
+                    kind: StmtKind::Return(Some(expr)),
+                    span: span.clone(),
+                }],
+                tail_expr: None,
+                span,
+            })
         } else {
             self.expect_exact(TokenKind::Semicolon)?;
             None
         };
+
+        // Implicit return: if the function has a return type and the body's
+        // last statement is a bare expression (without ;), convert to return
+        if return_type.is_some() {
+            if let Some(ref mut block) = body {
+                if let Some(last) = block.stmts.last() {
+                    if let StmtKind::Expr(expr) = &last.kind {
+                        if !matches!(&expr.kind,
+                            ExprKind::Assignment { .. }
+                            | ExprKind::IfElse { .. }
+                            | ExprKind::Match { .. }
+                            | ExprKind::Block(_)
+                        ) {
+                            let last_stmt = block.stmts.pop().unwrap();
+                            if let StmtKind::Expr(expr) = last_stmt.kind {
+                                let span = expr.span.clone();
+                                block.stmts.push(Stmt {
+                                    kind: StmtKind::Return(Some(expr)),
+                                    span,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         let end = self.current_span();
         Ok(FnDecl {
@@ -437,7 +477,7 @@ impl Parser {
 
     fn parse_struct_decl(&mut self) -> Result<StructDecl, CompileError> {
         let start = self.current_span();
-        self.expect_exact(TokenKind::Struct)?;
+        self.expect_exact(TokenKind::Model)?;
         let name = self.expect_name()?;
 
         let generics = if self.at(&TokenKind::Lt) {
@@ -561,7 +601,7 @@ impl Parser {
 
     fn parse_impl_block(&mut self) -> Result<ImplBlock, CompileError> {
         let start = self.current_span();
-        self.expect_exact(TokenKind::Impl)?;
+        self.expect_exact(TokenKind::Extend)?;
 
         let generics = if self.at(&TokenKind::Lt) {
             self.parse_generic_params()?
@@ -714,7 +754,7 @@ impl Parser {
         let mut path = Vec::new();
         path.push(self.expect_name()?);
 
-        while self.eat(&TokenKind::ColonColon) {
+        while self.eat(&TokenKind::Dot) {
             path.push(self.expect_name()?);
         }
 
@@ -741,13 +781,13 @@ impl Parser {
         let start = self.current_span();
 
         match self.peek() {
-            TokenKind::Let => self.parse_let_stmt(),
+            TokenKind::Val | TokenKind::Var => self.parse_let_stmt(),
             TokenKind::Return => self.parse_return_stmt(),
             TokenKind::While => self.parse_while_stmt(),
             TokenKind::For => self.parse_for_stmt(),
             // Items that can appear inside blocks
-            TokenKind::Fn | TokenKind::Struct | TokenKind::Enum
-            | TokenKind::Impl | TokenKind::Trait | TokenKind::Type
+            TokenKind::Fn | TokenKind::Model | TokenKind::Enum
+            | TokenKind::Extend | TokenKind::Trait | TokenKind::Type
             | TokenKind::Mod | TokenKind::Use | TokenKind::Pub => {
                 let item = self.parse_item()?;
                 Ok(Stmt {
@@ -808,7 +848,10 @@ impl Parser {
                 };
 
                 if needs_semi {
-                    self.expect_exact(TokenKind::Semicolon)?;
+                    // Allow omitting semicolon before } (implicit return)
+                    if !self.at(&TokenKind::RBrace) {
+                        self.expect_exact(TokenKind::Semicolon)?;
+                    }
                 }
 
                 Ok(Stmt {
@@ -821,9 +864,14 @@ impl Parser {
 
     fn parse_let_stmt(&mut self) -> Result<Stmt, CompileError> {
         let start = self.current_span();
-        self.expect_exact(TokenKind::Let)?;
 
-        let mutable = self.eat(&TokenKind::Mut);
+        // Accept: val (immutable), var (mutable)
+        let mutable = if self.eat(&TokenKind::Var) {
+            true
+        } else {
+            self.expect_exact(TokenKind::Val)?;
+            false
+        };
 
         let pattern = self.parse_pattern()?;
 
@@ -932,10 +980,11 @@ impl Parser {
     // ═══════════════════════════════════════════════════════════
 
     fn parse_expression(&mut self) -> Result<Expr, CompileError> {
-        self.parse_or_expr()
+        self.parse_pipe_expr()
     }
 
     // Precedence (low → high):
+    // 0. |> (pipe)
     // 1. || (or)
     // 2. && (and)
     // 3. ==, !=, <, >, <=, >= (comparison)
@@ -944,6 +993,49 @@ impl Parser {
     // 6. as (type cast)
     // 7. unary: -, !, &, &mut
     // 8. postfix: ?, (), [], ., ::
+
+    fn parse_pipe_expr(&mut self) -> Result<Expr, CompileError> {
+        let mut left = self.parse_or_expr()?;
+
+        while self.at(&TokenKind::Pipe) {
+            let start = left.span.clone();
+            self.advance();
+            let right = self.parse_or_expr()?;
+            let span = start.merge(&right.span);
+
+            // Desugar: a |> f(b, c) → f(a, b, c)
+            //          a |> f        → f(a)
+            //          a |> obj.method(b) → obj.method(a, b)
+            left = match right.kind {
+                ExprKind::FnCall { function, mut args } => {
+                    args.insert(0, left);
+                    Expr {
+                        kind: ExprKind::FnCall { function, args },
+                        span,
+                    }
+                }
+                ExprKind::MethodCall { receiver, method, mut args } => {
+                    args.insert(0, left);
+                    Expr {
+                        kind: ExprKind::MethodCall { receiver, method, args },
+                        span,
+                    }
+                }
+                // Bare identifier: a |> f → f(a)
+                _ => {
+                    Expr {
+                        kind: ExprKind::FnCall {
+                            function: Box::new(right),
+                            args: vec![left],
+                        },
+                        span,
+                    }
+                }
+            };
+        }
+
+        Ok(left)
+    }
 
     fn parse_or_expr(&mut self) -> Result<Expr, CompileError> {
         let mut left = self.parse_and_expr()?;
@@ -1468,10 +1560,14 @@ impl Parser {
         let start = self.current_span();
         let first = self.expect_name()?;
 
-        // Check for path: a::b::c
-        if self.at(&TokenKind::ColonColon) {
+        // Check for path: A.b.c (dot paths only when first segment is uppercase)
+        let is_dot_path = self.at(&TokenKind::Dot)
+            && first.chars().next().map(|c| c.is_uppercase()).unwrap_or(false);
+        if is_dot_path {
             let mut segments = vec![first];
-            while self.eat(&TokenKind::ColonColon) {
+            while self.at(&TokenKind::Dot)
+                && segments[0].chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
+                && self.eat(&TokenKind::Dot) {
                 segments.push(self.expect_name()?);
             }
 
@@ -1667,7 +1763,7 @@ impl Parser {
                     }
                 }
                 self.expect_exact(TokenKind::RParen)?;
-                let return_type = if self.eat(&TokenKind::Arrow) {
+                let return_type = if self.eat(&TokenKind::Colon) {
                     self.parse_type()?
                 } else {
                     TypeExpr {
@@ -1731,9 +1827,9 @@ impl Parser {
         let start = self.current_span();
         let name = self.expect_name()?;
 
-        // Check for path: A::B::C
+        // Check for path: A.B.C
         let mut path = vec![name.clone()];
-        while self.at(&TokenKind::ColonColon) && !self.is_at_end() {
+        while self.at(&TokenKind::Dot) && !self.is_at_end() {
             self.advance();
             path.push(self.expect_name()?);
         }
@@ -1775,7 +1871,7 @@ impl Parser {
             self.expect_exact(TokenKind::Gt)?;
 
             let full_name = if path.len() > 1 {
-                path.join("::")
+                path.join(".")
             } else {
                 name
             };
@@ -1936,7 +2032,7 @@ impl Parser {
                 let name = self.expect_name()?;
                 let mut path = vec![name];
 
-                while self.eat(&TokenKind::ColonColon) {
+                while self.eat(&TokenKind::Dot) {
                     path.push(self.expect_name()?);
                 }
 
@@ -2105,9 +2201,9 @@ mod tests {
     fn test_example2_tensor_operations() {
         let prog = parse_ok(r#"
             fn matrix_multiply_example() {
-                let A: Tensor<Float32, [128, 256]> = randn([128, 256]);
-                let B: Tensor<Float32, [256, 512]> = randn([256, 512]);
-                let C = A @ B;
+                val A: Tensor<Float32, [128, 256]> = randn([128, 256]);
+                val B: Tensor<Float32, [256, 512]> = randn([256, 512]);
+                val C = A @ B;
             }
         "#);
         assert_eq!(prog.items.len(), 1);
@@ -2126,15 +2222,15 @@ mod tests {
     #[test]
     fn test_example3_ownership() {
         let prog = parse_ok(r#"
-            fn process_tensor(data: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]> {
-                let normalized = data / 255.0;
-                let result = some_model(normalized);
+            fn process_tensor(data: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]> {
+                val normalized = data / 255.0;
+                val result = some_model(normalized);
                 return result;
             }
 
             fn main() {
-                let input = load_data("input.npy");
-                let output = process_tensor(input);
+                val input = load_data("input.npy");
+                val output = process_tensor(input);
                 println("{}", output);
             }
         "#);
@@ -2146,25 +2242,25 @@ mod tests {
     #[test]
     fn test_example4_neural_network() {
         let prog = parse_ok(r#"
-            struct NeuralNet {
+            model NeuralNet {
                 fc1: Linear<784, 256>,
                 fc2: Linear<256, 128>,
                 fc3: Linear<128, 10>,
             }
 
-            impl NeuralNet {
-                fn forward(&self, x: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]> {
-                    let h1 = relu(self.fc1.forward(x));
-                    let h2 = relu(self.fc2.forward(h1));
-                    let output = self.fc3.forward(h2);
+            extend NeuralNet {
+                fn forward(&self, x: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]> {
+                    val h1 = relu(self.fc1.forward(x));
+                    val h2 = relu(self.fc2.forward(h1));
+                    val output = self.fc3.forward(h2);
                     return output;
                 }
             }
 
             fn main() {
-                let model = NeuralNet::new();
-                let input = randn([32, 784]);
-                let output = model.forward(input);
+                val net = NeuralNet.new();
+                val input = randn([32, 784]);
+                val output = net.forward(input);
                 println("Output shape: {}", output.shape);
             }
         "#);
@@ -2176,13 +2272,13 @@ mod tests {
     #[test]
     fn test_example5_training_loop() {
         let prog = parse_ok(r#"
-            fn train_epoch(model: &mut NeuralNet, data: DataLoader, optimizer: &mut Adam) -> Float32 {
-                let mut total_loss = 0.0;
+            fn train_epoch(net: &mut NeuralNet, data: DataLoader, optimizer: &mut Adam): Float32 {
+                var total_loss = 0.0;
 
                 for batch in data {
-                    let (inputs, targets) = batch;
-                    let predictions = model.forward(inputs);
-                    let loss = cross_entropy(predictions, targets);
+                    val (inputs, targets) = batch;
+                    val predictions = net.forward(inputs);
+                    val loss = cross_entropy(predictions, targets);
                     total_loss += loss.item();
                     loss.backward();
                     optimizer.step();
@@ -2201,10 +2297,10 @@ mod tests {
     fn test_example6_device_management() {
         let prog = parse_ok(r#"
             fn gpu_example() {
-                let cpu_tensor = randn([1024, 1024]);
-                let gpu_tensor = cpu_tensor.to_gpu();
-                let result = gpu_tensor @ gpu_tensor;
-                let cpu_result = result.to_cpu();
+                val cpu_tensor = randn([1024, 1024]);
+                val gpu_tensor = cpu_tensor.to_gpu();
+                val result = gpu_tensor @ gpu_tensor;
+                val cpu_result = result.to_cpu();
                 println("{}", cpu_result);
             }
         "#);
@@ -2216,15 +2312,15 @@ mod tests {
     #[test]
     fn test_example7_error_handling() {
         let prog = parse_ok(r#"
-            fn load_model(path: String) -> Result<NeuralNet, IOError> {
-                let file = File::open(path)?;
-                let model = deserialize(file)?;
-                return Ok(model);
+            fn load_model(path: String): Result<NeuralNet, IOError> {
+                val file = File.open(path)?;
+                val net = deserialize(file)?;
+                return Ok(net);
             }
 
             fn main() {
                 match load_model("model.axon") {
-                    Ok(model) => {
+                    Ok(net) => {
                         println("Model loaded successfully");
                     },
                     Err(e) => {
@@ -2241,16 +2337,16 @@ mod tests {
     #[test]
     fn test_example8_generics() {
         let prog = parse_ok(r#"
-            fn squared_sum<T: Numeric>(values: Tensor<T, [?]>) -> T {
-                let squared = values * values;
+            fn squared_sum<T: Numeric>(values: Tensor<T, [?]>): T {
+                val squared = values * values;
                 return squared.sum();
             }
 
             fn main() {
-                let int_values: Tensor<Int32, [10]> = arange(0, 10);
-                let int_result = squared_sum(int_values);
-                let float_values: Tensor<Float32, [10]> = randn([10]);
-                let float_result = squared_sum(float_values);
+                val int_values: Tensor<Int32, [10]> = arange(0, 10);
+                val int_result = squared_sum(int_values);
+                val float_values: Tensor<Float32, [10]> = randn([10]);
+                val float_result = squared_sum(float_values);
             }
         "#);
         assert_eq!(prog.items.len(), 2);
@@ -2261,7 +2357,7 @@ mod tests {
     #[test]
     fn test_struct_generics() {
         let prog = parse_ok(r#"
-            struct Pair<A, B> {
+            model Pair<A, B> {
                 first: A,
                 second: B,
             }
@@ -2303,7 +2399,7 @@ mod tests {
         let prog = parse_ok(r#"
             trait Drawable {
                 fn draw(&self);
-                fn area(&self) -> Float64;
+                fn area(&self): Float64;
             }
         "#);
         match &prog.items[0].kind {
@@ -2332,7 +2428,7 @@ mod tests {
 
     #[test]
     fn test_use_decl() {
-        let prog = parse_ok("use std::io::File;");
+        let prog = parse_ok("use std.io.File;");
         match &prog.items[0].kind {
             ItemKind::Use(u) => {
                 assert_eq!(u.path, vec!["std", "io", "File"]);
@@ -2360,7 +2456,7 @@ mod tests {
     #[test]
     fn test_matmul_precedence() {
         // @ should be same precedence as *, so `a + b @ c` = `a + (b @ c)`
-        let prog = parse_ok("fn main() { let x = a + b @ c; }");
+        let prog = parse_ok("fn main() { val x = a + b @ c; }");
         match &prog.items[0].kind {
             ItemKind::Function(f) => {
                 let body = f.body.as_ref().unwrap();
@@ -2418,7 +2514,7 @@ mod tests {
     fn test_while_loop() {
         let prog = parse_ok(r#"
             fn main() {
-                let mut i = 0;
+                var i = 0;
                 while i < 10 {
                     i += 1;
                 }
@@ -2446,8 +2542,8 @@ mod tests {
     #[test]
     fn test_error_propagation() {
         let prog = parse_ok(r#"
-            fn read_file(path: String) -> Result<String, IOError> {
-                let file = File::open(path)?;
+            fn read_file(path: String): Result<String, IOError> {
+                val file = File.open(path)?;
                 return Ok(file.read_all()?);
             }
         "#);
@@ -2461,7 +2557,7 @@ mod tests {
         let prog = parse_ok(r#"
             @gpu
             fn compute() {
-                let x = randn([1024, 1024]);
+                val x = randn([1024, 1024]);
             }
         "#);
         assert_eq!(prog.items[0].attributes.len(), 1);
@@ -2472,7 +2568,7 @@ mod tests {
 
     #[test]
     fn test_error_missing_semicolon() {
-        let (_, errors) = parse("fn main() { let x = 10 }");
+        let (_, errors) = parse("fn main() { val x = 10 }");
         assert!(!errors.is_empty());
         // Should have an error about missing semicolon
         assert!(errors.iter().any(|e| e.message.contains("expected")));
@@ -2480,7 +2576,7 @@ mod tests {
 
     #[test]
     fn test_error_missing_closing_brace() {
-        let (_, errors) = parse("fn main() { let x = 10;");
+        let (_, errors) = parse("fn main() { val x = 10;");
         assert!(!errors.is_empty());
     }
 
@@ -2489,8 +2585,8 @@ mod tests {
         // Multiple errors should be collected
         let (_, errors) = parse(r#"
             fn main() {
-                let x = ;
-                let y = ;
+                val x = ;
+                val y = ;
             }
         "#);
         assert!(errors.len() >= 1, "Should report at least one error, got {}", errors.len());
@@ -2500,7 +2596,7 @@ mod tests {
 
     #[test]
     fn test_pub_function() {
-        let prog = parse_ok("pub fn add(a: Int32, b: Int32) -> Int32 { return a + b; }");
+        let prog = parse_ok("pub fn add(a: Int32, b: Int32): Int32 { return a + b; }");
         assert_eq!(prog.items[0].visibility, Visibility::Public);
     }
 
@@ -2509,7 +2605,7 @@ mod tests {
     #[test]
     fn test_tensor_type_parsing() {
         let prog = parse_ok(r#"
-            fn process(t: Tensor<Float32, [128, 256]>) -> Tensor<Float64, [?, 10]> {
+            fn process(t: Tensor<Float32, [128, 256]>): Tensor<Float64, [?, 10]> {
                 return t;
             }
         "#);
@@ -2537,7 +2633,7 @@ mod tests {
     fn test_method_chain() {
         let prog = parse_ok(r#"
             fn main() {
-                let x = a.b().c.d();
+                val x = a.b().c.d();
             }
         "#);
         assert_eq!(prog.items.len(), 1);
@@ -2547,7 +2643,7 @@ mod tests {
     fn test_nested_function_calls() {
         let prog = parse_ok(r#"
             fn main() {
-                let x = foo(bar(baz(1, 2), 3), 4);
+                val x = foo(bar(baz(1, 2), 3), 4);
             }
         "#);
         assert_eq!(prog.items.len(), 1);

@@ -63,7 +63,7 @@ fn nn_layernorm_new() {
 
 #[test]
 fn nn_dropout_new() {
-    check_ok("fn main() { let p: Float32; dropout_new(p); }");
+    check_ok("fn main() { val p: Float32; dropout_new(p); }");
 }
 
 #[test]
@@ -123,12 +123,12 @@ fn nn_sequential_new() {
 
 #[test]
 fn nn_linear_new_returns_int64() {
-    check_ok("fn main() -> Int64 { return linear_new(10, 10); }");
+    check_ok("fn main(): Int64 { return linear_new(10, 10); }");
 }
 
 #[test]
 fn nn_sequential_new_returns_int64() {
-    check_ok("fn main() -> Int64 { return sequential_new(); }");
+    check_ok("fn main(): Int64 { return sequential_new(); }");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -167,12 +167,12 @@ fn autograd_grad_checkpoint() {
 
 #[test]
 fn autograd_grad_tensor_new_returns_int64() {
-    check_ok("fn main() -> Int64 { return grad_tensor_new(false); }");
+    check_ok("fn main(): Int64 { return grad_tensor_new(false); }");
 }
 
 #[test]
 fn autograd_detach_returns_int64() {
-    check_ok("fn main() -> Int64 { return detach(42); }");
+    check_ok("fn main(): Int64 { return detach(42); }");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -206,7 +206,7 @@ fn optim_adagrad_new() {
 
 #[test]
 fn optim_step_lr_new() {
-    check_ok("fn main() { let g: Float32; step_lr_new(10, g); }");
+    check_ok("fn main() { val g: Float32; step_lr_new(10, g); }");
 }
 
 #[test]
@@ -221,7 +221,7 @@ fn optim_reduce_lr_on_plateau_new() {
 
 #[test]
 fn optim_one_cycle_lr_new() {
-    check_ok("fn main() { let lr: Float32; one_cycle_lr_new(lr, 1000); }");
+    check_ok("fn main() { val lr: Float32; one_cycle_lr_new(lr, 1000); }");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -260,7 +260,7 @@ fn loss_nll_loss() {
 
 #[test]
 fn loss_huber_loss() {
-    check_ok("fn main() { let d: Float32; huber_loss(d); }");
+    check_ok("fn main() { val d: Float32; huber_loss(d); }");
 }
 
 #[test]
@@ -275,7 +275,7 @@ fn loss_cosine_embedding_loss() {
 
 #[test]
 fn loss_triplet_margin_loss() {
-    check_ok("fn main() { let m: Float32; triplet_margin_loss(m); }");
+    check_ok("fn main() { val m: Float32; triplet_margin_loss(m); }");
 }
 
 #[test]
@@ -304,7 +304,7 @@ fn train_checkpoint_load() {
 
 #[test]
 fn train_grad_scaler_new() {
-    check_ok("fn main() { let s: Float32; grad_scaler_new(s); }");
+    check_ok("fn main() { val s: Float32; grad_scaler_new(s); }");
 }
 
 #[test]
@@ -382,7 +382,7 @@ fn transforms_random_crop() {
 
 #[test]
 fn transforms_random_horizontal_flip() {
-    check_ok("fn main() { let p: Float32; random_horizontal_flip(p); }");
+    check_ok("fn main() { val p: Float32; random_horizontal_flip(p); }");
 }
 
 #[test]
@@ -411,7 +411,7 @@ fn transforms_pad_sequence() {
 
 #[test]
 fn export_onnx_export() {
-    check_ok(r#"fn main() { let v: Int32; onnx_export("model.onnx", v); }"#);
+    check_ok(r#"fn main() { val v: Int32; onnx_export("model.onnx", v); }"#);
 }
 
 #[test]
@@ -490,22 +490,22 @@ fn init_constant() {
 #[test]
 fn metrics_accuracy_returns_float32() {
     // accuracy returns Float32, not Int64
-    check_err("fn main() -> Int64 { return accuracy(1, 1); }");
+    check_err("fn main(): Int64 { return accuracy(1, 1); }");
 }
 
 #[test]
 fn export_save_model_returns_bool() {
-    check_ok(r#"fn main() -> Bool { return save_model("m.axon"); }"#);
+    check_ok(r#"fn main(): Bool { return save_model("m.axon"); }"#);
 }
 
 #[test]
 fn export_load_model_returns_int64() {
-    check_ok(r#"fn main() -> Int64 { return load_model("m.axon"); }"#);
+    check_ok(r#"fn main(): Int64 { return load_model("m.axon"); }"#);
 }
 
 #[test]
 fn export_onnx_export_returns_bool() {
-    check_ok(r#"fn main() -> Bool { let v: Int32; return onnx_export("m.onnx", v); }"#);
+    check_ok(r#"fn main(): Bool { val v: Int32; return onnx_export("m.onnx", v); }"#);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -607,7 +607,7 @@ fn autograd_context_new() {
 
 #[test]
 fn autograd_context_new_returns_int64() {
-    check_ok("fn main() -> Int64 { return autograd_context_new(); }");
+    check_ok("fn main(): Int64 { return autograd_context_new(); }");
 }
 
 // -- 14b. NN layer forward/parameters type-check --
@@ -615,12 +615,12 @@ fn autograd_context_new_returns_int64() {
 #[test]
 fn nn_linear_forward_typechecks() {
     // linear_new returns Int64, forward expects (self: Int64, input: Int64) -> Int64
-    check_ok("fn main() -> Int64 { return linear_new(10, 5); }");
+    check_ok("fn main(): Int64 { return linear_new(10, 5); }");
 }
 
 #[test]
 fn nn_sequential_new_typechecks() {
-    check_ok("fn main() -> Int64 { return sequential_new(); }");
+    check_ok("fn main(): Int64 { return sequential_new(); }");
 }
 
 // -- 14c. Activation struct existence (Sigmoid, Tanh) --
@@ -637,12 +637,12 @@ fn nn_sigmoid_struct_exists() {
 
 #[test]
 fn loss_mse_returns_tensor() {
-    check_ok("fn main() -> Int64 { return mse_loss(); }");
+    check_ok("fn main(): Int64 { return mse_loss(); }");
 }
 
 #[test]
 fn loss_cross_entropy_returns_tensor() {
-    check_ok("fn main() -> Int64 { return cross_entropy_loss(); }");
+    check_ok("fn main(): Int64 { return cross_entropy_loss(); }");
 }
 
 // -- 14e. Optimizer full constructors --
@@ -671,29 +671,29 @@ fn optim_rmsprop_full_new() {
 
 #[test]
 fn optim_sgd_new_float64() {
-    check_ok("fn main() -> Int64 { return sgd_new(0.01); }");
+    check_ok("fn main(): Int64 { return sgd_new(0.01); }");
 }
 
 #[test]
 fn optim_adam_new_returns_int64() {
-    check_ok("fn main() -> Int64 { return adam_new(0.001); }");
+    check_ok("fn main(): Int64 { return adam_new(0.001); }");
 }
 
 // -- 14g. Loss functions all return Int64 (Tensor proxy) --
 
 #[test]
 fn loss_bce_returns_tensor() {
-    check_ok("fn main() -> Int64 { return bce_loss(); }");
+    check_ok("fn main(): Int64 { return bce_loss(); }");
 }
 
 #[test]
 fn loss_nll_returns_tensor() {
-    check_ok("fn main() -> Int64 { return nll_loss(); }");
+    check_ok("fn main(): Int64 { return nll_loss(); }");
 }
 
 #[test]
 fn loss_l1_returns_tensor() {
-    check_ok("fn main() -> Int64 { return l1_loss(); }");
+    check_ok("fn main(): Int64 { return l1_loss(); }");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -702,162 +702,162 @@ fn loss_l1_returns_tensor() {
 
 #[test]
 fn grad_add_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_add(1); }");
+    check_ok("fn main(): Int64 { return grad_add(1); }");
 }
 
 #[test]
 fn grad_sub_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_sub(1); }");
+    check_ok("fn main(): Int64 { return grad_sub(1); }");
 }
 
 #[test]
 fn grad_mul_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_mul(1, 2, 3); }");
+    check_ok("fn main(): Int64 { return grad_mul(1, 2, 3); }");
 }
 
 #[test]
 fn grad_div_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_div(1, 2, 3); }");
+    check_ok("fn main(): Int64 { return grad_div(1, 2, 3); }");
 }
 
 #[test]
 fn grad_neg_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_neg(1); }");
+    check_ok("fn main(): Int64 { return grad_neg(1); }");
 }
 
 #[test]
 fn grad_abs_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_abs(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_abs(1, 2); }");
 }
 
 #[test]
 fn grad_matmul_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_matmul(1, 2, 3); }");
+    check_ok("fn main(): Int64 { return grad_matmul(1, 2, 3); }");
 }
 
 #[test]
 fn grad_transpose_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_transpose(1); }");
+    check_ok("fn main(): Int64 { return grad_transpose(1); }");
 }
 
 #[test]
 fn grad_reshape_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_reshape(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_reshape(1, 2); }");
 }
 
 #[test]
 fn grad_relu_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_relu(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_relu(1, 2); }");
 }
 
 #[test]
 fn grad_sigmoid_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_sigmoid(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_sigmoid(1, 2); }");
 }
 
 #[test]
 fn grad_tanh_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_tanh(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_tanh(1, 2); }");
 }
 
 #[test]
 fn grad_softmax_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_softmax(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_softmax(1, 2); }");
 }
 
 #[test]
 fn grad_gelu_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_gelu(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_gelu(1, 2); }");
 }
 
 #[test]
 fn grad_silu_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_silu(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_silu(1, 2); }");
 }
 
 #[test]
 fn grad_leaky_relu_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_leaky_relu(1, 0.01, 2); }");
+    check_ok("fn main(): Int64 { return grad_leaky_relu(1, 0.01, 2); }");
 }
 
 #[test]
 fn grad_sum_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_sum(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_sum(1, 2); }");
 }
 
 #[test]
 fn grad_mean_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_mean(1, 100, 2); }");
+    check_ok("fn main(): Int64 { return grad_mean(1, 100, 2); }");
 }
 
 #[test]
 fn grad_log_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_log(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_log(1, 2); }");
 }
 
 #[test]
 fn grad_exp_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_exp(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_exp(1, 2); }");
 }
 
 #[test]
 fn grad_pow_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_pow(1, 2.0, 3); }");
+    check_ok("fn main(): Int64 { return grad_pow(1, 2.0, 3); }");
 }
 
 #[test]
 fn grad_sqrt_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_sqrt(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_sqrt(1, 2); }");
 }
 
 #[test]
 fn grad_sin_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_sin(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_sin(1, 2); }");
 }
 
 #[test]
 fn grad_cos_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_cos(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_cos(1, 2); }");
 }
 
 #[test]
 fn grad_linear_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_linear(1, 2, 3); }");
+    check_ok("fn main(): Int64 { return grad_linear(1, 2, 3); }");
 }
 
 #[test]
 fn grad_conv2d_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_conv2d(1, 2, 3); }");
+    check_ok("fn main(): Int64 { return grad_conv2d(1, 2, 3); }");
 }
 
 #[test]
 fn grad_batchnorm_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_batchnorm(1, 2, 3, 4); }");
+    check_ok("fn main(): Int64 { return grad_batchnorm(1, 2, 3, 4); }");
 }
 
 #[test]
 fn grad_layernorm_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_layernorm(1, 2, 3, 4); }");
+    check_ok("fn main(): Int64 { return grad_layernorm(1, 2, 3, 4); }");
 }
 
 #[test]
 fn grad_maxpool2d_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_maxpool2d(1, 2); }");
+    check_ok("fn main(): Int64 { return grad_maxpool2d(1, 2); }");
 }
 
 #[test]
 fn grad_dropout_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_dropout(1, 0.5, 2); }");
+    check_ok("fn main(): Int64 { return grad_dropout(1, 0.5, 2); }");
 }
 
 #[test]
 fn grad_embedding_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_embedding(1, 10000, 3); }");
+    check_ok("fn main(): Int64 { return grad_embedding(1, 10000, 3); }");
 }
 
 #[test]
 fn grad_cross_entropy_typechecks() {
-    check_ok("fn main() -> Int64 { return grad_cross_entropy(1, 2, 3); }");
+    check_ok("fn main(): Int64 { return grad_cross_entropy(1, 2, 3); }");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -897,11 +897,11 @@ fn ai_workflow_model_creation() {
     // Test that a complete model creation workflow type-checks
     check_ok(r#"
         fn main() {
-            let layer1: Int64 = linear_new(784, 256);
-            let layer2: Int64 = linear_new(256, 10);
-            let model: Int64 = sequential_new();
-            let opt: Int64 = adam_new(0.001);
-            let loss_fn: Int64 = cross_entropy_loss();
+            val layer1: Int64 = linear_new(784, 256);
+            val layer2: Int64 = linear_new(256, 10);
+            val net: Int64 = sequential_new();
+            val opt: Int64 = adam_new(0.001);
+            val loss_fn: Int64 = cross_entropy_loss();
         }
     "#);
 }
@@ -911,12 +911,12 @@ fn ai_workflow_training_utilities() {
     // Test that training utilities type-check together
     check_ok(r#"
         fn main() {
-            let trainer: Int64 = trainer_new();
-            let s: Float32;
-            let scaler: Int64 = grad_scaler_new(s);
+            val trainer: Int64 = trainer_new();
+            val s: Float32;
+            val scaler: Int64 = grad_scaler_new(s);
             autocast();
-            let lr: Float32;
-            let sched: Int64 = step_lr_new(30, lr);
+            val lr: Float32;
+            val sched: Int64 = step_lr_new(30, lr);
         }
     "#);
 }
@@ -926,10 +926,10 @@ fn ai_workflow_gradient_computation() {
     // Test a realistic gradient computation chain
     check_ok(r#"
         fn main() {
-            let t: Int64 = grad_tensor_new(true);
-            let g1: Int64 = grad_relu(t, 1);
-            let g2: Int64 = grad_sigmoid(g1, 1);
-            let g3: Int64 = grad_add(g2);
+            val t: Int64 = grad_tensor_new(true);
+            val g1: Int64 = grad_relu(t, 1);
+            val g2: Int64 = grad_sigmoid(g1, 1);
+            val g3: Int64 = grad_add(g2);
             backward();
             zero_grad();
         }

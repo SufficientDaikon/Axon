@@ -58,7 +58,7 @@ fn test_spec_example2_tensors() {
                         _ => panic!("Expected binary op with @"),
                     }
                 }
-                _ => panic!("Expected let with matmul"),
+                _ => panic!("Expected val with matmul"),
             }
         }
         _ => panic!("Expected function"),
@@ -202,7 +202,7 @@ fn test_spec_example8_generics() {
 
 #[test]
 fn test_ast_json_output() {
-    let prog = parse_ok("fn main() { let x = 42; }");
+    let prog = parse_ok("fn main() { val x = 42; }");
     let json = ast_to_json(&prog);
     assert!(json.contains("\"main\""));
     assert!(json.contains("42"));
@@ -216,9 +216,9 @@ fn test_ast_json_output() {
 fn test_fr001_brace_syntax() {
     let prog = parse_ok(r#"
         fn compute() {
-            let a = 1;
-            let b = 2;
-            let c = a + b;
+            val a = 1;
+            val b = 2;
+            val c = a + b;
         }
     "#);
     assert_eq!(prog.items.len(), 1);
@@ -232,11 +232,11 @@ fn test_fr001_brace_syntax() {
 fn test_fr002_tensor_notation() {
     let prog = parse_ok(r#"
         fn matmul_test() {
-            let C = A @ B;
-            let D = A * B;
-            let E = A + B;
-            let F = A - B;
-            let G = A / B;
+            val C = A @ B;
+            val D = A * B;
+            val E = A + B;
+            val F = A - B;
+            val G = A / B;
         }
     "#);
     match &prog.items[0].kind {
@@ -255,9 +255,9 @@ fn test_fr002_tensor_notation() {
 #[test]
 fn test_fr003_whitespace_insensitive() {
     // These should all parse identically
-    let prog1 = parse_ok("fn main(){let x=1;}");
-    let prog2 = parse_ok("fn  main  (  )  {  let  x  =  1  ;  }");
-    let prog3 = parse_ok("fn\nmain\n(\n)\n{\nlet\nx\n=\n1\n;\n}");
+    let prog1 = parse_ok("fn main(){val x=1;}");
+    let prog2 = parse_ok("fn  main  (  )  {  val  x  =  1  ;  }");
+    let prog3 = parse_ok("fn\nmain\n(\n)\n{\nval\nx\n=\n1\n;\n}");
     assert_eq!(prog1.items.len(), 1);
     assert_eq!(prog2.items.len(), 1);
     assert_eq!(prog3.items.len(), 1);
@@ -271,10 +271,10 @@ fn test_fr003_whitespace_insensitive() {
 fn test_fr004_variable_declarations() {
     let prog = parse_ok(r#"
         fn main() {
-            let x: Int32 = 10;
-            let y = 20;
-            let mut z: Float64 = 3.14;
-            let mut w = true;
+            val x: Int32 = 10;
+            val y = 20;
+            var z: Float64 = 3.14;
+            var w = true;
         }
     "#);
     match &prog.items[0].kind {
@@ -309,7 +309,7 @@ fn test_fr004_variable_declarations() {
 #[test]
 fn test_fr005_function_definitions() {
     let prog = parse_ok(r#"
-        fn add(a: Int32, b: Int32) -> Int32 {
+        fn add(a: Int32, b: Int32): Int32 {
             return a + b;
         }
 
@@ -384,7 +384,7 @@ fn test_fr006_for_loop_with_destructuring() {
 #[test]
 fn test_fr007_struct() {
     let prog = parse_ok(r#"
-        struct Point {
+        model Point {
             x: Float64,
             y: Float64,
         }
@@ -441,7 +441,7 @@ fn test_fr008_comments() {
         fn main() {
             /* This is a
                multi-line comment */
-            let x = 42; // inline comment
+            val x = 42; // inline comment
         }
     "#);
     assert_eq!(prog.items.len(), 1);
@@ -455,20 +455,20 @@ fn test_fr008_comments() {
 fn test_fr010_primitive_types() {
     let prog = parse_ok(r#"
         fn types() {
-            let a: Int8 = 1;
-            let b: Int16 = 2;
-            let c: Int32 = 3;
-            let d: Int64 = 4;
-            let e: UInt8 = 5;
-            let f: UInt16 = 6;
-            let g: UInt32 = 7;
-            let h: UInt64 = 8;
-            let i: Float16 = 1.0;
-            let j: Float32 = 2.0;
-            let k: Float64 = 3.0;
-            let l: Bool = true;
-            let m: Char = 'a';
-            let n: String = "hello";
+            val a: Int8 = 1;
+            val b: Int16 = 2;
+            val c: Int32 = 3;
+            val d: Int64 = 4;
+            val e: UInt8 = 5;
+            val f: UInt16 = 6;
+            val g: UInt32 = 7;
+            val h: UInt64 = 8;
+            val i: Float16 = 1.0;
+            val j: Float32 = 2.0;
+            val k: Float64 = 3.0;
+            val l: Bool = true;
+            val m: Char = 'a';
+            val n: String = "hello";
         }
     "#);
     match &prog.items[0].kind {
@@ -487,9 +487,9 @@ fn test_fr010_primitive_types() {
 fn test_fr011_tensor_types() {
     let prog = parse_ok(r#"
         fn tensor_types() {
-            let a: Tensor<Float32, [128, 256]> = zeros([128, 256]);
-            let b: Tensor<Float64, [?, 10]> = ones([32, 10]);
-            let c: Tensor<Int32, [3, 3, 3]> = zeros([3, 3, 3]);
+            val a: Tensor<Float32, [128, 256]> = zeros([128, 256]);
+            val b: Tensor<Float64, [?, 10]> = ones([32, 10]);
+            val c: Tensor<Int32, [3, 3, 3]> = zeros([3, 3, 3]);
         }
     "#);
     assert_eq!(prog.items.len(), 1);
@@ -502,7 +502,7 @@ fn test_fr011_tensor_types() {
 #[test]
 fn test_fr013_generics() {
     let prog = parse_ok(r#"
-        fn process<T: Numeric>(data: Tensor<T, [N, M]>) -> Tensor<T, [N]> {
+        fn process<T: Numeric>(data: Tensor<T, [N, M]>): Tensor<T, [N]> {
             return data.sum();
         }
     "#);
@@ -523,7 +523,7 @@ fn test_fr013_generics() {
 #[test]
 fn test_fr014_dynamic_shapes() {
     let prog = parse_ok(r#"
-        fn dynamic(t: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, ?]> {
+        fn dynamic(t: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, ?]> {
             return t;
         }
     "#);
@@ -554,11 +554,11 @@ fn test_fr014_dynamic_shapes() {
 fn test_fr015_references() {
     let prog = parse_ok(r#"
         fn borrow(x: &Int32) {
-            let y = x;
+            val y = x;
         }
 
         fn borrow_mut(x: &mut Int32) {
-            let y = x;
+            val y = x;
         }
     "#);
     assert_eq!(prog.items.len(), 2);
@@ -586,7 +586,7 @@ fn test_fr015_references() {
 #[test]
 fn test_fr040_result_type() {
     let prog = parse_ok(r#"
-        fn read() -> Result<String, IOError> {
+        fn read(): Result<String, IOError> {
             return Ok("data");
         }
     "#);
@@ -611,8 +611,8 @@ fn test_fr040_result_type() {
 #[test]
 fn test_fr041_question_operator() {
     let prog = parse_ok(r#"
-        fn read(path: String) -> Result<String, IOError> {
-            let file = File::open(path)?;
+        fn read(path: String): Result<String, IOError> {
+            val file = File.open(path)?;
             return Ok(file.read()?);
         }
     "#);
@@ -625,7 +625,7 @@ fn test_fr041_question_operator() {
 
 #[test]
 fn test_fr043_error_details() {
-    let errors = parse_errors("fn main() { let x = ; }");
+    let errors = parse_errors("fn main() { val x = ; }");
     assert!(!errors.is_empty());
     let e = &errors[0];
     assert!(!e.error_code.is_empty());
@@ -639,7 +639,7 @@ fn test_fr043_error_details() {
 
 #[test]
 fn test_fr044_json_error_format() {
-    let errors = parse_errors("fn main() { let x = ; }");
+    let errors = parse_errors("fn main() { val x = ; }");
     assert!(!errors.is_empty());
     let json = errors[0].format_json();
     // Should be valid JSON
@@ -683,7 +683,7 @@ fn test_comment_only_program() {
 fn test_deeply_nested_expressions() {
     let prog = parse_ok(r#"
         fn main() {
-            let x = ((((1 + 2) * 3) - 4) / 5);
+            val x = ((((1 + 2) * 3) - 4) / 5);
         }
     "#);
     assert_eq!(prog.items.len(), 1);
@@ -693,7 +693,7 @@ fn test_deeply_nested_expressions() {
 fn test_chained_method_calls() {
     let prog = parse_ok(r#"
         fn main() {
-            let x = a.b().c().d().e();
+            val x = a.b().c().d().e();
         }
     "#);
     assert_eq!(prog.items.len(), 1);
@@ -716,8 +716,8 @@ fn test_complex_match_patterns() {
 fn test_trait_with_methods() {
     let prog = parse_ok(r#"
         trait Model {
-            fn forward(&self, input: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]>;
-            fn parameters(&self) -> Vec<Tensor<Float32, [?]>>;
+            fn forward(&self, input: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]>;
+            fn parameters(&self): Vec<Tensor<Float32, [?]>>;
         }
     "#);
     match &prog.items[0].kind {
@@ -732,7 +732,7 @@ fn test_trait_with_methods() {
 #[test]
 fn test_impl_trait_for_type() {
     let prog = parse_ok(r#"
-        impl Display for NeuralNet {
+        extend Display for NeuralNet {
             fn display(&self) {
                 println("NeuralNet");
             }
@@ -748,7 +748,7 @@ fn test_impl_trait_for_type() {
 
 #[test]
 fn test_use_as_alias() {
-    let prog = parse_ok("use std::collections::HashMap as Map;");
+    let prog = parse_ok("use std.collections.HashMap as Map;");
     match &prog.items[0].kind {
         ItemKind::Use(u) => {
             assert_eq!(u.path, vec!["std", "collections", "HashMap"]);
@@ -762,7 +762,7 @@ fn test_use_as_alias() {
 fn test_module_with_items() {
     let prog = parse_ok(r#"
         mod math {
-            fn add(a: Int32, b: Int32) -> Int32 {
+            fn add(a: Int32, b: Int32): Int32 {
                 return a + b;
             }
         }
@@ -782,12 +782,12 @@ fn test_attributes_on_functions() {
     let prog = parse_ok(r#"
         @gpu
         fn compute(a: Tensor<Float32, [1024, 1024]>) {
-            let b = a @ a;
+            val b = a @ a;
         }
 
         @cpu
         fn fallback(a: Tensor<Float32, [4, 4]>) {
-            let b = a * a;
+            val b = a * a;
         }
     "#);
     assert_eq!(prog.items.len(), 2);
@@ -799,7 +799,7 @@ fn test_attributes_on_functions() {
 fn test_assignment_operators() {
     let prog = parse_ok(r#"
         fn main() {
-            let mut x = 0;
+            var x = 0;
             x += 1;
             x -= 2;
             x *= 3;
@@ -813,7 +813,7 @@ fn test_assignment_operators() {
 fn test_type_cast_as() {
     let prog = parse_ok(r#"
         fn main() {
-            let x = total_loss / data.len() as Float32;
+            val x = total_loss / data.len() as Float32;
         }
     "#);
     assert_eq!(prog.items.len(), 1);
@@ -822,7 +822,7 @@ fn test_type_cast_as() {
 #[test]
 fn test_public_struct_fields() {
     let prog = parse_ok(r#"
-        pub struct Config {
+        pub model Config {
             pub learning_rate: Float64,
             pub batch_size: Int32,
             hidden_size: Int32,
@@ -842,8 +842,8 @@ fn test_public_struct_fields() {
 fn test_negative_number_literal() {
     let prog = parse_ok(r#"
         fn main() {
-            let x = -42;
-            let y = -3.14;
+            val x = -42;
+            val y = -3.14;
         }
     "#);
     assert_eq!(prog.items.len(), 1);
@@ -853,8 +853,8 @@ fn test_negative_number_literal() {
 fn test_boolean_operators() {
     let prog = parse_ok(r#"
         fn main() {
-            let x = a && b || c;
-            let y = !flag;
+            val x = a && b || c;
+            val y = !flag;
         }
     "#);
     assert_eq!(prog.items.len(), 1);

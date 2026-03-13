@@ -273,7 +273,7 @@ impl fmt::Display for Type {
             Type::Generic(g) => write!(f, "{}", g.name),
             Type::TypeVar(id) => write!(f, "?T{}", id),
             Type::Named { path, args } => {
-                write!(f, "{}", path.join("::"))?;
+                write!(f, "{}", path.join("."))?;
                 if !args.is_empty() {
                     write!(f, "<")?;
                     for (i, a) in args.iter().enumerate() {

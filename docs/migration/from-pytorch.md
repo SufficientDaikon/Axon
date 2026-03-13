@@ -22,12 +22,12 @@ r = torch.arange(0, 10)
 
 ```axon
 // Axon
-let x = zeros([3, 4]);
-let y = ones([5]);
-let z = randn([128, 256]);
-let a = Tensor::from_vec([1.0, 2.0, 3.0], [3]);
-let e = Tensor::eye(4);
-let r = arange(0, 10);
+val x = zeros([3, 4]);
+val y = ones([5]);
+val z = randn([128, 256]);
+val a = Tensor.from_vec([1.0, 2.0, 3.0], [3]);
+val e = Tensor.eye(4);
+val r = arange(0, 10);
 ```
 
 Key difference: Axon tensors carry their shape in the type system:
@@ -51,14 +51,14 @@ t = x.T             # transpose
 
 ```axon
 // Axon
-let c = a + b;
-let c = a * b;
-let c = a @ b;          // matmul (same!)
+val c = a + b;
+val c = a * b;
+val c = a @ b;          // matmul (same!)
 // no functional form needed
-let m = x.mean(dim: 0);
-let s = x.sum(dim: 1);
-let r = x.reshape([3, 4]);
-let t = x.transpose();
+val m = x.mean(dim: 0);
+val s = x.sum(dim: 1);
+val r = x.reshape([3, 4]);
+val t = x.transpose();
 ```
 
 ---
@@ -86,38 +86,38 @@ model = MyModel()
 
 ```axon
 // Axon
-use std::nn::{Linear, Module};
+use std.nn.{Linear, Module};
 
-struct MyModel {
+model MyModel {
     fc1: Linear<784, 256>,
     fc2: Linear<256, 128>,
     fc3: Linear<128, 10>,
 }
 
-impl MyModel {
-    fn new() -> MyModel {
+extend MyModel {
+    fn new(): MyModel {
         MyModel {
-            fc1: Linear::new(),
-            fc2: Linear::new(),
-            fc3: Linear::new(),
+            fc1: Linear.new(),
+            fc2: Linear.new(),
+            fc3: Linear.new(),
         }
     }
 }
 
-impl Module for MyModel {
-    fn forward(&self, x: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]> {
-        let h = relu(self.fc1.forward(x));
-        let h = relu(self.fc2.forward(h));
+extend Module for MyModel {
+    fn forward(&self, x: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]> {
+        val h = relu(self.fc1.forward(x));
+        val h = relu(self.fc2.forward(h));
         self.fc3.forward(h)
     }
 }
 
-let model = MyModel::new();
+val model = MyModel.new();
 ```
 
 Key differences:
 
-- `struct` + `impl Module` instead of `class(nn.Module)`
+- `model` + `extend Module` instead of `class(nn.Module)`
 - Linear layer sizes are part of the type: `Linear<784, 256>`
 - Input/output shapes are checked at compile time
 - No `super().__init__()` boilerplate
@@ -143,16 +143,16 @@ for epoch in range(10):
 
 ```axon
 // Axon
-use std::optim::Adam;
-use std::loss::cross_entropy;
+use std.optim.Adam;
+use std.loss.cross_entropy;
 
-let mut optimizer = Adam::new(model.parameters(), lr: 0.001);
+var optimizer = Adam.new(model.parameters(), lr: 0.001);
 
 for epoch in 0..10 {
     for batch in &dataloader {
-        let (inputs, targets) = batch;
-        let outputs = model.forward(inputs);
-        let loss = cross_entropy(outputs, targets);
+        val (inputs, targets) = batch;
+        val outputs = model.forward(inputs);
+        val loss = cross_entropy(outputs, targets);
         loss.backward();
         optimizer.step();
         optimizer.zero_grad();
@@ -182,10 +182,10 @@ self.dropout = nn.Dropout(0.5)
 
 ```axon
 // Axon
-self.conv1 = Conv2d::new(in_channels: 1, out_channels: 32, kernel_size: 3, padding: 1);
-self.pool = MaxPool2d::new(kernel_size: 2, stride: 2);
-self.bn = BatchNorm::new(32);
-self.dropout = Dropout::new(rate: 0.5);
+self.conv1 = Conv2d.new(in_channels: 1, out_channels: 32, kernel_size: 3, padding: 1);
+self.pool = MaxPool2d.new(kernel_size: 2, stride: 2);
+self.bn = BatchNorm.new(32);
+self.dropout = Dropout.new(rate: 0.5);
 ```
 
 ---
@@ -204,9 +204,9 @@ encoder = nn.TransformerEncoder(
 
 ```axon
 // Axon
-let lstm = LSTM::new(input_size: 128, hidden_size: 256, num_layers: 2);
-let attention = MultiHeadAttention::new(d_model: 512, num_heads: 8);
-let encoder = TransformerEncoder::new(
+val lstm = LSTM.new(input_size: 128, hidden_size: 256, num_layers: 2);
+val attention = MultiHeadAttention.new(d_model: 512, num_heads: 8);
+val encoder = TransformerEncoder.new(
     d_model: 512,
     num_heads: 8,
     num_layers: 6,
@@ -231,14 +231,14 @@ model = nn.DataParallel(model)
 
 ```axon
 // Axon
-use std::device::{cuda, cpu};
+use std.device.{cuda, cpu};
 
-let model = MyModel::new().to_gpu();
-let x = x.to_gpu();
+val model = MyModel.new().to_gpu();
+val x = x.to_gpu();
 
 // Or with explicit device
-let dev = cuda(0);
-let x = x.to_device(dev);
+val dev = cuda(0);
+val x = x.to_device(dev);
 ```
 
 Axon difference: Device transfer is a **move** (ownership transfer), not a copy.
@@ -249,9 +249,9 @@ Axon difference: Device transfer is a **move** (ownership transfer), not a copy.
 
 | PyTorch                                                 | Axon                                                 |
 | ------------------------------------------------------- | ---------------------------------------------------- |
-| `torch.optim.SGD(params, lr=0.01)`                      | `SGD::new(params, lr: 0.01)`                         |
-| `torch.optim.Adam(params, lr=0.001)`                    | `Adam::new(params, lr: 0.001)`                       |
-| `torch.optim.AdamW(params, lr=1e-4, weight_decay=0.01)` | `AdamW::new(params, lr: 0.0001, weight_decay: 0.01)` |
+| `torch.optim.SGD(params, lr=0.01)`                      | `SGD.new(params, lr: 0.01)`                         |
+| `torch.optim.Adam(params, lr=0.001)`                    | `Adam.new(params, lr: 0.001)`                       |
+| `torch.optim.AdamW(params, lr=1e-4, weight_decay=0.01)` | `AdamW.new(params, lr: 0.0001, weight_decay: 0.01)` |
 
 ---
 
@@ -283,15 +283,15 @@ with torch.no_grad():
 
 ```axon
 // Axon
-use std::autograd::{GradTensor, no_grad};
+use std.autograd.{GradTensor, no_grad};
 
-let x = GradTensor::new(randn([3]));
-let y = x * 2.0 + 1.0;
+val x = GradTensor.new(randn([3]));
+val y = x * 2.0 + 1.0;
 y.sum().backward();
 println("{}", x.grad());
 
 no_grad(|| {
-    let prediction = model.forward(x);
+    val prediction = model.forward(x);
 });
 ```
 
@@ -309,9 +309,9 @@ loader = DataLoader(dataset, batch_size=64, shuffle=True)
 
 ```axon
 // Axon
-use std::data::DataLoader;
+use std.data.DataLoader;
 
-let loader = DataLoader::new(x_train, y_train)
+val loader = DataLoader.new(x_train, y_train)
     .batch_size(64)
     .shuffle(true);
 ```
@@ -331,13 +331,13 @@ torch.onnx.export(model, dummy_input, "model.onnx")
 
 ```axon
 // Axon
-use std::export::{save, load, export_onnx};
+use std.export.{save, load, export_onnx};
 
 save(&model, "model.axon");
-let model: MyModel = load("model.axon");
+val model: MyModel = load("model.axon");
 
 // ONNX export
-let dummy_input = randn([1, 784]);
+val dummy_input = randn([1, 784]);
 export_onnx(&model, dummy_input, "model.onnx");
 ```
 
@@ -362,7 +362,7 @@ export_onnx(&model, dummy_input, "model.onnx");
 | PyTorch                 | Axon                         |
 | ----------------------- | ---------------------------- |
 | `import torch`          | (built-in, no import needed) |
-| `import torch.nn as nn` | `use std::nn::*;`            |
+| `import torch.nn as nn` | `use std.nn.*`               |
 | `model(x)`              | `model.forward(x)`           |
 | `loss.item()`           | `loss.item()` (same!)        |
 | `.backward()`           | `.backward()` (same!)        |

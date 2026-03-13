@@ -10,6 +10,7 @@ use super::protocol::*;
 // ═══════════════════════════════════════════════════════════════
 
 pub(crate) struct DocumentState {
+    #[allow(dead_code)]
     pub uri: String,
     pub text: String,
     pub version: i32,
@@ -247,18 +248,18 @@ mod tests {
         // Insert
         server.documents.insert(uri.clone(), DocumentState {
             uri: uri.clone(),
-            text: "let x = 1".to_string(),
+            text: "val x = 1".to_string(),
             version: 1,
         });
         assert_eq!(server.documents.get(&uri).unwrap().version, 1);
 
         // Update
         if let Some(doc) = server.documents.get_mut(&uri) {
-            doc.text = "let x = 2".to_string();
+            doc.text = "val x = 2".to_string();
             doc.version = 2;
         }
         assert_eq!(server.documents.get(&uri).unwrap().version, 2);
-        assert_eq!(server.documents.get(&uri).unwrap().text, "let x = 2");
+        assert_eq!(server.documents.get(&uri).unwrap().text, "val x = 2");
 
         // Remove
         server.documents.remove(&uri);

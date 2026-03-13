@@ -13,11 +13,11 @@ Use `mod` to define a module inline:
 
 ```axon
 mod math {
-    pub fn square(x: Float64) -> Float64 {
+    pub fn square(x: Float64): Float64 {
         x * x
     }
 
-    pub fn cube(x: Float64) -> Float64 {
+    pub fn cube(x: Float64): Float64 {
         x * x * x
     }
 
@@ -27,9 +27,9 @@ mod math {
 }
 
 fn main() {
-    println("{}", math::square(5.0));   // 25.0
-    println("{}", math::cube(3.0));     // 27.0
-    // math::helper();                  // ERROR: `helper` is private
+    println("{}", math.square(5.0));   // 25.0
+    println("{}", math.cube(3.0));     // 27.0
+    // math.helper();                  // ERROR: `helper` is private
 }
 ```
 
@@ -45,8 +45,8 @@ my_project/
     ├── model.axon         # mod model
     ├── data/
     │   ├── mod.axon       # mod data (directory module)
-    │   ├── loader.axon    # mod data::loader
-    │   └── transform.axon # mod data::transform
+    │   ├── loader.axon    # mod data.loader
+    │   └── transform.axon # mod data.transform
     └── utils.axon         # mod utils
 ```
 
@@ -58,9 +58,9 @@ mod data;
 mod utils;
 
 fn main() {
-    let net = model::build_network();
-    let loader = data::loader::DataLoader::new("train.csv");
-    utils::log("Training started");
+    val net = model.build_network();
+    val loader = data.loader.DataLoader.new("train.csv");
+    utils.log("Training started");
 }
 ```
 
@@ -80,20 +80,20 @@ their module:
 
 ```axon
 mod network {
-    pub struct Layer {
+    pub model Layer {
         pub size: Int32,        // public field
         weights: Vec<Float32>,  // private field
     }
 
-    pub fn new_layer(size: Int32) -> Layer {
+    pub fn new_layer(size: Int32): Layer {
         Layer {
             size,
-            weights: Vec::new(),
+            weights: Vec.new(),
         }
     }
 
-    impl Layer {
-        pub fn forward(&self, input: &Vec<Float32>) -> Vec<Float32> {
+    extend Layer {
+        pub fn forward(&self, input: &Vec<Float32>): Vec<Float32> {
             // public method
         }
 
@@ -110,8 +110,8 @@ mod network {
 | ---------------- | -------------------------------------- |
 | `fn foo()`       | Current module only                    |
 | `pub fn foo()`   | Parent module and beyond               |
-| `pub struct Foo` | Public type, fields default to private |
-| `pub field: T`   | Public field on a public struct        |
+| `pub model Foo`  | Public type, fields default to private |
+| `pub field: T`   | Public field on a public model         |
 
 ---
 
@@ -120,11 +120,11 @@ mod network {
 Bring items into scope with `use`:
 
 ```axon
-use std::collections::HashMap;
-use std::io::{File, Read, Write};
+use std.collections.HashMap;
+use std.io.{File, Read, Write};
 
 fn main() {
-    let mut map = HashMap::new();
+    var map = HashMap.new();
     map.insert("key", 42);
 }
 ```
@@ -133,16 +133,16 @@ fn main() {
 
 ```axon
 // Absolute path
-use std::math::sin;
+use std.math.sin;
 
 // Nested imports
-use std::collections::{Vec, HashMap, HashSet};
+use std.collections.{Vec, HashMap, HashSet};
 
 // Wildcard import (use sparingly)
-use std::prelude::*;
+use std.prelude.*;
 
 // Aliased import
-use std::collections::HashMap as Map;
+use std.collections.HashMap as Map;
 ```
 
 ### Re-exports
@@ -151,11 +151,11 @@ Modules can re-export items for a cleaner public API:
 
 ```axon
 mod internal {
-    pub fn core_function() -> Int32 { 42 }
+    pub fn core_function(): Int32 { 42 }
 }
 
-// Re-export so users see `my_lib::core_function`
-pub use internal::core_function;
+// Re-export so users see `my_lib.core_function`
+pub use internal.core_function;
 ```
 
 ---
@@ -224,11 +224,11 @@ axonc pkg remove axon-vision
 After adding a dependency, import it like any module:
 
 ```axon
-use axon_vision::transforms::{resize, normalize};
-use axon_nlp::tokenizer::BPETokenizer;
+use axon_vision.transforms.{resize, normalize};
+use axon_nlp.tokenizer.BPETokenizer;
 
-fn preprocess(image: Tensor<Float32, [?, ?, 3]>) -> Tensor<Float32, [?, 224, 224, 3]> {
-    let resized = resize(image, [224, 224]);
+fn preprocess(image: Tensor<Float32, [?, ?, 3]>): Tensor<Float32, [?, 224, 224, 3]> {
+    val resized = resize(image, [224, 224]);
     normalize(resized, mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225])
 }
 ```
@@ -263,25 +263,25 @@ Axon ships with a comprehensive standard library:
 
 | Module             | Contents                                                   |
 | ------------------ | ---------------------------------------------------------- |
-| `std::prelude`     | Auto-imported basics (println, Clone, Copy, Display, etc.) |
-| `std::collections` | `Vec`, `HashMap`, `HashSet`, `Option`, `Result`            |
-| `std::string`      | `String` with UTF-8 operations                             |
-| `std::io`          | `File`, `Read`, `Write`, formatting                        |
-| `std::math`        | Trigonometry, logarithms, constants                        |
-| `std::tensor`      | Tensor creation, shape ops, reductions, linalg             |
-| `std::nn`          | Neural network layers (Linear, Conv2d, LSTM, Transformer)  |
-| `std::autograd`    | Automatic differentiation                                  |
-| `std::optim`       | Optimizers (SGD, Adam, AdamW) + LR schedulers              |
-| `std::loss`        | Loss functions (CrossEntropy, MSE, BCE)                    |
-| `std::data`        | DataLoader, CSV/JSON loading                               |
-| `std::metrics`     | Accuracy, precision, recall, F1, ROC-AUC                   |
-| `std::transforms`  | Image and text preprocessing                               |
-| `std::sync`        | `Mutex`, `RwLock`, `Arc`, `Channel`                        |
-| `std::thread`      | `spawn`, `JoinHandle`                                      |
-| `std::device`      | Device abstraction, GPU query                              |
-| `std::random`      | Random number generation                                   |
-| `std::ops`         | Operator traits (Add, Mul, MatMul, Index)                  |
-| `std::convert`     | `From`, `Into`, `TryFrom`, `TryInto`                       |
+| `std.prelude`      | Auto-imported basics (println, Clone, Copy, Display, etc.) |
+| `std.collections`  | `Vec`, `HashMap`, `HashSet`, `Option`, `Result`            |
+| `std.string`       | `String` with UTF-8 operations                             |
+| `std.io`           | `File`, `Read`, `Write`, formatting                        |
+| `std.math`         | Trigonometry, logarithms, constants                        |
+| `std.tensor`       | Tensor creation, shape ops, reductions, linalg             |
+| `std.nn`           | Neural network layers (Linear, Conv2d, LSTM, Transformer)  |
+| `std.autograd`     | Automatic differentiation                                  |
+| `std.optim`        | Optimizers (SGD, Adam, AdamW) + LR schedulers              |
+| `std.loss`         | Loss functions (CrossEntropy, MSE, BCE)                    |
+| `std.data`         | DataLoader, CSV/JSON loading                               |
+| `std.metrics`      | Accuracy, precision, recall, F1, ROC-AUC                   |
+| `std.transforms`   | Image and text preprocessing                               |
+| `std.sync`         | `Mutex`, `RwLock`, `Arc`, `Channel`                        |
+| `std.thread`       | `spawn`, `JoinHandle`                                      |
+| `std.device`       | Device abstraction, GPU query                              |
+| `std.random`       | Random number generation                                   |
+| `std.ops`          | Operator traits (Add, Mul, MatMul, Index)                  |
+| `std.convert`      | `From`, `Into`, `TryFrom`, `TryInto`                       |
 
 ---
 

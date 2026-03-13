@@ -250,6 +250,9 @@ impl Lexer {
                 if self.peek() == Some('|') {
                     self.advance();
                     Some(Token::new(TokenKind::OrOr, self.make_span(sl, sc)))
+                } else if self.peek() == Some('>') {
+                    self.advance();
+                    Some(Token::new(TokenKind::Pipe, self.make_span(sl, sc)))
                 } else {
                     // Bare `|` — used for closures; for now treat as unexpected
                     // We'll report an error
@@ -274,10 +277,7 @@ impl Lexer {
 
             '-' => {
                 self.advance();
-                if self.peek() == Some('>') {
-                    self.advance();
-                    Some(Token::new(TokenKind::Arrow, self.make_span(sl, sc)))
-                } else if self.peek() == Some('=') {
+                if self.peek() == Some('=') {
                     self.advance();
                     Some(Token::new(TokenKind::MinusEq, self.make_span(sl, sc)))
                 } else {
@@ -327,12 +327,7 @@ impl Lexer {
 
             ':' => {
                 self.advance();
-                if self.peek() == Some(':') {
-                    self.advance();
-                    Some(Token::new(TokenKind::ColonColon, self.make_span(sl, sc)))
-                } else {
-                    Some(Token::new(TokenKind::Colon, self.make_span(sl, sc)))
-                }
+                Some(Token::new(TokenKind::Colon, self.make_span(sl, sc)))
             }
 
             // ── Simple delimiters ────────────────────────────
@@ -731,13 +726,13 @@ mod tests {
 
     #[test]
     fn test_keywords() {
-        let tokens = lex("fn let mut struct enum impl trait if else while for in match return pub use mod unsafe self true false as type");
+        let tokens = lex("fn mut val var model enum extend trait if else while for in match return pub use mod unsafe self true false as type");
         let expected = vec![
-            TokenKind::Fn, TokenKind::Let, TokenKind::Mut, TokenKind::Struct,
-            TokenKind::Enum, TokenKind::Impl, TokenKind::Trait, TokenKind::If,
-            TokenKind::Else, TokenKind::While, TokenKind::For, TokenKind::In,
-            TokenKind::Match, TokenKind::Return, TokenKind::Pub, TokenKind::Use,
-            TokenKind::Mod, TokenKind::Unsafe, TokenKind::SelfValue,
+            TokenKind::Fn, TokenKind::Mut, TokenKind::Val, TokenKind::Var,
+            TokenKind::Model, TokenKind::Enum, TokenKind::Extend, TokenKind::Trait,
+            TokenKind::If, TokenKind::Else, TokenKind::While, TokenKind::For,
+            TokenKind::In, TokenKind::Match, TokenKind::Return, TokenKind::Pub,
+            TokenKind::Use, TokenKind::Mod, TokenKind::Unsafe, TokenKind::SelfValue,
             TokenKind::True, TokenKind::False, TokenKind::As, TokenKind::Type,
             TokenKind::Eof,
         ];
@@ -772,14 +767,14 @@ mod tests {
 
     #[test]
     fn test_operators() {
-        let tokens = lex("+ - * / @ % == != < > <= >= && || ! & ? -> => :: . .. = += -= *= /=");
+        let tokens = lex("+ - * / @ % == != < > <= >= && || ! & ? => |> . .. = += -= *= /=");
         let expected = vec![
             TokenKind::Plus, TokenKind::Minus, TokenKind::Star, TokenKind::Slash,
             TokenKind::At, TokenKind::Percent, TokenKind::EqEq, TokenKind::NotEq,
             TokenKind::Lt, TokenKind::Gt, TokenKind::LtEq, TokenKind::GtEq,
             TokenKind::AndAnd, TokenKind::OrOr, TokenKind::Bang, TokenKind::Amp,
-            TokenKind::Question, TokenKind::Arrow, TokenKind::FatArrow,
-            TokenKind::ColonColon, TokenKind::Dot, TokenKind::DotDot,
+            TokenKind::Question, TokenKind::FatArrow,
+            TokenKind::Pipe, TokenKind::Dot, TokenKind::DotDot,
             TokenKind::Eq, TokenKind::PlusEq, TokenKind::MinusEq,
             TokenKind::StarEq, TokenKind::SlashEq, TokenKind::Eof,
         ];
@@ -1016,10 +1011,9 @@ mod tests {
     }
 
     #[test]
-    fn test_arrow_operators() {
-        let tokens = lex("-> =>");
-        assert_eq!(tokens[0].kind, TokenKind::Arrow);
-        assert_eq!(tokens[1].kind, TokenKind::FatArrow);
+    fn test_fat_arrow_operator() {
+        let tokens = lex("=>");
+        assert_eq!(tokens[0].kind, TokenKind::FatArrow);
     }
 
     #[test]

@@ -1,0 +1,10 @@
+// Test: Tensor subtraction — ones - ones = zeros, first element is 0
+// expect: 0
+
+fn main() {
+    val a = tensor_ones(4);
+    val b = tensor_ones(4);
+    val c = a - b;
+    val v = tensor_item(c);
+    println(v);
+}

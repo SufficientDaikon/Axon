@@ -174,8 +174,8 @@ impl LspServer {
     pub(crate) fn get_keyword_completions(&self) -> Vec<CompletionItem> {
         let keywords = [
             ("fn", "Function declaration"),
-            ("let", "Variable binding"),
-            ("mut", "Mutable binding"),
+            ("val", "Immutable binding"),
+            ("var", "Mutable binding"),
             ("if", "Conditional"),
             ("else", "Else branch"),
             ("while", "While loop"),
@@ -183,10 +183,10 @@ impl LspServer {
             ("in", "In keyword"),
             ("match", "Match expression"),
             ("return", "Return from function"),
-            ("struct", "Struct definition"),
+            ("model", "Model (struct) definition"),
             ("enum", "Enum definition"),
             ("trait", "Trait definition"),
-            ("impl", "Implementation block"),
+            ("extend", "Implementation block"),
             ("pub", "Public visibility"),
             ("use", "Import declaration"),
             ("mod", "Module declaration"),
@@ -302,12 +302,12 @@ impl LspServer {
         // Check if it's a keyword
         let keyword_info = match word.as_str() {
             "fn" => Some("**fn** — Declare a function"),
-            "let" => Some("**let** — Bind a value to a variable"),
-            "mut" => Some("**mut** — Make a binding mutable"),
-            "struct" => Some("**struct** — Define a struct type"),
+            "val" => Some("**val** — Bind an immutable value"),
+            "var" => Some("**var** — Bind a mutable value"),
+            "model" => Some("**model** — Define a model (struct) type"),
             "enum" => Some("**enum** — Define an enum type"),
             "trait" => Some("**trait** — Define a trait"),
-            "impl" => Some("**impl** — Implement methods or traits"),
+            "extend" => Some("**extend** — Implement methods or traits"),
             "if" => Some("**if** — Conditional expression"),
             "match" => Some("**match** — Pattern matching expression"),
             "for" => Some("**for** — For loop"),
@@ -339,7 +339,7 @@ impl LspServer {
                 crate::symbol::SymbolKind::Function => "function",
                 crate::symbol::SymbolKind::Variable => "variable",
                 crate::symbol::SymbolKind::Parameter => "parameter",
-                crate::symbol::SymbolKind::StructDef => "struct",
+                crate::symbol::SymbolKind::StructDef => "model",
                 crate::symbol::SymbolKind::EnumDef => "enum",
                 crate::symbol::SymbolKind::TraitDef => "trait",
                 crate::symbol::SymbolKind::TypeAlias => "type alias",
@@ -948,7 +948,7 @@ mod tests {
     #[test]
     fn test_diagnostics_from_valid_source() {
         let server = LspServer::new();
-        let source = "fn main() {\n    let x = 42;\n}";
+        let source = "fn main() {\n    val x = 42;\n}";
         let diags = server.compile_and_get_diagnostics(source, "test.axon");
         assert!(diags.is_empty(), "valid source should have no diagnostics, got: {:?}", diags);
     }
@@ -969,8 +969,8 @@ mod tests {
         assert!(!completions.is_empty());
         let labels: Vec<&str> = completions.iter().map(|c| c.label.as_str()).collect();
         assert!(labels.contains(&"fn"));
-        assert!(labels.contains(&"let"));
-        assert!(labels.contains(&"struct"));
+        assert!(labels.contains(&"val"));
+        assert!(labels.contains(&"model"));
         assert!(labels.contains(&"match"));
     }
 
@@ -1005,7 +1005,7 @@ mod tests {
             uri.to_string(),
             DocumentState {
                 uri: uri.to_string(),
-                text: "fn foo() {}\nstruct Bar {}\nenum Baz {}".to_string(),
+                text: "fn foo() {}\nmodel Bar {}\nenum Baz {}".to_string(),
                 version: 1,
             },
         );

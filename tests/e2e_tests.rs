@@ -9,15 +9,14 @@ use std::process::Command;
 
 /// Full pipeline: source → parse → typecheck → MIR → LLVM IR → compile+link → run.
 fn compile_and_run(source: &str, test_name: &str) -> Result<std::process::Output, String> {
-    // Step 1: Parse + type check
-    let (typed_program, errors) = axonc::check_source(source, &format!("{}.axon", test_name));
+    // Step 1: Parse + type check (use check_source_full to get the checker for MIR/codegen)
+    let (typed_program, errors, checker) = axonc::check_source_full(source, &format!("{}.axon", test_name));
     if !errors.is_empty() {
         let msgs: Vec<String> = errors.iter().map(|e| format!("{:?}", e)).collect();
         return Err(format!("Type check errors:\n{}", msgs.join("\n")));
     }
 
-    // Step 2: Build MIR
-    let (checker, _) = axonc::typeck::check(source, &format!("{}.axon", test_name));
+    // Step 2: Build MIR (using the SAME checker/interner as the TAST)
     let mut mir_builder = axonc::mir::MirBuilder::new(&checker.interner);
     let mir_program = mir_builder.build(&typed_program);
 
@@ -223,7 +222,7 @@ fn e2e_mutual_recursion() {
 fn e2e_inline_simple_return() {
     let src = r#"
 fn main() {
-    let x: Int64 = 42;
+    val x: Int64 = 42;
 }
 "#;
     assert_compiles_and_runs(src, "inline_simple_return");
@@ -233,10 +232,10 @@ fn main() {
 fn e2e_inline_chain_arithmetic() {
     let src = r#"
 fn main() {
-    let a: Int64 = 1;
-    let b: Int64 = 2;
-    let c: Int64 = 3;
-    let d: Int64 = a + b + c;
+    val a: Int64 = 1;
+    val b: Int64 = 2;
+    val c: Int64 = 3;
+    val d: Int64 = a + b + c;
 }
 "#;
     assert_compiles_and_runs(src, "inline_chain_arithmetic");
@@ -246,8 +245,8 @@ fn main() {
 fn e2e_inline_bool_logic() {
     let src = r#"
 fn main() {
-    let a: Bool = true;
-    let b: Bool = false;
+    val a: Bool = true;
+    val b: Bool = false;
 }
 "#;
     assert_compiles_and_runs(src, "inline_bool_logic");
@@ -256,12 +255,12 @@ fn main() {
 #[test]
 fn e2e_inline_nested_calls() {
     let src = r#"
-fn inc(x: Int64) -> Int64 {
+fn inc(x: Int64): Int64 {
     return x + 1;
 }
 
 fn main() {
-    let x: Int64 = inc(inc(inc(0)));
+    val x: Int64 = inc(inc(inc(0)));
 }
 "#;
     assert_compiles_and_runs(src, "inline_nested_calls");
@@ -399,4 +398,48 @@ fn e2e_error_missing_main() {
     // A program without `fn main()` should fail with E5009 error
     // now caught at codegen stage before linking.
     assert_compile_fails(&src, "error_missing_main", Some("E5009"));
+}
+
+// ── Tensor E2E tests ────────────────────────────────────────────────
+
+#[test]
+fn e2e_tensor_create() {
+    assert_e2e_output("tensor_create");
+}
+
+#[test]
+fn e2e_tensor_add() {
+    assert_e2e_output("tensor_add");
+}
+
+#[test]
+fn e2e_tensor_matmul() {
+    assert_e2e_output("tensor_matmul");
+}
+
+#[test]
+fn e2e_tensor_sub() {
+    assert_e2e_output("tensor_sub");
+}
+
+#[test]
+fn e2e_tensor_mul() {
+    assert_e2e_output("tensor_mul");
+}
+
+#[test]
+fn e2e_tensor_arithmetic() {
+    assert_e2e_output("tensor_arithmetic");
+}
+
+// ── Autograd E2E tests ─────────────────────────────────────────────
+
+#[test]
+fn e2e_autograd_basic() {
+    assert_e2e_output("autograd_basic");
+}
+
+#[test]
+fn e2e_train_demo() {
+    assert_e2e_output("train_demo");
 }

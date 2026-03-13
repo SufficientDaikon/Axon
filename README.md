@@ -23,29 +23,29 @@ and AI. It combines Rust's memory safety with PyTorch's ergonomics and adds
 your code ever runs.
 
 ```axon
-use std::nn::{Linear, Module};
-use std::optim::Adam;
-use std::loss::cross_entropy;
+use std.nn.{Linear, Module};
+use std.optim.Adam;
+use std.loss.cross_entropy;
 
-struct Classifier {
+model Classifier {
     fc1: Linear<784, 256>,
     fc2: Linear<256, 10>,
 }
 
-impl Module for Classifier {
-    fn forward(&self, x: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]> {
-        let h = relu(self.fc1.forward(x));
+extend Module for Classifier {
+    fn forward(&self, x: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]> {
+        val h = relu(self.fc1.forward(x));
         self.fc2.forward(h)
     }
 }
 
 fn main() {
-    let mut model = Classifier { fc1: Linear::new(), fc2: Linear::new() };
-    let mut opt = Adam::new(model.parameters(), lr: 0.001);
+    var net = Classifier { fc1: Linear.new(), fc2: Linear.new() };
+    var opt = Adam.new(net.parameters(), lr: 0.001);
 
     for epoch in 0..10 {
         for (images, labels) in &train_loader {
-            let loss = cross_entropy(model.forward(images), labels);
+            val loss = cross_entropy(net.forward(images), labels);
             loss.backward();
             opt.step();
             opt.zero_grad();
@@ -100,9 +100,9 @@ axonc build hello.axon -o hello
 
 ```axon
 fn main() {
-    let A: Tensor<Float32, [2, 3]> = randn([2, 3]);
-    let B: Tensor<Float32, [3, 4]> = randn([3, 4]);
-    let C = A @ B;   // Tensor<Float32, [2, 4]> — shape checked!
+    val A: Tensor<Float32, [2, 3]> = randn([2, 3]);
+    val B: Tensor<Float32, [3, 4]> = randn([3, 4]);
+    val C = A @ B;   // Tensor<Float32, [2, 4]> — shape checked!
     println("{}", C);
 }
 ```

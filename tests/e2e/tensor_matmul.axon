@@ -1,0 +1,10 @@
+// Test: Matrix multiply — ones(2,3) @ ones(3,2) = threes(2,2), first element is 3
+// expect: 3
+
+fn main() {
+    val a = tensor_ones2(2, 3);
+    val b = tensor_ones2(3, 2);
+    val c = a @ b;
+    val v = tensor_item(c);
+    println(v);
+}

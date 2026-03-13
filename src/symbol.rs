@@ -152,6 +152,23 @@ impl SymbolTable {
         self.scopes[scope.0 as usize].bindings.get(name).copied()
     }
 
+    /// Look up a name across ALL scopes (not just from current scope up).
+    /// Used by the TAST builder after type-checking when function scopes have been popped.
+    /// Returns the last-defined symbol with this name.
+    pub fn lookup_all(&self, name: &str) -> Option<SymbolId> {
+        // First try normal scoped lookup
+        if let result @ Some(_) = self.lookup(name) {
+            return result;
+        }
+        // Fall back: search all scopes in reverse (newest first)
+        for scope in self.scopes.iter().rev() {
+            if let Some(&sym) = scope.bindings.get(name) {
+                return Some(sym);
+            }
+        }
+        None
+    }
+
     pub fn get_symbol(&self, id: SymbolId) -> &SymbolInfo {
         &self.symbols[id.0 as usize]
     }

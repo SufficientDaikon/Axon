@@ -118,7 +118,7 @@ impl Formatter {
         }
         self.write(")");
         if let Some(ret) = &decl.return_type {
-            self.write(" -> ");
+            self.write(": ");
             self.format_type_expr(ret);
         }
         if let Some(body) = &decl.body {
@@ -171,7 +171,7 @@ impl Formatter {
     }
 
     fn format_struct(&mut self, s: &StructDecl) {
-        self.write("struct ");
+        self.write("model ");
         self.write(&s.name);
         self.format_generics(&s.generics);
         self.write(" {");
@@ -240,7 +240,7 @@ impl Formatter {
     }
 
     fn format_impl_block(&mut self, imp: &ImplBlock) {
-        self.write("impl");
+        self.write("extend");
         self.format_generics(&imp.generics);
         self.write(" ");
         if let Some(trait_name) = &imp.trait_name {
@@ -325,7 +325,7 @@ impl Formatter {
 
     fn format_use(&mut self, u: &UseDecl) {
         self.write("use ");
-        self.write(&u.path.join("::"));
+        self.write(&u.path.join("."));
         if let Some(alias) = &u.alias {
             self.write(" as ");
             self.write(alias);
@@ -338,9 +338,10 @@ impl Formatter {
         match &stmt.kind {
             StmtKind::Let { name, mutable, ty, initializer } => {
                 self.write_indent();
-                self.write("let ");
                 if *mutable {
-                    self.write("mut ");
+                    self.write("var ");
+                } else {
+                    self.write("val ");
                 }
                 self.format_pattern(name);
                 if let Some(ty) = ty {
@@ -398,7 +399,7 @@ impl Formatter {
         match &expr.kind {
             ExprKind::Literal(lit) => self.format_literal(lit),
             ExprKind::Identifier(name) => self.write(name),
-            ExprKind::Path(parts) => self.write(&parts.join("::")),
+            ExprKind::Path(parts) => self.write(&parts.join(".")),
             ExprKind::BinaryOp { left, op, right } => {
                 self.format_expr(left);
                 self.write(" ");
@@ -543,7 +544,7 @@ impl Formatter {
                 self.write(")");
             }
             ExprKind::StructLiteral { name, fields } => {
-                self.write(&name.join("::"));
+                self.write(&name.join("."));
                 self.write(" { ");
                 for (i, f) in fields.iter().enumerate() {
                     if i > 0 {
@@ -569,7 +570,7 @@ impl Formatter {
                 }
                 self.write("|");
                 if let Some(ret) = return_type {
-                    self.write(" -> ");
+                    self.write(": ");
                     self.format_type_expr(ret);
                 }
                 self.write(" ");
@@ -581,7 +582,7 @@ impl Formatter {
     fn format_type_expr(&mut self, ty: &TypeExpr) {
         match &ty.kind {
             TypeExprKind::Named(name) => self.write(name),
-            TypeExprKind::Path(parts) => self.write(&parts.join("::")),
+            TypeExprKind::Path(parts) => self.write(&parts.join(".")),
             TypeExprKind::Generic { name, args } => {
                 self.write(name);
                 self.write("<");
@@ -633,7 +634,7 @@ impl Formatter {
                     }
                     self.format_type_expr(p);
                 }
-                self.write(") -> ");
+                self.write("): ");
                 self.format_type_expr(return_type);
             }
             TypeExprKind::Tuple(types) => {
@@ -679,7 +680,7 @@ impl Formatter {
                 self.write(")");
             }
             PatternKind::Struct { name, fields } => {
-                self.write(&name.join("::"));
+                self.write(&name.join("."));
                 self.write(" { ");
                 for (i, f) in fields.iter().enumerate() {
                     if i > 0 {
@@ -694,7 +695,7 @@ impl Formatter {
                 self.write(" }");
             }
             PatternKind::EnumVariant { path, fields } => {
-                self.write(&path.join("::"));
+                self.write(&path.join("."));
                 if !fields.is_empty() {
                     self.write("(");
                     for (i, f) in fields.iter().enumerate() {
@@ -791,6 +792,7 @@ impl Formatter {
         self.output.push_str(s);
     }
 
+    #[allow(dead_code)]
     fn writeln(&mut self, s: &str) {
         self.write_indent();
         self.output.push_str(s);
@@ -814,18 +816,18 @@ mod tests {
 
     #[test]
     fn test_format_function() {
-        let src = "fn  add( a :  Int32 , b : Int32 ) -> Int32 { return a + b ; }";
+        let src = "fn  add( a :  Int32 , b : Int32 ): Int32 { return a + b ; }";
         let result = Formatter::format(src, "test.axon").unwrap();
-        assert!(result.contains("fn add(a: Int32, b: Int32) -> Int32 {"));
+        assert!(result.contains("fn add(a: Int32, b: Int32): Int32 {"));
         assert!(result.contains("    return a + b;"));
         assert!(result.contains("}"));
     }
 
     #[test]
     fn test_format_struct() {
-        let src = "struct Point { x : Float64 , y : Float64 , }";
+        let src = "model Point { x : Float64 , y : Float64 , }";
         let result = Formatter::format(src, "test.axon").unwrap();
-        assert!(result.contains("struct Point {"));
+        assert!(result.contains("model Point {"));
         assert!(result.contains("    x: Float64,"));
         assert!(result.contains("    y: Float64,"));
         assert!(result.contains("}"));
@@ -841,7 +843,7 @@ mod tests {
 
     #[test]
     fn test_idempotent() {
-        let src = "fn add(a: Int32, b: Int32) -> Int32 {\n    return a + b;\n}\n";
+        let src = "fn add(a: Int32, b: Int32): Int32 {\n    return a + b;\n}\n";
         let first = Formatter::format(src, "test.axon").unwrap();
         let second = Formatter::format(&first, "test.axon").unwrap();
         assert_eq!(first, second, "Formatting should be idempotent");
@@ -849,9 +851,9 @@ mod tests {
 
     #[test]
     fn test_format_let_binding() {
-        let src = "fn main() { let   x :  Int32   =  42; }";
+        let src = "fn main() { val   x :  Int32   =  42; }";
         let result = Formatter::format(src, "test.axon").unwrap();
-        assert!(result.contains("let x: Int32 = 42;"));
+        assert!(result.contains("val x: Int32 = 42;"));
     }
 
     #[test]

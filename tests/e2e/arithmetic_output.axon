@@ -4,10 +4,10 @@
 // expect: 36
 
 fn main() {
-    let x: Int64 = 10 + 20;
+    val x: Int64 = 10 + 20;
     println(x);
-    let y: Int64 = 10 - 4;
+    val y: Int64 = 10 - 4;
     println(y);
-    let z: Int64 = x + y;
+    val z: Int64 = x + y;
     println(z);
 }

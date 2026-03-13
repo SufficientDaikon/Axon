@@ -124,7 +124,7 @@ impl<'a> LlvmCodegen<'a> {
             Type::Unit => "void".to_string(),
             Type::Never => "void".to_string(),
             Type::Error => "i8*".to_string(),
-            Type::Tensor(_) => "{ i8*, i64*, i64, i8 }".to_string(),
+            Type::Tensor(_) => "i8*".to_string(),
             Type::Tuple(fields) => {
                 let field_types: Vec<String> =
                     fields.iter().map(|f| self.llvm_type(*f)).collect();
@@ -331,14 +331,8 @@ impl<'a> LlvmCodegen<'a> {
                 // In a full implementation, extract ptr/len and call axon_dealloc.
             }
             Type::Tensor(_) => {
-                let val = self.emit_place_load(place, func);
-                let name = self.fresh_name();
-                self.output.push_str(&format!(
-                    "  {} = bitcast {{ i8*, i64*, i64, i8 }} {} to i8*\n",
-                    name, val
-                ));
-                self.output
-                    .push_str(&format!("  call void @axon_tensor_free(i8* {})\n", name));
+                // Tensor cleanup deferred — refcounting not yet fully wired for MVP.
+                // The process exit will reclaim all memory.
             }
             _ => {
                 // Scalar / trivially-droppable types: no-op.
@@ -434,64 +428,87 @@ impl<'a> LlvmCodegen<'a> {
                     Operand::Constant(MirConstant::String(name)) => format!("@{}", name),
                     _ => self.emit_operand(callee, func),
                 };
-                let is_print_bool = callee_name == "@axon_print_bool";
-                let arg_strs: Vec<String> = args
-                    .iter()
-                    .map(|a| {
-                        let val = self.emit_operand(a, func);
-                        // String constants now emit as { i8*, i64, i64 } structs.
-                        // For runtime print functions that expect raw (i8*, i64),
-                        // extract the pointer from the struct.
-                        let ty_str = if matches!(a, Operand::Constant(MirConstant::String(_))) {
-                            // Extract the i8* pointer from the string struct for call args
-                            let ptr = self.fresh_name();
-                            self.output.push_str(&format!(
-                                "  {} = extractvalue {{ i8*, i64, i64 }} {}, 0\n",
-                                ptr, val
-                            ));
-                            return format!("i8* {}", ptr);
-                        } else {
-                            let ty = self.type_of_operand(a, func);
-                            self.llvm_alloca_type(ty)
-                        };
-                        // ABI fix: axon_print_bool expects i8, but bools are i1 in IR.
-                        // Emit zext i1 → i8 to match the C runtime signature.
-                        if is_print_bool && ty_str == "i1" {
-                            let widened = self.fresh_name();
-                            self.output.push_str(&format!(
-                                "  {} = zext i1 {} to i8\n",
-                                widened, val
-                            ));
-                            return format!("i8 {}", widened);
-                        }
-                        format!("{} {}", ty_str, val)
-                    })
-                    .collect();
 
+                // ── Tensor method dispatch ──────────────────────────────
+                // Intercept known tensor method/function names and rewrite to C runtime calls.
+                // The destination type or first argument type being tensor triggers this.
                 let dest_ty = self.local_type(func, destination.local);
-                let dest_ty_str = self.llvm_type(dest_ty);
+                let dest_is_tensor = matches!(self.interner.resolve(dest_ty), Type::Tensor(_));
+                let first_arg_is_tensor = args.first().map_or(false, |a| {
+                    matches!(self.interner.resolve(self.type_of_operand(a, func)), Type::Tensor(_))
+                });
 
-                if dest_ty_str == "void" {
+                if let Some(tensor_call) = self.try_emit_tensor_call(
+                    &callee_name, args, func, dest_is_tensor, first_arg_is_tensor,
+                ) {
+                    // tensor_call is (ir_for_call, result_name_or_none)
+                    let (call_ir, result_opt) = tensor_call;
+                    self.output.push_str(&call_ir);
+
+                    let dest_ty_str = self.llvm_type(dest_ty);
+                    if let Some(result) = result_opt {
+                        if dest_ty_str != "void" {
+                            self.emit_place_store(destination, &result, &dest_ty_str);
+                        }
+                    }
                     self.output.push_str(&format!(
-                        "  call void {}({})\n",
-                        callee_name,
-                        arg_strs.join(", ")
+                        "  br label %{}\n",
+                        self.block_label(*target)
                     ));
                 } else {
-                    let result = self.fresh_name();
+                    // ── Normal (non-tensor) call path ────────────────────────
+                    let is_print_bool = callee_name == "@axon_print_bool";
+                    let arg_strs: Vec<String> = args
+                        .iter()
+                        .map(|a| {
+                            let val = self.emit_operand(a, func);
+                            let ty_str = if matches!(a, Operand::Constant(MirConstant::String(_))) {
+                                let ptr = self.fresh_name();
+                                self.output.push_str(&format!(
+                                    "  {} = extractvalue {{ i8*, i64, i64 }} {}, 0\n",
+                                    ptr, val
+                                ));
+                                return format!("i8* {}", ptr);
+                            } else {
+                                let ty = self.type_of_operand(a, func);
+                                self.llvm_alloca_type(ty)
+                            };
+                            if is_print_bool && ty_str == "i1" {
+                                let widened = self.fresh_name();
+                                self.output.push_str(&format!(
+                                    "  {} = zext i1 {} to i8\n",
+                                    widened, val
+                                ));
+                                return format!("i8 {}", widened);
+                            }
+                            format!("{} {}", ty_str, val)
+                        })
+                        .collect();
+
+                    let dest_ty_str = self.llvm_type(dest_ty);
+
+                    if dest_ty_str == "void" {
+                        self.output.push_str(&format!(
+                            "  call void {}({})\n",
+                            callee_name,
+                            arg_strs.join(", ")
+                        ));
+                    } else {
+                        let result = self.fresh_name();
+                        self.output.push_str(&format!(
+                            "  {} = call {} {}({})\n",
+                            result,
+                            dest_ty_str,
+                            callee_name,
+                            arg_strs.join(", ")
+                        ));
+                        self.emit_place_store(destination, &result, &dest_ty_str);
+                    }
                     self.output.push_str(&format!(
-                        "  {} = call {} {}({})\n",
-                        result,
-                        dest_ty_str,
-                        callee_name,
-                        arg_strs.join(", ")
+                        "  br label %{}\n",
+                        self.block_label(*target)
                     ));
-                    self.emit_place_store(destination, &result, &dest_ty_str);
                 }
-                self.output.push_str(&format!(
-                    "  br label %{}\n",
-                    self.block_label(*target)
-                ));
             }
             Terminator::Assert {
                 cond,
@@ -1036,28 +1053,18 @@ impl<'a> LlvmCodegen<'a> {
         operands: &[Operand],
         func: &MirFunction,
     ) -> String {
-        // Tensor ops delegate to runtime function call stubs.
-        // Each op emits a call to @axon_tensor_<op>(i8*, ...) -> i8*
-        // which returns an opaque tensor pointer. The actual implementation
-        // is provided by the tensor runtime library (linked at compile time).
+        // Tensor ops delegate to C runtime autograd-aware functions.
+        // axon_ag_* records on the tape when autograd is enabled, otherwise
+        // falls through to axon_tensor_* directly.
+        // Tensors are represented as opaque i8* pointers in LLVM IR.
         match kind {
             TensorOpKind::MatMul => {
                 let lhs = self.emit_operand(&operands[0], func);
                 let rhs = self.emit_operand(&operands[1], func);
-                let lhs_ptr = self.fresh_name();
-                let rhs_ptr = self.fresh_name();
                 let result = self.fresh_name();
                 self.output.push_str(&format!(
-                    "  {} = inttoptr i64 {} to i8*\n",
-                    lhs_ptr, lhs
-                ));
-                self.output.push_str(&format!(
-                    "  {} = inttoptr i64 {} to i8*\n",
-                    rhs_ptr, rhs
-                ));
-                self.output.push_str(&format!(
-                    "  {} = call i8* @axon_tensor_matmul(i8* {}, i8* {})\n",
-                    result, lhs_ptr, rhs_ptr
+                    "  {} = call i8* @axon_ag_matmul(i8* {}, i8* {})\n",
+                    result, lhs, rhs
                 ));
                 result
             }
@@ -1075,83 +1082,374 @@ impl<'a> LlvmCodegen<'a> {
                 if operands.len() >= 2 {
                     let lhs = self.emit_operand(&operands[0], func);
                     let rhs = self.emit_operand(&operands[1], func);
-                    let lhs_ptr = self.fresh_name();
-                    let rhs_ptr = self.fresh_name();
                     let result = self.fresh_name();
                     self.output.push_str(&format!(
-                        "  {} = inttoptr i64 {} to i8*\n",
-                        lhs_ptr, lhs
-                    ));
-                    self.output.push_str(&format!(
-                        "  {} = inttoptr i64 {} to i8*\n",
-                        rhs_ptr, rhs
-                    ));
-                    self.output.push_str(&format!(
-                        "  {} = call i8* @axon_tensor_{}(i8* {}, i8* {})\n",
-                        result, op_name, lhs_ptr, rhs_ptr
+                        "  {} = call i8* @axon_ag_{}(i8* {}, i8* {})\n",
+                        result, op_name, lhs, rhs
                     ));
                     result
                 } else if !operands.is_empty() {
                     self.emit_operand(&operands[0], func)
                 } else {
-                    "zeroinitializer".to_string()
+                    "null".to_string()
                 }
             }
             TensorOpKind::Reshape(_) => {
                 if !operands.is_empty() {
                     let src = self.emit_operand(&operands[0], func);
-                    let src_ptr = self.fresh_name();
                     let result = self.fresh_name();
                     self.output.push_str(&format!(
-                        "  {} = inttoptr i64 {} to i8*\n",
-                        src_ptr, src
-                    ));
-                    self.output.push_str(&format!(
-                        "  {} = call i8* @axon_tensor_reshape(i8* {})\n",
-                        result, src_ptr
+                        "  {} = call i8* @axon_tensor_reshape(i8* {}, i64* null, i32 0)\n",
+                        result, src
                     ));
                     result
                 } else {
-                    "zeroinitializer".to_string()
+                    "null".to_string()
                 }
             }
             TensorOpKind::Transpose => {
                 if !operands.is_empty() {
                     let src = self.emit_operand(&operands[0], func);
-                    let src_ptr = self.fresh_name();
                     let result = self.fresh_name();
                     self.output.push_str(&format!(
-                        "  {} = inttoptr i64 {} to i8*\n",
-                        src_ptr, src
-                    ));
-                    self.output.push_str(&format!(
                         "  {} = call i8* @axon_tensor_transpose(i8* {})\n",
-                        result, src_ptr
+                        result, src
                     ));
                     result
                 } else {
-                    "zeroinitializer".to_string()
+                    "null".to_string()
                 }
             }
             TensorOpKind::Broadcast => {
                 if !operands.is_empty() {
                     let src = self.emit_operand(&operands[0], func);
-                    let src_ptr = self.fresh_name();
                     let result = self.fresh_name();
                     self.output.push_str(&format!(
-                        "  {} = inttoptr i64 {} to i8*\n",
-                        src_ptr, src
-                    ));
-                    self.output.push_str(&format!(
                         "  {} = call i8* @axon_tensor_broadcast(i8* {})\n",
-                        result, src_ptr
+                        result, src
                     ));
                     result
                 } else {
-                    "zeroinitializer".to_string()
+                    "null".to_string()
                 }
             }
         }
+    }
+
+    // ── Tensor method dispatch ──────────────────────────────────
+    // Maps Axon method calls to C runtime tensor function calls.
+    // Returns Some((ir_string, Option<result_name>)) if this is a tensor call.
+
+    fn try_emit_tensor_call(
+        &mut self,
+        callee_name: &str,
+        args: &[Operand],
+        func: &MirFunction,
+        dest_is_tensor: bool,
+        first_arg_is_tensor: bool,
+    ) -> Option<(String, Option<String>)> {
+        let bare_name = callee_name.strip_prefix('@').unwrap_or(callee_name);
+
+        // Tensor creation functions: tensor_zeros(dim1, dim2, ...) or zeros(shape)
+        // We need to emit shape array + call axon_tensor_zeros(shape_ptr, ndim, dtype)
+        if dest_is_tensor {
+            match bare_name {
+                "zeros" | "ones" | "rand"
+                | "tensor_zeros" | "tensor_ones" | "tensor_rand"
+                | "tensor_zeros2" | "tensor_ones2" | "tensor_rand2" => {
+                    let runtime_name = bare_name
+                        .strip_prefix("tensor_")
+                        .unwrap_or(bare_name)
+                        .trim_end_matches('2');
+                    return Some(self.emit_tensor_creation(runtime_name, args, func));
+                }
+                _ => {}
+            }
+        }
+
+        // Tensor methods where receiver (first arg) is a tensor
+        if first_arg_is_tensor {
+            match bare_name {
+                // Unary tensor ops: receiver → tensor result
+                "relu" | "sum" | "mean" | "transpose" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let result = self.fresh_name();
+                    let ir = format!(
+                        "  {} = call i8* @axon_tensor_{}(i8* {})\n",
+                        result, bare_name, recv
+                    );
+                    return Some((ir, Some(result)));
+                }
+                // Binary tensor ops: receiver + arg → tensor result
+                "add" | "sub" | "mul" | "div" | "matmul" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let arg1 = if args.len() > 1 {
+                        self.emit_operand(&args[1], func)
+                    } else {
+                        "null".to_string()
+                    };
+                    let result = self.fresh_name();
+                    let ir = format!(
+                        "  {} = call i8* @axon_tensor_{}(i8* {}, i8* {})\n",
+                        result, bare_name, recv, arg1
+                    );
+                    return Some((ir, Some(result)));
+                }
+                // tensor.item() → double
+                "item" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let result = self.fresh_name();
+                    let ir = format!(
+                        "  {} = call double @axon_tensor_item(i8* {})\n",
+                        result, recv
+                    );
+                    return Some((ir, Some(result)));
+                }
+                // tensor.print() → void
+                "print" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let ir = format!("  call void @axon_tensor_print(i8* {})\n", recv);
+                    return Some((ir, None));
+                }
+                // tensor.reshape(shape) → tensor
+                "reshape" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    // For now, pass the shape arguments from remaining args
+                    let result = self.fresh_name();
+                    let ir = format!(
+                        "  {} = call i8* @axon_tensor_reshape(i8* {}, i64* null, i32 0)\n",
+                        result, recv
+                    );
+                    return Some((ir, Some(result)));
+                }
+                // tensor.retain() / tensor.release() → void
+                "retain" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let ir = format!("  call void @axon_tensor_retain(i8* {})\n", recv);
+                    return Some((ir, None));
+                }
+                "release" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let ir = format!("  call void @axon_tensor_release(i8* {})\n", recv);
+                    return Some((ir, None));
+                }
+                // Autograd methods
+                "backward" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let ir = format!("  call void @axon_backward(i8* {})\n", recv);
+                    return Some((ir, None));
+                }
+                "zero_grad" => {
+                    let recv = self.emit_operand(&args[0], func);
+                    let ir = format!("  call void @axon_zero_grad(i8* {})\n", recv);
+                    return Some((ir, None));
+                }
+                "grad" => {
+                    // Return the grad tensor (stored at offset in AxonTensor struct)
+                    // For now, use a runtime helper
+                    let recv = self.emit_operand(&args[0], func);
+                    let result = self.fresh_name();
+                    let ir = format!(
+                        "  {} = call i8* @axon_tensor_grad(i8* {})\n",
+                        result, recv
+                    );
+                    return Some((ir, Some(result)));
+                }
+                _ => {}
+            }
+        }
+
+        // Free functions that operate on tensors
+        match bare_name {
+            "tensor_print" if !args.is_empty() => {
+                let arg = self.emit_operand(&args[0], func);
+                let ir = format!("  call void @axon_tensor_print(i8* {})\n", arg);
+                return Some((ir, None));
+            }
+            "tensor_item" if !args.is_empty() => {
+                let arg = self.emit_operand(&args[0], func);
+                let result = self.fresh_name();
+                let ir = format!(
+                    "  {} = call double @axon_tensor_item(i8* {})\n",
+                    result, arg
+                );
+                return Some((ir, Some(result)));
+            }
+            "backward" | "tensor_backward" if !args.is_empty() => {
+                let arg = self.emit_operand(&args[0], func);
+                let ir = format!("  call void @axon_backward(i8* {})\n", arg);
+                return Some((ir, None));
+            }
+            "zero_grad" | "tensor_zero_grad" if !args.is_empty() => {
+                let arg = self.emit_operand(&args[0], func);
+                let ir = format!("  call void @axon_zero_grad(i8* {})\n", arg);
+                return Some((ir, None));
+            }
+            "tape_clear" => {
+                let ir = "  call void @axon_tape_clear()\n".to_string();
+                return Some((ir, None));
+            }
+            "mse_loss" | "tensor_mse_loss" if args.len() >= 2 => {
+                let pred = self.emit_operand(&args[0], func);
+                let target = self.emit_operand(&args[1], func);
+                let result = self.fresh_name();
+                let ir = format!(
+                    "  {} = call i8* @axon_mse_loss(i8* {}, i8* {})\n",
+                    result, pred, target
+                );
+                return Some((ir, Some(result)));
+            }
+            "cross_entropy_loss" | "tensor_cross_entropy_loss" if args.len() >= 2 => {
+                let pred = self.emit_operand(&args[0], func);
+                let target = self.emit_operand(&args[1], func);
+                let result = self.fresh_name();
+                let ir = format!(
+                    "  {} = call i8* @axon_cross_entropy_loss(i8* {}, i8* {})\n",
+                    result, pred, target
+                );
+                return Some((ir, Some(result)));
+            }
+            "autograd_enable" => {
+                let ir = "  call void @axon_autograd_enable()\n".to_string();
+                return Some((ir, None));
+            }
+            "autograd_disable" => {
+                let ir = "  call void @axon_autograd_disable()\n".to_string();
+                return Some((ir, None));
+            }
+            "sgd_step" => {
+                // sgd_step(tensor, lr) -> void
+                if args.len() >= 2 {
+                    let tensor = self.emit_operand(&args[0], func);
+                    let lr = self.emit_operand(&args[1], func);
+                    let ir = format!(
+                        "  call void @axon_sgd_step1(i8* {}, double {})\n",
+                        tensor, lr
+                    );
+                    return Some((ir, None));
+                }
+            }
+            "tensor_grad" => {
+                // tensor_grad(tensor) -> tensor
+                if !args.is_empty() {
+                    let tensor = self.emit_operand(&args[0], func);
+                    let result = self.fresh_name();
+                    let ir = format!(
+                        "  {} = call i8* @axon_tensor_grad(i8* {})\n",
+                        result, tensor
+                    );
+                    return Some((ir, Some(result)));
+                }
+            }
+            "tensor_set_requires_grad" => {
+                // tensor_set_requires_grad(tensor) -> void (always sets to 1)
+                if !args.is_empty() {
+                    let tensor = self.emit_operand(&args[0], func);
+                    let ir = format!(
+                        "  call void @axon_tensor_set_requires_grad(i8* {}, i32 1)\n",
+                        tensor
+                    );
+                    return Some((ir, None));
+                }
+            }
+            _ => {}
+        }
+
+        None
+    }
+
+    /// Emit a tensor creation call (zeros, ones, rand).
+    /// Extracts shape dimensions from the MIR arguments and emits shape array + runtime call.
+    fn emit_tensor_creation(
+        &mut self,
+        fn_name: &str,
+        args: &[Operand],
+        func: &MirFunction,
+    ) -> (String, Option<String>) {
+        let mut ir = String::new();
+
+        // Try to extract shape information from the destination type
+        let dest_ty = if !args.is_empty() {
+            self.type_of_operand(&args[0], func)
+        } else {
+            TypeId::UNIT
+        };
+        let resolved = self.interner.resolve(dest_ty);
+
+        // Default shape: try to get from the tensor type annotation
+        let shape_dims: Vec<i64> = if let Type::Tensor(ref t) = resolved {
+            t.shape.iter().filter_map(|d| {
+                if let crate::types::ShapeDimResolved::Known(n) = d {
+                    Some(*n)
+                } else {
+                    None
+                }
+            }).collect()
+        } else {
+            // Fallback: try to extract shape from constant array args
+            self.extract_shape_from_args(args, func)
+        };
+
+        let ndim = shape_dims.len() as i32;
+        if ndim > 0 {
+            // Emit shape array as alloca
+            let shape_alloca = self.fresh_name();
+            ir.push_str(&format!(
+                "  {} = alloca [{} x i64]\n",
+                shape_alloca, ndim
+            ));
+            for (i, dim) in shape_dims.iter().enumerate() {
+                let gep = self.fresh_name();
+                ir.push_str(&format!(
+                    "  {} = getelementptr [{} x i64], [{} x i64]* {}, i32 0, i32 {}\n",
+                    gep, ndim, ndim, shape_alloca, i
+                ));
+                ir.push_str(&format!("  store i64 {}, i64* {}\n", dim, gep));
+            }
+            let shape_ptr = self.fresh_name();
+            ir.push_str(&format!(
+                "  {} = getelementptr [{} x i64], [{} x i64]* {}, i32 0, i32 0\n",
+                shape_ptr, ndim, ndim, shape_alloca
+            ));
+            let result = self.fresh_name();
+            // dtype 0 = float32 (default for MVP)
+            ir.push_str(&format!(
+                "  {} = call i8* @axon_tensor_{}(i64* {}, i32 {}, i8 0)\n",
+                result, fn_name, shape_ptr, ndim
+            ));
+            (ir, Some(result))
+        } else {
+            // Fallback: scalar tensor [1]
+            let shape_alloca = self.fresh_name();
+            ir.push_str(&format!(
+                "  {} = alloca [1 x i64]\n", shape_alloca
+            ));
+            let gep = self.fresh_name();
+            ir.push_str(&format!(
+                "  {} = getelementptr [1 x i64], [1 x i64]* {}, i32 0, i32 0\n",
+                gep, shape_alloca
+            ));
+            ir.push_str(&format!("  store i64 1, i64* {}\n", gep));
+            let result = self.fresh_name();
+            ir.push_str(&format!(
+                "  {} = call i8* @axon_tensor_{}(i64* {}, i32 1, i8 0)\n",
+                result, fn_name, gep
+            ));
+            (ir, Some(result))
+        }
+    }
+
+    /// Try to extract shape dimensions from function call arguments.
+    /// Handles cases like Tensor::zeros([2, 3]) where args contain array literals.
+    fn extract_shape_from_args(&self, args: &[Operand], _func: &MirFunction) -> Vec<i64> {
+        let mut dims = Vec::new();
+        for arg in args {
+            match arg {
+                Operand::Constant(MirConstant::Int(n)) => dims.push(*n),
+                _ => {}
+            }
+        }
+        dims
     }
 
     // ── Operand emission ───────────────────────────────────────
@@ -2002,7 +2300,7 @@ mod tests {
     // 7. Generate return constant
     #[test]
     fn test_generate_return_constant() {
-        let ir = generate_ir("fn answer() -> Int64 { return 42; }\nfn main() { let x: Int64 = answer(); }");
+        let ir = generate_ir("fn answer(): Int64 { return 42; }\nfn main() { val x: Int64 = answer(); }");
         assert!(
             ir.contains("define"),
             "IR should contain define: {}",
@@ -2016,7 +2314,7 @@ mod tests {
     #[test]
     fn test_generate_binary_op() {
         let ir = generate_ir(
-            "fn test_add() -> Int64 { let x: Int64 = 1 + 2; return x; }\nfn main() { let r: Int64 = test_add(); }",
+            "fn test_add(): Int64 { val x: Int64 = 1 + 2; return x; }\nfn main() { val r: Int64 = test_add(); }",
         );
         assert!(ir.contains("add"), "IR should contain add instruction: {}", ir);
     }
@@ -2025,7 +2323,7 @@ mod tests {
     #[test]
     fn test_generate_if_else() {
         let ir = generate_ir(
-            "fn test_if(x: Bool) -> Int64 { if x { return 1; } else { return 2; } }\nfn main() { let r: Int64 = test_if(true); }",
+            "fn test_if(x: Bool): Int64 { if x { return 1; } else { return 2; } }\nfn main() { val r: Int64 = test_if(true); }",
         );
         assert!(ir.contains("br"), "IR should contain branch: {}", ir);
         assert!(
@@ -2039,7 +2337,7 @@ mod tests {
     #[test]
     fn test_generate_while_loop() {
         let ir = generate_ir(
-            "fn test_while() { let mut i: Int64 = 0; while i < 10 { i = i + 1; } }\nfn main() { test_while(); }",
+            "fn test_while() { var i: Int64 = 0; while i < 10 { i = i + 1; } }\nfn main() { test_while(); }",
         );
         assert!(ir.contains("br"), "IR should contain branch: {}", ir);
         // Loop generates multiple basic blocks
@@ -2050,7 +2348,7 @@ mod tests {
     #[test]
     fn test_generate_function_call() {
         let ir = generate_ir(
-            "fn add(a: Int64, b: Int64) -> Int64 { return a + b; }\nfn main() { let x: Int64 = add(1, 2); }",
+            "fn add(a: Int64, b: Int64): Int64 { return a + b; }\nfn main() { val x: Int64 = add(1, 2); }",
         );
         assert!(ir.contains("call"), "IR should contain call: {}", ir);
     }
@@ -2059,7 +2357,7 @@ mod tests {
     #[test]
     fn test_generate_string_literal() {
         let ir = generate_ir(
-            "fn main() { let s: String = \"hello\"; }",
+            "fn main() { val s: String = \"hello\"; }",
         );
         assert!(
             ir.contains("hello") || ir.contains("@.str"),
@@ -2109,7 +2407,7 @@ mod tests {
     #[test]
     fn test_multiple_functions() {
         let ir = generate_ir(
-            "fn foo() -> Int64 { return 1; }\nfn bar() -> Int64 { return 2; }\nfn main() { }",
+            "fn foo(): Int64 { return 1; }\nfn bar(): Int64 { return 2; }\nfn main() { }",
         );
         assert!(
             ir.contains("@foo") || ir.contains("@_AX"),

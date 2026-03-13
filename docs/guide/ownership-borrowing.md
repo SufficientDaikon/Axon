@@ -19,8 +19,8 @@ compile time — no garbage collector, no dangling pointers, no data races.
 By default, assigning a value _moves_ it. The original binding becomes invalid:
 
 ```axon
-let tensor = randn([1024, 1024]);
-let other = tensor;          // tensor is MOVED into other
+val tensor = randn([1024, 1024]);
+val other = tensor;          // tensor is MOVED into other
 // println("{}", tensor);    // ERROR[E4001]: use of moved value `tensor`
 println("{}", other);        // OK
 ```
@@ -32,7 +32,7 @@ fn consume(t: Tensor<Float32, [3, 3]>) {
     println("{}", t);
 }
 
-let data = randn([3, 3]);
+val data = randn([3, 3]);
 consume(data);
 // consume(data);   // ERROR[E4001]: use of moved value `data`
 ```
@@ -58,7 +58,7 @@ fn print_shape(t: &Tensor<Float32, [?, 784]>) {
     println("Shape: {}", t.shape);
 }
 
-let input = randn([32, 784]);
+val input = randn([32, 784]);
 print_shape(&input);       // borrow, don't move
 print_shape(&input);       // still valid — input wasn't moved
 ```
@@ -73,7 +73,7 @@ fn scale(t: &mut Tensor<Float32, [3, 3]>, factor: Float32) {
     // modify tensor in place
 }
 
-let mut weights = randn([3, 3]);
+var weights = randn([3, 3]);
 scale(&mut weights, 2.0);
 println("{}", weights);    // OK — mutable borrow has ended
 ```
@@ -83,9 +83,9 @@ println("{}", weights);    // OK — mutable borrow has ended
 The compiler rejects overlapping mutable and immutable borrows:
 
 ```axon
-let mut data = randn([10]);
-let r1 = &data;
-let r2 = &mut data;       // ERROR[E4003]: cannot borrow `data` as mutable
+var data = randn([10]);
+val r1 = &data;
+val r2 = &mut data;       // ERROR[E4003]: cannot borrow `data` as mutable
                            // because it is also borrowed as immutable
 println("{}", r1);
 ```
@@ -98,7 +98,7 @@ Lifetimes ensure that references never outlive the data they point to.
 In most cases, the compiler infers lifetimes automatically:
 
 ```axon
-fn first_element(v: &Vec<Int32>) -> &Int32 {
+fn first_element(v: &Vec<Int32>): &Int32 {
     &v[0]   // lifetime of return value tied to lifetime of `v`
 }
 ```
@@ -106,7 +106,7 @@ fn first_element(v: &Vec<Int32>) -> &Int32 {
 When the compiler needs help, you annotate lifetimes explicitly:
 
 ```axon
-fn longest<'a>(a: &'a String, b: &'a String) -> &'a String {
+fn longest<'a>(a: &'a String, b: &'a String): &'a String {
     if a.len() > b.len() { a } else { b }
 }
 ```
@@ -114,8 +114,8 @@ fn longest<'a>(a: &'a String, b: &'a String) -> &'a String {
 ### Dangling Reference Prevention
 
 ```axon
-fn dangling() -> &String {
-    let s = "hello".to_string();
+fn dangling(): &String {
+    val s = "hello".to_string();
     &s   // ERROR[E4005]: `s` does not live long enough
 }        // `s` is dropped here
 ```
@@ -133,31 +133,31 @@ Some small, stack-allocated types implement the `Copy` trait and are
 | `UInt8` through `UInt64`    | `Vec<T>`             |
 | `Float16` through `Float64` | `Tensor<T, S>`       |
 | `Bool`, `Char`              | `HashMap<K, V>`      |
-| Tuples of Copy types        | Structs (by default) |
+| Tuples of Copy types        | Models (by default)  |
 
 ```axon
-let a: Int32 = 42;
-let b = a;          // copy — both a and b are valid
+val a: Int32 = 42;
+val b = a;          // copy — both a and b are valid
 println("{} {}", a, b);
 
-let s = "hello".to_string();
-let t = s;          // move — only t is valid
+val s = "hello".to_string();
+val t = s;          // move — only t is valid
 // println("{}", s);   // ERROR
 ```
 
-### Making Structs Copyable
+### Making Models Copyable
 
 Derive `Copy` and `Clone` for small value types:
 
 ```axon
-struct Color: Copy, Clone {
+model Color: Copy, Clone {
     r: UInt8,
     g: UInt8,
     b: UInt8,
 }
 
-let red = Color { r: 255, g: 0, b: 0 };
-let also_red = red;   // copy, not move
+val red = Color { r: 255, g: 0, b: 0 };
+val also_red = red;   // copy, not move
 println("{}", red.r);  // OK
 ```
 
@@ -173,9 +173,9 @@ enforces device-safety rules:
 A tensor on the GPU cannot be mutably borrowed while a CPU reference exists:
 
 ```axon
-let mut t = randn([256, 256]);
-let cpu_ref = &t;
-let gpu_t = t.to_gpu();      // ERROR[E4007]: cannot move `t` to GPU while
+var t = randn([256, 256]);
+val cpu_ref = &t;
+val gpu_t = t.to_gpu();      // ERROR[E4007]: cannot move `t` to GPU while
                               // borrowed on CPU
 ```
 
@@ -184,26 +184,26 @@ let gpu_t = t.to_gpu();      // ERROR[E4007]: cannot move `t` to GPU while
 Transferring a tensor between devices moves it:
 
 ```axon
-let cpu_data = randn([1024]);
-let gpu_data = cpu_data.to_gpu();    // cpu_data is moved
+val cpu_data = randn([1024]);
+val gpu_data = cpu_data.to_gpu();    // cpu_data is moved
 // println("{}", cpu_data);          // ERROR: use of moved value
 
-let result = gpu_data.to_cpu();      // gpu_data is moved back
+val result = gpu_data.to_cpu();      // gpu_data is moved back
 println("{}", result);
 ```
 
 ### Safe Pattern: Borrow, Then Transfer
 
 ```axon
-let mut data = randn([256, 256]);
+var data = randn([256, 256]);
 
 // Phase 1: work on CPU
-let norm = data.mean();
+val norm = data.mean();
 println("Mean: {}", norm);
 
 // Phase 2: transfer to GPU (no outstanding borrows)
-let gpu_data = data.to_gpu();
-let result = gpu_data @ gpu_data;
+val gpu_data = data.to_gpu();
+val result = gpu_data @ gpu_data;
 ```
 
 ---
@@ -213,21 +213,21 @@ let result = gpu_data @ gpu_data;
 A real-world example combining ownership patterns:
 
 ```axon
-struct Trainer {
+model Trainer {
     model: NeuralNet,
     optimizer: Adam,
 }
 
-impl Trainer {
-    fn train_epoch(&mut self, data: &DataLoader) -> Float32 {
-        let mut total_loss = 0.0;
+extend Trainer {
+    fn train_epoch(&mut self, data: &DataLoader): Float32 {
+        var total_loss = 0.0;
 
         for batch in data {
-            let (inputs, targets) = batch;
+            val (inputs, targets) = batch;
 
             // model borrowed mutably through self
-            let predictions = self.model.forward(inputs);
-            let loss = cross_entropy(predictions, targets);
+            val predictions = self.model.forward(inputs);
+            val loss = cross_entropy(predictions, targets);
 
             total_loss += loss.item();
 

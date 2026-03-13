@@ -1,0 +1,12 @@
+// Test: Chained tensor ops — (ones + ones) * ones = twos, first element is 2
+// expect: 2
+
+fn main() {
+    val a = tensor_ones(4);
+    val b = tensor_ones(4);
+    val c = tensor_ones(4);
+    val sum = a + b;
+    val result = sum * c;
+    val v = tensor_item(result);
+    println(v);
+}

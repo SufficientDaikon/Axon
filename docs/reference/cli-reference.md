@@ -243,12 +243,12 @@ axonc repl
 $ axonc repl
 Axon REPL v0.1.0 — type :help for commands
 
->>> let x = 42
+>>> val x = 42
 >>> x * 2
 84
 >>> :type x
 Int32
->>> let t = randn([3, 3])
+>>> val t = randn([3, 3])
 >>> t.shape
 [3, 3]
 >>> :quit

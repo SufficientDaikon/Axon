@@ -1,0 +1,14 @@
+// Test: Basic autograd — y = x + x, dy/dx = 2
+// expect: 2
+
+fn main() {
+    autograd_enable();
+    val x = tensor_ones(1);
+    tensor_set_requires_grad(x);
+    val y = x + x;
+    tensor_backward(y);
+    val g = tensor_grad(x);
+    val v = tensor_item(g);
+    println(v);
+    autograd_disable();
+}

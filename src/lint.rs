@@ -211,7 +211,7 @@ impl Linter {
                 if !is_pascal_case(&s.name) {
                     self.warn(
                         "W5005",
-                        format!("struct `{}` should use PascalCase naming", s.name),
+                        format!("model `{}` should use PascalCase naming", s.name),
                         s.span.clone(),
                         None,
                     );
@@ -598,7 +598,7 @@ mod tests {
 
     #[test]
     fn test_unused_variable() {
-        let src = "fn main() { let x: Int32 = 1; }";
+        let src = "fn main() { val x: Int32 = 1; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(warnings.iter().any(|w| w.code == "W5001" && w.message.contains("unused variable")));
     }
@@ -612,7 +612,7 @@ mod tests {
 
     #[test]
     fn test_naming_convention_struct() {
-        let src = "struct my_struct { x: Int32, }";
+        let src = "model my_model { x: Int32, }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(warnings.iter().any(|w| w.code == "W5005"));
     }
@@ -626,7 +626,7 @@ mod tests {
 
     #[test]
     fn test_underscore_prefix_allowed() {
-        let src = "fn main() { let _x: Int32 = 1; }";
+        let src = "fn main() { val _x: Int32 = 1; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(!warnings.iter().any(|w| w.code == "W5001" && w.message.contains("_x")));
     }
@@ -640,7 +640,7 @@ mod tests {
 
     #[test]
     fn test_todo_comment() {
-        let src = "// TODO: fix this\nfn main() { let _x: Int32 = 0; }";
+        let src = "// TODO: fix this\nfn main() { val _x: Int32 = 0; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(warnings.iter().any(|w| w.code == "W5009"));
     }
@@ -650,7 +650,7 @@ mod tests {
     #[test]
     fn test_ml_unused_gradient() {
         // W5012: Warn when .backward() result is unused
-        let src = "fn train() { let _t: Int32 = 0; _t.backward(); }";
+        let src = "fn train() { val _t: Int32 = 0; _t.backward(); }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(
             warnings.iter().any(|w| w.code == "W5012"),
@@ -662,7 +662,7 @@ mod tests {
     #[test]
     fn test_ml_deprecated_activation() {
         // W5014: Warn when using sigmoid
-        let src = "fn forward() { let _t: Int32 = 0; _t.sigmoid(); }";
+        let src = "fn forward() { val _t: Int32 = 0; _t.sigmoid(); }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(
             warnings.iter().any(|w| w.code == "W5014"),
@@ -674,7 +674,7 @@ mod tests {
     #[test]
     fn test_ml_no_grad_in_eval() {
         // W5013: Warn when gradient computation is in eval context
-        let src = "fn eval() { let _t: Int32 = 0; _t.backward(); }";
+        let src = "fn eval() { val _t: Int32 = 0; _t.backward(); }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(
             warnings.iter().any(|w| w.code == "W5013"),
@@ -686,7 +686,7 @@ mod tests {
     #[test]
     fn test_ml_no_grad_in_eval_predict() {
         // W5013: Also catches predict functions
-        let src = "fn predict() { let _x: Int32 = 0; _x.grad; }";
+        let src = "fn predict() { val _x: Int32 = 0; _x.grad; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(
             warnings.iter().any(|w| w.code == "W5013"),

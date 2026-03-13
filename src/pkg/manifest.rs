@@ -78,6 +78,7 @@ pub struct LintConfig {
 // ---- Simple TOML parser ----
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum TomlValue {
     String(String),
     Integer(i64),

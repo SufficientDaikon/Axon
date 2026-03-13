@@ -323,6 +323,7 @@ impl<'a> MirBuilder<'a> {
         self.current_block = block;
     }
 
+    #[allow(dead_code)]
     fn current_block_mut(&mut self) -> &mut MirBasicBlock {
         let idx = self.current_block.0 as usize;
         &mut self.current_blocks[idx]
@@ -835,8 +836,16 @@ impl<'a> MirBuilder<'a> {
         let dest = self.new_temp(effective_ty);
 
         // Check for tensor operations
-        // MatMul (@) is always a tensor op; for other ops, check if the type is tensor
-        if *op == BinOp::MatMul || Self::is_tensor_op(op, left.ty, self.interner) {
+        // MatMul (@) is always a tensor op; for other ops, check if the type is tensor.
+        // Use the MIR operand type as fallback when the TAST expr type is Error
+        // (which happens because the TAST builder can't resolve local variable types
+        // after the TypeChecker's scopes have been popped).
+        let left_type = if left.ty == TypeId::ERROR {
+            self.operand_type(&left_op)
+        } else {
+            left.ty
+        };
+        if *op == BinOp::MatMul || Self::is_tensor_op(op, left_type, self.interner) {
             let kind = match op {
                 BinOp::MatMul => TensorOpKind::MatMul,
                 BinOp::Add => TensorOpKind::Add,
@@ -954,7 +963,7 @@ impl<'a> MirBuilder<'a> {
                 }
             }
             TypedExprKind::Path(segments) => {
-                let name = segments.join("::");
+                let name = segments.join(".");
                 if let Some(mangled) = self.function_map.get(&name) {
                     Operand::Constant(MirConstant::String(mangled.clone()))
                 } else {
@@ -1315,7 +1324,7 @@ impl<'a> MirBuilder<'a> {
         fields: &[TypedStructLiteralField],
         ty: TypeId,
     ) -> Operand {
-        let struct_name = name.join("::");
+        let struct_name = name.join(".");
         let mut field_ops = Vec::new();
         for field in fields {
             field_ops.push(self.lower_expr(&field.value));
@@ -1568,7 +1577,7 @@ impl fmt::Display for MirProgram {
 
 impl fmt::Display for MirFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "fn {}() -> #{} {{", self.name, self.return_ty.0)?;
+        writeln!(f, "fn {}(): #{} {{", self.name, self.return_ty.0)?;
         for local in &self.locals {
             let mutability = if local.mutable { "mut " } else { "" };
             let name = local
@@ -1578,7 +1587,7 @@ impl fmt::Display for MirFunction {
                 .unwrap_or_default();
             writeln!(
                 f,
-                "  let {}_{}: #{}{}",
+                "  val {}_{}: #{}{}",
                 mutability, local.id.0, local.ty.0, name
             )?;
         }
@@ -1630,7 +1639,7 @@ impl fmt::Display for Terminator {
                 targets,
                 otherwise,
             } => {
-                write!(f, "switchInt({}) -> [", value)?;
+                write!(f, "switchInt({}): [", value)?;
                 for (i, (val, bb)) in targets.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
@@ -1656,12 +1665,12 @@ impl fmt::Display for Terminator {
                     }
                     write!(f, "{}", arg)?;
                 }
-                write!(f, ") -> bb{}", target.0)
+                write!(f, "): bb{}", target.0)
             }
             Terminator::Assert {
                 cond, msg, target, ..
             } => {
-                write!(f, "assert({}, \"{}\") -> bb{}", cond, msg, target.0)
+                write!(f, "assert({}, \"{}\"): bb{}", cond, msg, target.0)
             }
             Terminator::Unreachable => write!(f, "unreachable"),
         }
@@ -1797,7 +1806,7 @@ mod tests {
 
     #[test]
     fn lower_function_with_return_value() {
-        let mir = build_mir("fn answer() -> Int64 { return 42; }");
+        let mir = build_mir("fn answer(): Int64 { return 42; }");
         assert_eq!(mir.functions.len(), 1);
         let func = &mir.functions[0];
         assert_eq!(func.name, "answer");
@@ -1824,7 +1833,7 @@ mod tests {
 
     #[test]
     fn lower_let_binding_and_assignment() {
-        let src = "fn test_let() -> Int64 { let x: Int64 = 10; return x; }";
+        let src = "fn test_let(): Int64 { val x: Int64 = 10; return x; }";
         let mir = build_mir(src);
         let func = &mir.functions[0];
         assert_eq!(func.name, "test_let");
@@ -1837,7 +1846,7 @@ mod tests {
 
     #[test]
     fn lower_binary_operations() {
-        let src = "fn add(a: Int64, b: Int64) -> Int64 { return a + b; }";
+        let src = "fn add(a: Int64, b: Int64): Int64 { return a + b; }";
         let mir = build_mir(src);
         let func = &mir.functions[0];
         // Should have a BinaryOp assignment somewhere in one of the blocks
@@ -1857,7 +1866,7 @@ mod tests {
 
     #[test]
     fn lower_if_else_to_switchint() {
-        let src = "fn test_if(x: Bool) -> Int64 { if x { return 1; } else { return 2; } }";
+        let src = "fn test_if(x: Bool): Int64 { if x { return 1; } else { return 2; } }";
         let mir = build_mir(src);
         let func = &mir.functions[0];
         // Should have multiple basic blocks
@@ -1875,7 +1884,7 @@ mod tests {
 
     #[test]
     fn lower_while_loop() {
-        let src = "fn test_while() { let mut i: Int64 = 0; while i < 10 { i = i + 1; } }";
+        let src = "fn test_while() { var i: Int64 = 0; while i < 10 { i = i + 1; } }";
         let mir = build_mir(src);
         let func = &mir.functions[0];
         // Should have blocks: entry, header, body, exit
@@ -1907,7 +1916,7 @@ mod tests {
 
     #[test]
     fn lower_function_call() {
-        let src = "fn callee() -> Int64 { return 42; }\nfn caller() -> Int64 { return callee(); }";
+        let src = "fn callee(): Int64 { return 42; }\nfn caller(): Int64 { return callee(); }";
         let mir = build_mir(src);
         assert_eq!(mir.functions.len(), 2);
         let caller = &mir.functions[1];
@@ -1920,7 +1929,7 @@ mod tests {
 
     #[test]
     fn lower_struct_literal_to_aggregate() {
-        let src = "struct Point { x: Int64, y: Int64 }\nfn make_point() { let p = Point { x: 1, y: 2 }; }";
+        let src = "model Point { x: Int64, y: Int64 }\nfn make_point() { val p = Point { x: 1, y: 2 }; }";
         let mir = build_mir(src);
         let func = mir.functions.iter().find(|f| f.name == "make_point").unwrap();
         let has_aggregate = func.basic_blocks.iter().any(|bb| {
@@ -1939,13 +1948,13 @@ mod tests {
         });
         assert!(
             has_aggregate,
-            "Expected an Aggregate::Struct rvalue for struct literal"
+            "Expected an Aggregate::Struct rvalue for model literal"
         );
     }
 
     #[test]
     fn lower_match_to_switch_chain() {
-        let src = "fn test_match(x: Int64) -> Int64 { return match x { 1 => 10, 2 => 20, _ => 0, }; }";
+        let src = "fn test_match(x: Int64): Int64 { return match x { 1 => 10, 2 => 20, _ => 0, }; }";
         let mir = build_mir(src);
         let func = &mir.functions[0];
         // Should have SwitchInt for the match
@@ -1963,7 +1972,7 @@ mod tests {
 
     #[test]
     fn mir_pretty_print() {
-        let mir = build_mir("fn hello() { let x: Int64 = 42; }");
+        let mir = build_mir("fn hello() { val x: Int64 = 42; }");
         let output = format!("{}", mir);
         assert!(output.contains("fn hello()"), "Should contain function name");
         assert!(output.contains("bb0:"), "Should contain basic block label");
@@ -1973,7 +1982,7 @@ mod tests {
     #[test]
     fn lower_tensor_matmul() {
         let src = "fn matmul(a: Tensor<Float32, [2, 3]>, b: Tensor<Float32, [3, 4]>) {\n\
-                    let c = a @ b;\n\
+                    val c = a @ b;\n\
                     }";
         let mir = build_mir(src);
         let func = &mir.functions[0];
@@ -1996,7 +2005,7 @@ mod tests {
 
     #[test]
     fn multiple_functions_in_program() {
-        let src = "fn foo() -> Int64 { return 1; }\nfn bar() -> Int64 { return 2; }\nfn baz() -> Int64 { return 3; }";
+        let src = "fn foo(): Int64 { return 1; }\nfn bar(): Int64 { return 2; }\nfn baz(): Int64 { return 3; }";
         let mir = build_mir(src);
         assert_eq!(mir.functions.len(), 3);
         assert_eq!(mir.functions[0].name, "foo");

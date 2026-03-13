@@ -20,23 +20,23 @@ We'll build a CNN with:
 ## Step 1: Data Loading
 
 ```axon
-use std::data::DataLoader;
-use std::transforms::{normalize, to_tensor};
+use std.data.DataLoader;
+use std.transforms.{normalize, to_tensor};
 
-fn load_mnist() -> (DataLoader, DataLoader) {
-    let train_loader = DataLoader::from_csv("data/mnist_train.csv")
+fn load_mnist(): (DataLoader, DataLoader) {
+    val train_loader = DataLoader.from_csv("data/mnist_train.csv")
         .batch_size(64)
         .shuffle(true)
         .transform(|img| {
-            let tensor = to_tensor(img, [1, 28, 28]);
+            val tensor = to_tensor(img, [1, 28, 28]);
             normalize(tensor, mean: [0.1307], std: [0.3081])
         });
 
-    let test_loader = DataLoader::from_csv("data/mnist_test.csv")
+    val test_loader = DataLoader.from_csv("data/mnist_test.csv")
         .batch_size(256)
         .shuffle(false)
         .transform(|img| {
-            let tensor = to_tensor(img, [1, 28, 28]);
+            val tensor = to_tensor(img, [1, 28, 28]);
             normalize(tensor, mean: [0.1307], std: [0.3081])
         });
 
@@ -49,9 +49,9 @@ fn load_mnist() -> (DataLoader, DataLoader) {
 ## Step 2: Define the Model
 
 ```axon
-use std::nn::{Conv2d, Linear, MaxPool2d, Module, Sequential};
+use std.nn.{Conv2d, Linear, MaxPool2d, Module, Sequential};
 
-struct MNISTNet {
+model MNISTNet {
     conv1: Conv2d,
     conv2: Conv2d,
     pool: MaxPool2d,
@@ -59,36 +59,36 @@ struct MNISTNet {
     fc2: Linear<128, 10>,
 }
 
-impl MNISTNet {
-    fn new() -> MNISTNet {
+extend MNISTNet {
+    fn new(): MNISTNet {
         MNISTNet {
-            conv1: Conv2d::new(in_channels: 1, out_channels: 32, kernel_size: 3, padding: 1),
-            conv2: Conv2d::new(in_channels: 32, out_channels: 64, kernel_size: 3, padding: 1),
-            pool: MaxPool2d::new(kernel_size: 2, stride: 2),
-            fc1: Linear::new(),
-            fc2: Linear::new(),
+            conv1: Conv2d.new(in_channels: 1, out_channels: 32, kernel_size: 3, padding: 1),
+            conv2: Conv2d.new(in_channels: 32, out_channels: 64, kernel_size: 3, padding: 1),
+            pool: MaxPool2d.new(kernel_size: 2, stride: 2),
+            fc1: Linear.new(),
+            fc2: Linear.new(),
         }
     }
 }
 
-impl Module for MNISTNet {
-    fn forward(&self, x: Tensor<Float32, [?, 1, 28, 28]>) -> Tensor<Float32, [?, 10]> {
+extend Module for MNISTNet {
+    fn forward(&self, x: Tensor<Float32, [?, 1, 28, 28]>): Tensor<Float32, [?, 10]> {
         // Conv block 1: [?, 1, 28, 28] → [?, 32, 14, 14]
-        let h = self.conv1.forward(x);
-        let h = relu(h);
-        let h = self.pool.forward(h);
+        val h = self.conv1.forward(x);
+        val h = relu(h);
+        val h = self.pool.forward(h);
 
         // Conv block 2: [?, 32, 14, 14] → [?, 64, 7, 7]
-        let h = self.conv2.forward(h);
-        let h = relu(h);
-        let h = self.pool.forward(h);
+        val h = self.conv2.forward(h);
+        val h = relu(h);
+        val h = self.pool.forward(h);
 
         // Flatten: [?, 64, 7, 7] → [?, 3136]
-        let batch_size = h.shape[0];
-        let h = h.reshape([batch_size, 3136]);
+        val batch_size = h.shape[0];
+        val h = h.reshape([batch_size, 3136]);
 
         // Fully connected layers
-        let h = relu(self.fc1.forward(h));
+        val h = relu(self.fc1.forward(h));
         self.fc2.forward(h)
     }
 }
@@ -99,29 +99,29 @@ impl Module for MNISTNet {
 ## Step 3: Training Loop
 
 ```axon
-use std::optim::Adam;
-use std::loss::cross_entropy;
-use std::metrics::accuracy;
+use std.optim.Adam;
+use std.loss.cross_entropy;
+use std.metrics.accuracy;
 
 fn train_epoch(
-    model: &mut MNISTNet,
+    net: &mut MNISTNet,
     data: &DataLoader,
     optimizer: &mut Adam,
-) -> (Float32, Float32) {
-    let mut total_loss = 0.0;
-    let mut correct = 0;
-    let mut total = 0;
+): (Float32, Float32) {
+    var total_loss = 0.0;
+    var correct = 0;
+    var total = 0;
 
     for batch in data {
-        let (images, labels) = batch;
+        val (images, labels) = batch;
 
         // Forward
-        let logits = model.forward(images);
-        let loss = cross_entropy(logits, labels);
+        val logits = net.forward(images);
+        val loss = cross_entropy(logits, labels);
 
         // Track metrics
         total_loss += loss.item();
-        let predicted = logits.argmax(dim: 1);
+        val predicted = logits.argmax(dim: 1);
         correct += (predicted == labels).sum().item() as Int32;
         total += labels.shape[0];
 
@@ -131,8 +131,8 @@ fn train_epoch(
         optimizer.zero_grad();
     }
 
-    let avg_loss = total_loss / data.num_batches() as Float32;
-    let acc = correct as Float32 / total as Float32;
+    val avg_loss = total_loss / data.num_batches() as Float32;
+    val acc = correct as Float32 / total as Float32;
     (avg_loss, acc)
 }
 ```
@@ -142,24 +142,24 @@ fn train_epoch(
 ## Step 4: Evaluation
 
 ```axon
-fn evaluate(model: &MNISTNet, data: &DataLoader) -> (Float32, Float32) {
-    let mut total_loss = 0.0;
-    let mut correct = 0;
-    let mut total = 0;
+fn evaluate(net: &MNISTNet, data: &DataLoader): (Float32, Float32) {
+    var total_loss = 0.0;
+    var correct = 0;
+    var total = 0;
 
     for batch in data {
-        let (images, labels) = batch;
-        let logits = model.forward(images);
-        let loss = cross_entropy(logits, labels);
+        val (images, labels) = batch;
+        val logits = net.forward(images);
+        val loss = cross_entropy(logits, labels);
 
         total_loss += loss.item();
-        let predicted = logits.argmax(dim: 1);
+        val predicted = logits.argmax(dim: 1);
         correct += (predicted == labels).sum().item() as Int32;
         total += labels.shape[0];
     }
 
-    let avg_loss = total_loss / data.num_batches() as Float32;
-    let acc = correct as Float32 / total as Float32;
+    val avg_loss = total_loss / data.num_batches() as Float32;
+    val acc = correct as Float32 / total as Float32;
     (avg_loss, acc)
 }
 ```
@@ -169,32 +169,32 @@ fn evaluate(model: &MNISTNet, data: &DataLoader) -> (Float32, Float32) {
 ## Step 5: Full Training Program
 
 ```axon
-use std::nn::{Conv2d, Linear, MaxPool2d, Module};
-use std::optim::Adam;
-use std::loss::cross_entropy;
-use std::data::DataLoader;
-use std::transforms::{normalize, to_tensor};
+use std.nn.{Conv2d, Linear, MaxPool2d, Module};
+use std.optim.Adam;
+use std.loss.cross_entropy;
+use std.data.DataLoader;
+use std.transforms.{normalize, to_tensor};
 
 fn main() {
     println("=== MNIST Classifier ===\n");
 
     // Load data
-    let (train_loader, test_loader) = load_mnist();
+    val (train_loader, test_loader) = load_mnist();
     println("Train: {} samples", train_loader.len());
     println("Test:  {} samples\n", test_loader.len());
 
     // Create model and optimizer
-    let mut model = MNISTNet::new();
-    let mut optimizer = Adam::new(
-        model.parameters(),
+    var net = MNISTNet.new();
+    var optimizer = Adam.new(
+        net.parameters(),
         lr: 0.001,
     );
 
     // Training
-    let epochs = 10;
+    val epochs = 10;
     for epoch in 0..epochs {
-        let (train_loss, train_acc) = train_epoch(&mut model, &train_loader, &mut optimizer);
-        let (test_loss, test_acc) = evaluate(&model, &test_loader);
+        val (train_loss, train_acc) = train_epoch(&mut net, &train_loader, &mut optimizer);
+        val (test_loss, test_acc) = evaluate(&net, &test_loader);
 
         println("Epoch {:>2}/{} | Train Loss: {:.4} Acc: {:.2}% | Test Loss: {:.4} Acc: {:.2}%",
             epoch + 1, epochs,
@@ -204,7 +204,7 @@ fn main() {
     }
 
     // Final evaluation
-    let (_, final_acc) = evaluate(&model, &test_loader);
+    val (_, final_acc) = evaluate(&net, &test_loader);
     println("\nFinal test accuracy: {:.2}%", final_acc * 100.0);
 }
 ```
@@ -233,17 +233,17 @@ To train on GPU, simply transfer data and model:
 
 ```axon
 fn main() {
-    let mut model = MNISTNet::new().to_gpu();
-    let mut optimizer = Adam::new(model.parameters(), lr: 0.001);
+    var net = MNISTNet.new().to_gpu();
+    var optimizer = Adam.new(net.parameters(), lr: 0.001);
 
     for epoch in 0..10 {
         for batch in &train_loader {
-            let (images, labels) = batch;
-            let images = images.to_gpu();
-            let labels = labels.to_gpu();
+            val (images, labels) = batch;
+            val images = images.to_gpu();
+            val labels = labels.to_gpu();
 
-            let logits = model.forward(images);
-            let loss = cross_entropy(logits, labels);
+            val logits = net.forward(images);
+            val loss = cross_entropy(logits, labels);
             loss.backward();
             optimizer.step();
             optimizer.zero_grad();
@@ -263,15 +263,15 @@ axonc build mnist.axon --gpu cuda -O 3 -o mnist
 ## Step 7: Save the Model
 
 ```axon
-use std::export::save;
+use std.export.save;
 
 // After training
-save(&model, "mnist_model.axon");
+save(&net, "mnist_model.axon");
 println("Model saved!");
 
 // Load later
-use std::export::load;
-let loaded_model: MNISTNet = load("mnist_model.axon");
+use std.export.load;
+val loaded_net: MNISTNet = load("mnist_model.axon");
 ```
 
 ---
@@ -285,7 +285,7 @@ let loaded_model: MNISTNet = load("mnist_model.axon");
 | Training loop    | `forward` → `loss` → `backward` → `step` |
 | Metrics          | `argmax`, accuracy calculation           |
 | GPU training     | `.to_gpu()` + `--gpu cuda`               |
-| Model saving     | `std::export::save` / `load`             |
+| Model saving     | `std.export.save` / `load`             |
 
 ---
 

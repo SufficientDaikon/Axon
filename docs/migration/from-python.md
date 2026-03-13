@@ -10,9 +10,9 @@ shape checking.
 
 | Python                    | Axon                 |
 | ------------------------- | -------------------- |
-| `x = 42`                  | `let x = 42;`        |
-| `x = 42` (reassign later) | `let mut x = 42;`    |
-| `x: int = 42`             | `let x: Int32 = 42;` |
+| `x = 42`                  | `val x = 42;`        |
+| `x = 42` (reassign later) | `var x = 42;`    |
+| `x: int = 42`             | `val x: Int32 = 42;` |
 
 ```python
 # Python
@@ -23,12 +23,12 @@ scores = [95, 87, 92]
 
 ```axon
 // Axon
-let name = "Alice";
-let age = 30;
-let scores = vec![95, 87, 92];
+val name = "Alice";
+val age = 30;
+val scores = vec![95, 87, 92];
 ```
 
-Key difference: Axon variables are **immutable by default**. Use `let mut`
+Key difference: Axon variables are **immutable by default**. Use `var`
 for mutable variables.
 
 ---
@@ -46,7 +46,7 @@ def greet(name: str):
 
 ```axon
 // Axon
-fn add(a: Int32, b: Int32) -> Int32 {
+fn add(a: Int32, b: Int32): Int32 {
     a + b    // implicit return (last expression)
 }
 
@@ -95,7 +95,7 @@ else:
 
 ```axon
 // Axon — if is an expression!
-let grade = if score >= 90 {
+val grade = if score >= 90 {
     "A"
 } else if score >= 70 {
     "B"
@@ -157,9 +157,9 @@ match command {
 
 ---
 
-## Classes → Structs + Impl
+## Classes → Models + Extend
 
-Python classes map to Axon structs with impl blocks:
+Python classes map to Axon models with extend blocks:
 
 ```python
 # Python
@@ -177,25 +177,25 @@ class Point:
 
 ```axon
 // Axon
-struct Point {
+model Point {
     x: Float64,
     y: Float64,
 }
 
-impl Point {
-    fn new(x: Float64, y: Float64) -> Point {
+extend Point {
+    fn new(x: Float64, y: Float64): Point {
         Point { x, y }
     }
 
-    fn distance(&self, other: &Point) -> Float64 {
-        let dx = self.x - other.x;
-        let dy = self.y - other.y;
+    fn distance(&self, other: &Point): Float64 {
+        val dx = self.x - other.x;
+        val dy = self.y - other.y;
         (dx * dx + dy * dy).sqrt()
     }
 }
 
-impl Display for Point {
-    fn to_string(&self) -> String {
+extend Display for Point {
+    fn to_string(&self): String {
         format("({}, {})", self.x, self.y)
     }
 }
@@ -225,11 +225,11 @@ except ParseError as e:
 
 ```axon
 // Axon
-match File::open("config.toml") {
+match File.open("config.toml") {
     Ok(file) => {
         match file.read_all() {
             Ok(data) => {
-                let config = parse(data);
+                val config = parse(data);
                 println("Loaded config");
             }
             Err(e) => eprintln("Read error: {}", e),
@@ -239,9 +239,9 @@ match File::open("config.toml") {
 }
 
 // Or more concisely with ?
-fn load_config() -> Result<Config, IOError> {
-    let file = File::open("config.toml")?;
-    let data = file.read_all()?;
+fn load_config(): Result<Config, IOError> {
+    val file = File.open("config.toml")?;
+    val data = file.read_all()?;
     parse(data)
 }
 ```
@@ -263,11 +263,11 @@ mean = np.mean(c, axis=0)
 
 ```axon
 // Axon
-let a = zeros([3, 4]);
-let b = randn([3, 4]);
-let c = a + b;
-let d = a @ b.transpose();
-let mean = c.mean(dim: 0);
+val a = zeros([3, 4]);
+val b = randn([3, 4]);
+val c = a + b;
+val d = a @ b.transpose();
+val mean = c.mean(dim: 0);
 ```
 
 ### Key differences from NumPy:
@@ -289,8 +289,8 @@ evens = [x for x in numbers if x % 2 == 0]
 
 ```axon
 // Axon (iterator methods)
-let squares: Vec<Int32> = (0..10).map(|x| x * x).collect();
-let evens: Vec<Int32> = numbers.iter().filter(|x| x % 2 == 0).collect();
+val squares: Vec<Int32> = (0..10).map(|x| x * x).collect();
+val evens: Vec<Int32> = numbers.iter().filter(|x| x % 2 == 0).collect();
 ```
 
 ---
@@ -308,13 +308,13 @@ from math_utils import square
 
 ```axon
 // Axon — file: math_utils.axon
-pub fn square(x: Float64) -> Float64 {
+pub fn square(x: Float64): Float64 {
     x * x
 }
 
 // main.axon
 mod math_utils;
-use math_utils::square;
+use math_utils.square;
 ```
 
 ---

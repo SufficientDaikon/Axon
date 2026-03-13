@@ -1,6 +1,6 @@
 // Test: this file intentionally has NO main function.
 // It should fail to compile/link.
 
-fn helper(x: Int64) -> Int64 {
+fn helper(x: Int64): Int64 {
     return x + 1;
 }

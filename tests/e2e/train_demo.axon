@@ -1,0 +1,39 @@
+// Test: Training loop — learn w ≈ 3 by minimizing (w - 3)^2
+// Uses tape-based autograd: loss = (w - target)^2, gradient = 2*(w - target)
+// After 100 SGD steps with lr=0.1, w converges to 3.0
+// expect: 3
+
+fn main() {
+    autograd_enable();
+
+    // target = 3.0 (built from ones: 1 + 1 + 1)
+    val t1 = tensor_ones(1);
+    val t2 = tensor_ones(1);
+    val t3 = tensor_ones(1);
+    autograd_disable();
+    val target = t1 + t2;
+    val target2 = target + t3;
+    autograd_enable();
+
+    // weight starts at 1.0
+    var w = tensor_ones(1);
+    tensor_set_requires_grad(w);
+
+    val lr: Float64 = 0.1;
+    var i: Int64 = 0;
+    while i < 100 {
+        tape_clear();
+        val diff = w - target2;
+        val loss = diff * diff;
+        tensor_backward(loss);
+        sgd_step(w, lr);
+        tensor_zero_grad(w);
+        i = i + 1;
+    }
+
+    autograd_disable();
+
+    // w should be ~3.0; %g format prints "3" for exact 3.0
+    val v = tensor_item(w);
+    println(v);
+}

@@ -1,7 +1,7 @@
 fn main() {
-    let a: Int64 = 10;
-    let b: Int64 = 20;
-    let sum: Int64 = a + b;
-    let diff: Int64 = a - b;
-    let prod: Int64 = a * b;
+    val a: Int64 = 10;
+    val b: Int64 = 20;
+    val sum: Int64 = a + b;
+    val diff: Int64 = a - b;
+    val prod: Int64 = a * b;
 }

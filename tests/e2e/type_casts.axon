@@ -1,7 +1,7 @@
 fn main() {
-    let a: Int64 = 100;
-    let b: Int64 = 3;
-    let div: Int64 = a / b;
+    val a: Int64 = 100;
+    val b: Int64 = 3;
+    val div: Int64 = a / b;
     println(div);
 }
 // expect: 33

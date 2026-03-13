@@ -20,16 +20,16 @@ mod formatter_tests {
 
     #[test]
     fn format_struct() {
-        let src = "struct Point { x: Int32, y: Int32, }";
+        let src = "model Point { x: Int32, y: Int32, }";
         let result = Formatter::format(src, "test.axon").unwrap();
-        assert!(result.contains("struct Point"));
+        assert!(result.contains("model Point"));
         assert!(result.contains("x: Int32,"));
         assert!(result.contains("y: Int32,"));
     }
 
     #[test]
     fn format_if_else_braces_same_line() {
-        let src = "fn test() { if true { let _x: Int32 = 1; } }";
+        let src = "fn test() { if true { val _x: Int32 = 1; } }";
         let result = Formatter::format(src, "test.axon").unwrap();
         // Braces should appear on the same line as `if`
         assert!(result.contains("if true {"));
@@ -37,22 +37,22 @@ mod formatter_tests {
 
     #[test]
     fn format_match_expression() {
-        let src = "fn test() {\n    let _r: Int32 = match x {\n        1 => 0,\n        _ => 1,\n    };\n}";
+        let src = "fn test() {\n    val _r: Int32 = match x {\n        1 => 0,\n        _ => 1,\n    };\n}";
         let result = Formatter::format(src, "test.axon").unwrap();
         assert!(result.contains("match x"));
     }
 
     #[test]
     fn format_let_bindings() {
-        let src = "fn main() { let x: Int32 = 0; let y: Int32 = 1; }";
+        let src = "fn main() { val x: Int32 = 0; val y: Int32 = 1; }";
         let result = Formatter::format(src, "test.axon").unwrap();
-        assert!(result.contains("let x: Int32 = 0;"));
-        assert!(result.contains("let y: Int32 = 1;"));
+        assert!(result.contains("val x: Int32 = 0;"));
+        assert!(result.contains("val y: Int32 = 1;"));
     }
 
     #[test]
     fn format_idempotent() {
-        let src = "fn add(a: Int32, b: Int32) -> Int32 { return a + b; }";
+        let src = "fn add(a: Int32, b: Int32): Int32 { return a + b; }";
         let first = Formatter::format(src, "test.axon").unwrap();
         let second = Formatter::format(&first, "test.axon").unwrap();
         assert_eq!(first, second, "formatting should be idempotent");
@@ -100,7 +100,7 @@ mod linter_tests {
 
     #[test]
     fn detect_unused_variable() {
-        let src = "fn main() { let x: Int32 = 1; }";
+        let src = "fn main() { val x: Int32 = 1; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(
             warnings.iter().any(|w| w.code == "W5001" && w.message.contains("unused variable")),
@@ -110,7 +110,7 @@ mod linter_tests {
 
     #[test]
     fn allow_underscore_prefixed_variables() {
-        let src = "fn main() { let _unused: Int32 = 1; }";
+        let src = "fn main() { val _unused: Int32 = 1; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(
             !warnings.iter().any(|w| w.code == "W5001" && w.message.contains("_unused")),
@@ -134,7 +134,7 @@ mod linter_tests {
 
     #[test]
     fn detect_non_snake_case_function() {
-        let src = "fn MyFunction() { let _x: Int32 = 0; }";
+        let src = "fn MyFunction() { val _x: Int32 = 0; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(
             warnings.iter().any(|w| w.code == "W5004" && w.message.contains("snake_case")),
@@ -144,9 +144,9 @@ mod linter_tests {
 
     #[test]
     fn detect_non_pascal_case_struct() {
-        let src = "struct my_point { x: Int32, }";
+        let src = "model my_point { x: Int32, }";
         let warnings = Linter::lint(src, "test.axon");
-        assert!(warnings.iter().any(|w| w.code == "W5005"), "should detect non-PascalCase struct name");
+        assert!(warnings.iter().any(|w| w.code == "W5005"), "should detect non-PascalCase model name");
     }
 
     #[test]
@@ -162,7 +162,7 @@ mod linter_tests {
 
     #[test]
     fn clean_file_produces_no_warnings() {
-        let src = "fn main() { let _x: Int32 = 0; }";
+        let src = "fn main() { val _x: Int32 = 0; }";
         let warnings = Linter::lint(src, "test.axon");
         // Filter out magic number warnings for 0 (they are exempt)
         let real_warnings: Vec<_> = warnings.iter().filter(|w| w.code != "W5009").collect();
@@ -175,7 +175,7 @@ mod linter_tests {
 
     #[test]
     fn detect_todo_comment() {
-        let src = "// TODO: fix this\nfn main() { let _x: Int32 = 0; }";
+        let src = "// TODO: fix this\nfn main() { val _x: Int32 = 0; }";
         let warnings = Linter::lint(src, "test.axon");
         assert!(warnings.iter().any(|w| w.code == "W5009"), "should detect TODO comment");
     }
@@ -201,7 +201,7 @@ mod repl_tests {
     #[test]
     fn eval_let_binding() {
         let mut repl = Repl::new();
-        let result = repl.eval_line("let x: Int32 = 42;");
+        let result = repl.eval_line("val x: Int32 = 42;");
         assert_eq!(result, ReplResult::Definition("x".to_string()));
     }
 
@@ -218,7 +218,7 @@ mod repl_tests {
     #[test]
     fn eval_function_definition() {
         let mut repl = Repl::new();
-        let result = repl.eval_line("fn add(a: Int32, b: Int32) -> Int32 { return a + b; }");
+        let result = repl.eval_line("fn add(a: Int32, b: Int32): Int32 { return a + b; }");
         assert_eq!(result, ReplResult::Definition("add".to_string()));
     }
 
@@ -242,11 +242,11 @@ mod repl_tests {
     #[test]
     fn clear_command() {
         let mut repl = Repl::new();
-        repl.eval_line("let x: Int32 = 1;");
-        repl.eval_line("let y: Int32 = 2;");
+        repl.eval_line("val x: Int32 = 1;");
+        repl.eval_line("val y: Int32 = 2;");
         assert_eq!(repl.eval_line(":clear"), ReplResult::Command);
         // After clear, bindings should be empty — verify by defining again
-        let result = repl.eval_line("let x: Int32 = 99;");
+        let result = repl.eval_line("val x: Int32 = 99;");
         assert_eq!(result, ReplResult::Definition("x".to_string()));
     }
 
@@ -269,7 +269,7 @@ mod repl_tests {
     #[test]
     fn eval_struct_definition() {
         let mut repl = Repl::new();
-        let result = repl.eval_line("struct Point { x: Int32, y: Int32, }");
+        let result = repl.eval_line("model Point { x: Int32, y: Int32, }");
         assert_eq!(result, ReplResult::Definition("Point".to_string()));
     }
 }
@@ -283,7 +283,7 @@ mod doc_tests {
 
     #[test]
     fn generate_docs_for_function_with_doc_comment() {
-        let src = "/// Adds two numbers.\npub fn add(a: Int32, b: Int32) -> Int32 { return a + b; }";
+        let src = "/// Adds two numbers.\npub fn add(a: Int32, b: Int32): Int32 { return a + b; }";
         let html = DocGenerator::generate(src, "math.axon");
         assert!(html.contains("Adds two numbers"), "doc comment should appear in output");
         assert!(html.contains("add"), "function name should appear in output");
@@ -291,15 +291,15 @@ mod doc_tests {
 
     #[test]
     fn generate_docs_for_struct() {
-        let src = "pub struct Point { pub x: Int32, pub y: Int32, }";
+        let src = "pub model Point { pub x: Int32, pub y: Int32, }";
         let html = DocGenerator::generate(src, "geom.axon");
-        assert!(html.contains("Point"), "struct name should appear");
-        assert!(html.contains("Struct"), "kind label should appear");
+        assert!(html.contains("Point"), "model name should appear");
+        assert!(html.contains("Model"), "kind label should appear");
     }
 
     #[test]
     fn output_is_valid_html() {
-        let src = "pub fn hello() { let _x: Int32 = 0; }";
+        let src = "pub fn hello() { val _x: Int32 = 0; }";
         let html = DocGenerator::generate(src, "hello.axon");
         assert!(html.contains("<html"), "output should contain <html>");
         assert!(html.contains("<body>"), "output should contain <body>");
@@ -308,7 +308,7 @@ mod doc_tests {
 
     #[test]
     fn doc_comments_extracted_correctly() {
-        let src = "/// First line\n/// Second line\npub fn documented() { let _x: Int32 = 0; }";
+        let src = "/// First line\n/// Second line\npub fn documented() { val _x: Int32 = 0; }";
         let html = DocGenerator::generate(src, "test.axon");
         assert!(html.contains("First line"), "first line of doc comment should appear");
         assert!(html.contains("Second line"), "second line of doc comment should appear");
@@ -316,7 +316,7 @@ mod doc_tests {
 
     #[test]
     fn public_items_included() {
-        let src = "pub fn public_fn() { let _x: Int32 = 0; }\nfn private_fn() { let _y: Int32 = 0; }";
+        let src = "pub fn public_fn() { val _x: Int32 = 0; }\nfn private_fn() { val _y: Int32 = 0; }";
         let html = DocGenerator::generate(src, "test.axon");
         assert!(html.contains("public_fn"), "public function should be documented");
         // Private items are excluded by doc generator
@@ -326,14 +326,14 @@ mod doc_tests {
     #[test]
     fn generate_docs_multiple_items() {
         let src = r#"
-pub fn alpha() { let _x: Int32 = 0; }
-pub fn beta() { let _y: Int32 = 0; }
-pub struct Gamma { pub val: Int32, }
+pub fn alpha() { val _x: Int32 = 0; }
+pub fn beta() { val _y: Int32 = 0; }
+pub model Gamma { pub value: Int32, }
 "#;
         let html = DocGenerator::generate(src, "multi.axon");
         assert!(html.contains("alpha"), "first function should appear");
         assert!(html.contains("beta"), "second function should appear");
-        assert!(html.contains("Gamma"), "struct should appear");
+        assert!(html.contains("Gamma"), "model should appear");
     }
 
     #[test]
@@ -473,7 +473,7 @@ mod lsp_tests {
         let hover = Hover {
             contents: MarkupContent {
                 kind: "markdown".to_string(),
-                value: "```axon\nfn add(a: Int32, b: Int32) -> Int32\n```".to_string(),
+                value: "```axon\nfn add(a: Int32, b: Int32): Int32\n```".to_string(),
             },
             range: Some(Range {
                 start: Position { line: 0, character: 3 },

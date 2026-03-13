@@ -17,7 +17,7 @@ enum Option<T> {
 ### Using Option
 
 ```axon
-fn find_max(data: Tensor<Float32, [_]>) -> Option<Float32> {
+fn find_max(data: Tensor<Float32, [_]>): Option<Float32> {
     if data.len() == 0 {
         return None;
     }
@@ -25,7 +25,7 @@ fn find_max(data: Tensor<Float32, [_]>) -> Option<Float32> {
 }
 
 fn main() {
-    let values = tensor([1.0, 5.0, 3.0, 9.0, 2.0]);
+    val values = tensor([1.0, 5.0, 3.0, 9.0, 2.0]);
 
     match find_max(values) {
         Some(max) => println("Max value: {}", max),
@@ -37,13 +37,13 @@ fn main() {
 ### Option Combinators
 
 ```axon
-let maybe_value: Option<Float64> = Some(42.0);
+val maybe_value: Option<Float64> = Some(42.0);
 
 // unwrap_or: provide a default
-let value = maybe_value.unwrap_or(0.0);
+val value = maybe_value.unwrap_or(0.0);
 
 // map: transform the inner value
-let doubled = maybe_value.map(|x| x * 2.0);
+val doubled = maybe_value.map(|x| x * 2.0);
 
 // is_some / is_none: check presence
 if maybe_value.is_some() {
@@ -65,11 +65,11 @@ enum Result<T, E> {
 ### Using Result
 
 ```axon
-fn load_model(path: String) -> Result<Model, String> {
+fn load_model(path: String): Result<Model, String> {
     if !file_exists(path) {
         return Err("Model file not found: " + path);
     }
-    let data = read_file(path)?;  // ? propagates errors
+    val data = read_file(path)?;  // ? propagates errors
     return Ok(parse_model(data));
 }
 
@@ -86,12 +86,12 @@ fn main() {
 The `?` operator propagates errors up the call stack automatically:
 
 ```axon
-fn train_pipeline(config_path: String) -> Result<Float64, String> {
-    let config = load_config(config_path)?;     // returns Err early if this fails
-    let data = load_dataset(config.data_path)?;  // same here
-    let model = build_model(config)?;             // and here
+fn train_pipeline(config_path: String): Result<Float64, String> {
+    val config = load_config(config_path)?;     // returns Err early if this fails
+    val data = load_dataset(config.data_path)?;  // same here
+    val model = build_model(config)?;             // and here
 
-    let final_loss = train(model, data, config.epochs)?;
+    val final_loss = train(model, data, config.epochs)?;
     return Ok(final_loss);
 }
 ```
@@ -110,9 +110,9 @@ enum TrainingError {
     OutOfMemory,
 }
 
-fn train(model: Model, data: Dataset) -> Result<Model, TrainingError> {
+fn train(model: Model, data: Dataset): Result<Model, TrainingError> {
     if data.shape() != model.expected_input_shape() {
-        return Err(TrainingError::InvalidShape {
+        return Err(TrainingError.InvalidShape {
             expected: model.expected_input_shape(),
             actual: data.shape(),
         });
@@ -128,10 +128,10 @@ Convert between Option and Result:
 
 ```axon
 // Option → Result: provide an error message for the None case
-let value: Result<Float64, String> = maybe_value.ok_or("value was missing");
+val value: Result<Float64, String> = maybe_value.ok_or("value was missing");
 
 // Result → Option: discard the error info
-let maybe: Option<Float64> = result.ok();
+val maybe: Option<Float64> = result.ok();
 ```
 
 ## Panics
@@ -159,5 +159,5 @@ Use them for programming errors (invariant violations), not expected failure mod
 
 ## Next Steps
 
-- [Tutorial 05: Structs and Enums](05-structs-and-enums.md) — Custom data types
+- [Tutorial 05: Models and Enums](05-structs-and-enums.md) — Custom data types
 - [Tutorial 01: Hello Tensor](01-hello-tensor.md) — Start from the beginning

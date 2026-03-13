@@ -8,11 +8,12 @@ use crate::span::Span;
 pub enum TokenKind {
     // ── Keywords ──────────────────────────────────────────────
     Fn,
-    Let,
     Mut,
-    Struct,
+    Val,       // val (immutable binding)
+    Var,       // var (mutable binding)
     Enum,
-    Impl,
+    Extend,    // extend (implementation block)
+    Model,     // model (struct declaration)
     Trait,
     If,
     Else,
@@ -76,9 +77,8 @@ pub enum TokenKind {
     Amp,       // &
     AmpMut,    // &mut
     Question,  // ?
-    Arrow,     // ->
     FatArrow,  // =>
-    ColonColon, // ::
+    Pipe,      // |>
     Dot,       // .
     DotDot,    // ..
     Eq,        // =
@@ -121,11 +121,12 @@ impl TokenKind {
     pub fn name(&self) -> &str {
         match self {
             TokenKind::Fn => "fn",
-            TokenKind::Let => "let",
             TokenKind::Mut => "mut",
-            TokenKind::Struct => "struct",
+            TokenKind::Val => "val",
+            TokenKind::Var => "var",
             TokenKind::Enum => "enum",
-            TokenKind::Impl => "impl",
+            TokenKind::Extend => "extend",
+            TokenKind::Model => "model",
             TokenKind::Trait => "trait",
             TokenKind::If => "if",
             TokenKind::Else => "else",
@@ -185,9 +186,8 @@ impl TokenKind {
             TokenKind::Amp => "&",
             TokenKind::AmpMut => "&mut",
             TokenKind::Question => "?",
-            TokenKind::Arrow => "->",
             TokenKind::FatArrow => "=>",
-            TokenKind::ColonColon => "::",
+            TokenKind::Pipe => "|>",
             TokenKind::Dot => ".",
             TokenKind::DotDot => "..",
             TokenKind::Eq => "=",
@@ -247,11 +247,12 @@ impl Token {
 pub fn lookup_keyword(ident: &str) -> Option<TokenKind> {
     match ident {
         "fn" => Some(TokenKind::Fn),
-        "let" => Some(TokenKind::Let),
         "mut" => Some(TokenKind::Mut),
-        "struct" => Some(TokenKind::Struct),
+        "val" => Some(TokenKind::Val),
+        "var" => Some(TokenKind::Var),
+        "model" => Some(TokenKind::Model),
         "enum" => Some(TokenKind::Enum),
-        "impl" => Some(TokenKind::Impl),
+        "extend" => Some(TokenKind::Extend),
         "trait" => Some(TokenKind::Trait),
         "if" => Some(TokenKind::If),
         "else" => Some(TokenKind::Else),

@@ -12,6 +12,36 @@ pub fn register_prelude(interner: &mut TypeInterner, symbols: &mut SymbolTable) 
     def_fn(symbols, interner, "print", vec![TypeId::STRING], TypeId::UNIT);
     def_fn(symbols, interner, "eprintln", vec![TypeId::STRING], TypeId::UNIT);
 
+    // -- Tensor built-in functions --------------------------------------------
+    // These are intercepted by the type checker (check_fn_call) which returns
+    // the proper Tensor type. We register them with a tensor return type so
+    // the TAST builder also sees the correct type.
+    let tensor_ty = interner.intern(Type::Tensor(TensorType {
+        dtype: TypeId::FLOAT32,
+        shape: vec![ShapeDimResolved::Dynamic],
+    }));
+    // Creation: tensor_zeros/ones/rand accept variadic int args (shape dims)
+    // Register 1-arg and 2-arg variants for name resolution.
+    def_fn(symbols, interner, "tensor_zeros", vec![TypeId::INT64], tensor_ty);
+    def_fn(symbols, interner, "tensor_ones", vec![TypeId::INT64], tensor_ty);
+    def_fn(symbols, interner, "tensor_rand", vec![TypeId::INT64], tensor_ty);
+    // Also register 2-arg versions for 2D tensors (name resolver just checks existence)
+    def_fn(symbols, interner, "tensor_zeros2", vec![TypeId::INT64, TypeId::INT64], tensor_ty);
+    def_fn(symbols, interner, "tensor_ones2", vec![TypeId::INT64, TypeId::INT64], tensor_ty);
+    def_fn(symbols, interner, "tensor_rand2", vec![TypeId::INT64, TypeId::INT64], tensor_ty);
+    def_fn(symbols, interner, "tensor_print", vec![tensor_ty], TypeId::UNIT);
+    def_fn(symbols, interner, "tensor_item", vec![tensor_ty], TypeId::FLOAT64);
+    def_fn(symbols, interner, "tensor_backward", vec![tensor_ty], TypeId::UNIT);
+    def_fn(symbols, interner, "tensor_zero_grad", vec![tensor_ty], TypeId::UNIT);
+    def_fn(symbols, interner, "tensor_mse_loss", vec![tensor_ty, tensor_ty], tensor_ty);
+    def_fn(symbols, interner, "tensor_cross_entropy_loss", vec![tensor_ty, tensor_ty], tensor_ty);
+    def_fn(symbols, interner, "tape_clear", vec![], TypeId::UNIT);
+    def_fn(symbols, interner, "autograd_enable", vec![], TypeId::UNIT);
+    def_fn(symbols, interner, "autograd_disable", vec![], TypeId::UNIT);
+    def_fn(symbols, interner, "tensor_grad", vec![tensor_ty], tensor_ty);
+    def_fn(symbols, interner, "sgd_step", vec![tensor_ty, TypeId::FLOAT64], TypeId::UNIT);
+    def_fn(symbols, interner, "tensor_set_requires_grad", vec![tensor_ty], TypeId::UNIT);
+
     // -- Assertions / panics --------------------------------------------------
     def_fn(symbols, interner, "assert", vec![TypeId::BOOL], TypeId::UNIT);
     def_fn(symbols, interner, "assert_eq", vec![TypeId::INT32, TypeId::INT32], TypeId::UNIT);

@@ -1,5 +1,5 @@
 fn main() {
-    let mut i: Int64 = 0;
+    var i: Int64 = 0;
     while i < 10 {
         i = i + 1;
     }

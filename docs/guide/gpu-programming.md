@@ -14,7 +14,7 @@ Mark a function for GPU execution:
 
 ```axon
 @gpu
-fn vector_add(a: Tensor<Float32, [1024]>, b: Tensor<Float32, [1024]>) -> Tensor<Float32, [1024]> {
+fn vector_add(a: Tensor<Float32, [1024]>, b: Tensor<Float32, [1024]>): Tensor<Float32, [1024]> {
     a + b
 }
 ```
@@ -29,7 +29,7 @@ Explicitly mark a function for CPU-only execution:
 ```axon
 @cpu
 fn save_results(data: Tensor<Float32, [?, 10]>, path: String) {
-    let file = File::create(path);
+    val file = File.create(path);
     file.write(data);
 }
 ```
@@ -40,9 +40,9 @@ Specify a device target explicitly:
 
 ```axon
 @device("cuda:0")
-fn forward_gpu0(x: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]> {
+fn forward_gpu0(x: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]> {
     // executes on CUDA device 0
-    let w = randn([784, 10]);
+    val w = randn([784, 10]);
     x @ w
 }
 ```
@@ -56,16 +56,16 @@ Tensors are transferred between devices with `.to_gpu()` and `.to_cpu()`:
 ```axon
 fn gpu_example() {
     // Create on CPU
-    let cpu_tensor = randn([1024, 1024]);
+    val cpu_tensor = randn([1024, 1024]);
 
     // Transfer to GPU
-    let gpu_tensor = cpu_tensor.to_gpu();
+    val gpu_tensor = cpu_tensor.to_gpu();
 
     // Compute on GPU — fast!
-    let result = gpu_tensor @ gpu_tensor;
+    val result = gpu_tensor @ gpu_tensor;
 
     // Transfer back to CPU for I/O
-    let cpu_result = result.to_cpu();
+    val cpu_result = result.to_cpu();
     println("{}", cpu_result);
 }
 ```
@@ -75,17 +75,17 @@ fn gpu_example() {
 Device transfer follows ownership rules — the source tensor is consumed:
 
 ```axon
-let data = randn([256, 256]);
-let gpu_data = data.to_gpu();   // data is moved
+val data = randn([256, 256]);
+val gpu_data = data.to_gpu();   // data is moved
 // println("{}", data);          // ERROR[E4001]: use of moved value `data`
 ```
 
 To keep a CPU copy, clone first:
 
 ```axon
-let data = randn([256, 256]);
-let backup = data.clone();
-let gpu_data = data.to_gpu();
+val data = randn([256, 256]);
+val backup = data.clone();
+val gpu_data = data.to_gpu();
 println("{}", backup);           // OK — backup is a separate copy
 ```
 
@@ -97,16 +97,16 @@ Tensors track their device in the type system. Operations between tensors
 on different devices are compile-time errors:
 
 ```axon
-let cpu_a = randn([100]);
-let gpu_b = randn([100]).to_gpu();
-// let c = cpu_a + gpu_b;  // ERROR: device mismatch — cpu and gpu tensors
+val cpu_a = randn([100]);
+val gpu_b = randn([100]).to_gpu();
+// val c = cpu_a + gpu_b;  // ERROR: device mismatch — cpu and gpu tensors
 ```
 
 ### Creating Tensors Directly on GPU
 
 ```axon
 @gpu
-fn init_weights() -> Tensor<Float32, [784, 256]> {
+fn init_weights(): Tensor<Float32, [784, 256]> {
     randn([784, 256])   // created directly on GPU — no transfer needed
 }
 ```
@@ -152,14 +152,14 @@ Axon applies GPU-specific optimizations:
 ### Selecting a Device
 
 ```axon
-use std::device::{Device, cuda};
+use std.device.{Device, cuda};
 
 fn main() {
-    let dev0 = cuda(0);   // first GPU
-    let dev1 = cuda(1);   // second GPU
+    val dev0 = cuda(0);   // first GPU
+    val dev1 = cuda(1);   // second GPU
 
-    let a = randn([1024, 1024]).to_device(dev0);
-    let b = randn([1024, 1024]).to_device(dev1);
+    val a = randn([1024, 1024]).to_device(dev0);
+    val b = randn([1024, 1024]).to_device(dev1);
 }
 ```
 
@@ -169,24 +169,24 @@ Split batches across GPUs:
 
 ```axon
 fn train_multi_gpu(model: &mut NeuralNet, data: &DataLoader) {
-    let devices = [cuda(0), cuda(1)];
+    val devices = [cuda(0), cuda(1)];
 
     for batch in data {
-        let (inputs, targets) = batch;
+        val (inputs, targets) = batch;
 
         // Split batch across devices
-        let chunks = inputs.chunk(devices.len(), dim: 0);
+        val chunks = inputs.chunk(devices.len(), dim: 0);
 
-        let mut losses = Vec::new();
+        var losses = Vec.new();
         for i in 0..devices.len() {
-            let chunk = chunks[i].to_device(devices[i]);
-            let pred = model.forward(chunk);
-            let loss = cross_entropy(pred, targets);
+            val chunk = chunks[i].to_device(devices[i]);
+            val pred = model.forward(chunk);
+            val loss = cross_entropy(pred, targets);
             losses.push(loss);
         }
 
         // Aggregate gradients
-        let total_loss = losses.sum();
+        val total_loss = losses.sum();
         total_loss.backward();
     }
 }
@@ -195,14 +195,14 @@ fn train_multi_gpu(model: &mut NeuralNet, data: &DataLoader) {
 ### Device Query
 
 ```axon
-use std::device;
+use std.device;
 
 fn main() {
-    let count = device::gpu_count();
+    val count = device.gpu_count();
     println("Available GPUs: {}", count);
 
     for i in 0..count {
-        let dev = device::cuda(i);
+        val dev = device.cuda(i);
         println("  GPU {}: {} ({}MB)", i, dev.name(), dev.memory_mb());
     }
 }
@@ -213,32 +213,32 @@ fn main() {
 ## Complete Example: GPU Matrix Multiplication
 
 ```axon
-use std::device::cuda;
+use std.device.cuda;
 
 @gpu
 fn matmul_gpu(
     a: Tensor<Float32, [?, ?]>,
     b: Tensor<Float32, [?, ?]>,
-) -> Tensor<Float32, [?, ?]> {
+): Tensor<Float32, [?, ?]> {
     a @ b
 }
 
 fn main() {
-    let size = 2048;
+    val size = 2048;
 
     // Create tensors on CPU
-    let a = randn([size, size]);
-    let b = randn([size, size]);
+    val a = randn([size, size]);
+    val b = randn([size, size]);
 
     // Transfer to GPU
-    let ga = a.to_gpu();
-    let gb = b.to_gpu();
+    val ga = a.to_gpu();
+    val gb = b.to_gpu();
 
     // GPU matrix multiply
-    let gc = matmul_gpu(ga, gb);
+    val gc = matmul_gpu(ga, gb);
 
     // Get result
-    let c = gc.to_cpu();
+    val c = gc.to_cpu();
     println("Result shape: {}", c.shape);
     println("Result[0][0]: {}", c[0][0]);
 }

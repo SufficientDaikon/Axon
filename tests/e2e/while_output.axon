@@ -6,7 +6,7 @@
 // expect: 4
 
 fn main() {
-    let mut i: Int64 = 0;
+    var i: Int64 = 0;
     while i < 5 {
         println(i);
         i = i + 1;

@@ -23,7 +23,7 @@ code, description, example code that triggers it, and how to fix it.
 ### E0001: Unexpected Character
 
 ```axon
-let x = 42$;
+val x = 42$;
 //         ^ ERROR[E0001]: unexpected character `$`
 ```
 
@@ -32,7 +32,7 @@ let x = 42$;
 ### E0002: Unterminated String Literal
 
 ```axon
-let s = "hello;
+val s = "hello;
 //      ^ ERROR[E0002]: unterminated string literal
 ```
 
@@ -59,7 +59,7 @@ fn foo( {
 ### E0011: Expected Expression
 
 ```axon
-let x = ;
+val x = ;
 //      ^ ERROR[E0011]: expected expression, found `;`
 ```
 
@@ -68,7 +68,7 @@ let x = ;
 ### E0012: Expected Type
 
 ```axon
-let x: = 42;
+val x: = 42;
 //     ^ ERROR[E0012]: expected type, found `=`
 ```
 
@@ -77,7 +77,7 @@ let x: = 42;
 ### E0020: Invalid Integer Literal
 
 ```axon
-let x = 0xGG;
+val x = 0xGG;
 //      ^ ERROR[E0020]: invalid hexadecimal literal
 ```
 
@@ -86,14 +86,14 @@ let x = 0xGG;
 ### E0021: Invalid Float Literal
 
 ```axon
-let x = 1.2.3;
+val x = 1.2.3;
 //      ^ ERROR[E0021]: invalid float literal
 ```
 
 ### E0030: Invalid Escape Sequence
 
 ```axon
-let s = "\q";
+val s = "\q";
 //       ^ ERROR[E0030]: unknown escape sequence `\q`
 ```
 
@@ -143,7 +143,7 @@ fn main() {
 ### E1003: Undefined Type
 
 ```axon
-let x: NonExistent = 42;
+val x: NonExistent = 42;
 //     ^ ERROR[E1003]: undefined type `NonExistent`
 ```
 
@@ -158,15 +158,15 @@ fn foo() {}
 ### E1011: Duplicate Field
 
 ```axon
-struct Point { x: Int32, x: Int32 }
+model Point { x: Int32, x: Int32 }
 //                       ^ ERROR[E1011]: duplicate field `x`
 ```
 
 ### E1020: Unresolved Import
 
 ```axon
-use std::nonexistent::Module;
-//  ^ ERROR[E1020]: unresolved import `std::nonexistent`
+use std.nonexistent.Module;
+//  ^ ERROR[E1020]: unresolved import `std.nonexistent`
 ```
 
 ### E1030: Private Item
@@ -175,7 +175,7 @@ use std::nonexistent::Module;
 mod inner {
     fn secret() {}
 }
-inner::secret();
+inner.secret();
 // ^ ERROR[E1030]: function `secret` is private
 ```
 
@@ -188,21 +188,21 @@ inner::secret();
 ### E2001: Type Mismatch
 
 ```axon
-let x: Int32 = "hello";
+val x: Int32 = "hello";
 // ERROR[E2001]: type mismatch — expected `Int32`, found `String`
 ```
 
 ### E2002: Binary Operator Type Error
 
 ```axon
-let x = "hello" + 42;
+val x = "hello" + 42;
 // ERROR[E2002]: cannot apply `+` to `String` and `Int32`
 ```
 
 ### E2003: Return Type Mismatch
 
 ```axon
-fn foo() -> Int32 {
+fn foo(): Int32 {
     "not an integer"
 // ERROR[E2003]: return type mismatch — expected `Int32`, found `String`
 }
@@ -211,16 +211,16 @@ fn foo() -> Int32 {
 ### E2010: Missing Field
 
 ```axon
-struct Point { x: Int32, y: Int32 }
-let p = Point { x: 1 };
+model Point { x: Int32, y: Int32 }
+val p = Point { x: 1 };
 // ERROR[E2010]: missing field `y` in struct `Point`
 ```
 
 ### E2011: Unknown Field
 
 ```axon
-struct Point { x: Int32, y: Int32 }
-let p = Point { x: 1, y: 2, z: 3 };
+model Point { x: Int32, y: Int32 }
+val p = Point { x: 1, y: 2, z: 3 };
 //                           ^ ERROR[E2011]: unknown field `z` on `Point`
 ```
 
@@ -242,21 +242,21 @@ value.shared_method();
 // ERROR[E2021]: ambiguous method call — candidates from `TraitA` and `TraitB`
 ```
 
-**Fix**: Use fully qualified syntax: `TraitA::shared_method(&value)`.
+**Fix**: Use fully qualified syntax: `TraitA.shared_method(&value)`.
 
 ### E2030: Cannot Infer Type
 
 ```axon
-let x = Vec::new();
+val x = Vec.new();
 // ERROR[E2030]: cannot infer type — add a type annotation
 ```
 
-**Fix**: `let x: Vec<Int32> = Vec::new();`
+**Fix**: `val x: Vec<Int32> = Vec.new();`
 
 ### E2040: Invalid Cast
 
 ```axon
-let x = "hello" as Int32;
+val x = "hello" as Int32;
 // ERROR[E2040]: cannot cast `String` to `Int32`
 ```
 
@@ -267,9 +267,9 @@ let x = "hello" as Int32;
 ### E3001: Matmul Shape Mismatch
 
 ```axon
-let a: Tensor<Float32, [3, 4]> = randn([3, 4]);
-let b: Tensor<Float32, [5, 6]> = randn([5, 6]);
-let c = a @ b;
+val a: Tensor<Float32, [3, 4]> = randn([3, 4]);
+val b: Tensor<Float32, [5, 6]> = randn([5, 6]);
+val c = a @ b;
 // ERROR[E3001]: matmul shape mismatch — inner dimensions 4 ≠ 5
 //   note: left shape [3, 4], right shape [5, 6]
 ```
@@ -279,8 +279,8 @@ let c = a @ b;
 ### E3002: Invalid Reshape
 
 ```axon
-let t: Tensor<Float32, [2, 3]> = randn([2, 3]);
-let r = t.reshape([2, 2]);
+val t: Tensor<Float32, [2, 3]> = randn([2, 3]);
+val r = t.reshape([2, 2]);
 // ERROR[E3002]: cannot reshape [2, 3] (6 elements) to [2, 2] (4 elements)
 ```
 
@@ -289,17 +289,17 @@ let r = t.reshape([2, 2]);
 ### E3003: Broadcast Incompatible
 
 ```axon
-let a: Tensor<Float32, [3, 4]> = randn([3, 4]);
-let b: Tensor<Float32, [3, 5]> = randn([3, 5]);
-let c = a + b;
+val a: Tensor<Float32, [3, 4]> = randn([3, 4]);
+val b: Tensor<Float32, [3, 5]> = randn([3, 5]);
+val c = a + b;
 // ERROR[E3003]: shapes [3, 4] and [3, 5] are not broadcast-compatible
 ```
 
 ### E3010: Invalid Transpose Axes
 
 ```axon
-let t: Tensor<Float32, [2, 3, 4]> = randn([2, 3, 4]);
-let p = t.permute([0, 1, 5]);
+val t: Tensor<Float32, [2, 3, 4]> = randn([2, 3, 4]);
+val p = t.permute([0, 1, 5]);
 // ERROR[E3010]: axis 5 out of range for tensor with 3 dimensions
 ```
 
@@ -318,8 +318,8 @@ let p = t.permute([0, 1, 5]);
 ### E4001: Use After Move
 
 ```axon
-let data = randn([100]);
-let other = data;
+val data = randn([100]);
+val other = data;
 println("{}", data);
 // ERROR[E4001]: use of moved value `data`
 //   note: `data` was moved on line 2
@@ -330,18 +330,18 @@ println("{}", data);
 ### E4002: Borrow of Moved Value
 
 ```axon
-let s = "hello".to_string();
-let t = s;
-let r = &s;
+val s = "hello".to_string();
+val t = s;
+val r = &s;
 // ERROR[E4002]: cannot borrow `s` — value has been moved
 ```
 
 ### E4003: Mutable Borrow Conflict
 
 ```axon
-let mut v = vec![1, 2, 3];
-let r1 = &v;
-let r2 = &mut v;
+var v = vec![1, 2, 3];
+val r1 = &v;
+val r2 = &mut v;
 // ERROR[E4003]: cannot borrow `v` as mutable — also borrowed as immutable
 //   note: immutable borrow of `v` occurs on line 2
 ```
@@ -351,17 +351,17 @@ let r2 = &mut v;
 ### E4004: Multiple Mutable Borrows
 
 ```axon
-let mut data = randn([10]);
-let a = &mut data;
-let b = &mut data;
+var data = randn([10]);
+val a = &mut data;
+val b = &mut data;
 // ERROR[E4004]: cannot borrow `data` as mutable more than once
 ```
 
 ### E4005: Dangling Reference
 
 ```axon
-fn dangling() -> &String {
-    let s = "hello".to_string();
+fn dangling(): &String {
+    val s = "hello".to_string();
     &s
 // ERROR[E4005]: `s` does not live long enough
 //   note: borrowed value only lives until end of function
@@ -373,18 +373,18 @@ fn dangling() -> &String {
 ### E4006: Mutability Required
 
 ```axon
-let data = randn([10]);
+val data = randn([10]);
 scale(&mut data, 2.0);
 // ERROR[E4006]: cannot borrow `data` as mutable — declared as immutable
-//   help: consider changing to `let mut data`
+//   help: consider changing to `var data`
 ```
 
 ### E4007: Cross-Device Borrow
 
 ```axon
-let mut t = randn([256]);
-let cpu_ref = &t;
-let gpu_t = t.to_gpu();
+var t = randn([256]);
+val cpu_ref = &t;
+val gpu_t = t.to_gpu();
 // ERROR[E4007]: cannot move `t` to GPU while borrowed on CPU
 ```
 
@@ -395,7 +395,7 @@ let gpu_t = t.to_gpu();
 ### W5001: Unused Variable
 
 ```axon
-let x = 42;
+val x = 42;
 // WARNING[W5001]: unused variable `x`
 //   help: prefix with underscore: `_x`
 ```
@@ -403,7 +403,7 @@ let x = 42;
 ### W5002: Unused Import
 
 ```axon
-use std::math::sin;
+use std.math.sin;
 // WARNING[W5002]: unused import `sin`
 ```
 
@@ -417,7 +417,7 @@ fn unused_function() {}
 ### W5004: Unnecessary Mutability
 
 ```axon
-let mut x = 42;
+var x = 42;
 println("{}", x);
 // WARNING[W5004]: variable `x` declared as mutable but never mutated
 ```
@@ -425,8 +425,8 @@ println("{}", x);
 ### W5005: Shadowed Variable
 
 ```axon
-let x = 1;
-let x = 2;
+val x = 1;
+val x = 2;
 // WARNING[W5005]: variable `x` shadows previous declaration
 ```
 
@@ -441,7 +441,7 @@ fn MyFunction() {}
 ### W5007: Redundant Type Annotation
 
 ```axon
-let x: Int32 = 42;
+val x: Int32 = 42;
 // WARNING[W5007]: type annotation is redundant — inferred as `Int32`
 ```
 

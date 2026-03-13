@@ -3,14 +3,14 @@
 // expect: 20
 // expect: 5
 
-fn my_abs(x: Int64) -> Int64 {
+fn my_abs(x: Int64): Int64 {
     if x < 0 {
         return 0 - x;
     }
     return x;
 }
 
-fn my_max(a: Int64, b: Int64) -> Int64 {
+fn my_max(a: Int64, b: Int64): Int64 {
     if a > b {
         return a;
     }
@@ -18,10 +18,10 @@ fn my_max(a: Int64, b: Int64) -> Int64 {
 }
 
 fn main() {
-    let a: Int64 = my_abs(0 - 42);
+    val a: Int64 = my_abs(0 - 42);
     println(a);
-    let b: Int64 = my_max(10, 20);
+    val b: Int64 = my_max(10, 20);
     println(b);
-    let c: Int64 = my_max(my_abs(0 - 5), 3);
+    val c: Int64 = my_max(my_abs(0 - 5), 3);
     println(c);
 }

@@ -1,12 +1,12 @@
 // Example 3: Ownership and Borrowing
-fn process_tensor(data: Tensor<Float32, [?, 784]>) -> Tensor<Float32, [?, 10]> {
-    let normalized = data / 255.0;
-    let result = some_model(normalized);
+fn process_tensor(data: Tensor<Float32, [?, 784]>): Tensor<Float32, [?, 10]> {
+    val normalized = data / 255.0;
+    val result = some_model(normalized);
     return result;
 }
 
 fn main() {
-    let input = load_data("input.npy");
-    let output = process_tensor(input);
+    val input = load_data("input.npy");
+    val output = process_tensor(input);
     println("{}", output);
 }

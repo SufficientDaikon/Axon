@@ -10,6 +10,9 @@
 //! path-sensitive precision. Tracked for post-v1.0 improvement.
 
 // borrow.rs — Borrow checking and move analysis (Phase 3e)
+//
+// Device-aware checks and lifetime escape analysis are implemented but
+// not wired into the main checker path — deferred to v1.1 (CFG-based analysis).
 
 use std::collections::HashMap;
 
@@ -84,6 +87,7 @@ pub struct MoveInfo {
 
 /// Device annotation for tensors.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum DeviceContext {
     Cpu,
     Gpu,
@@ -599,17 +603,16 @@ impl<'a> BorrowChecker<'a> {
     // ── Device-aware checks ───────────────────────────────────
 
     fn get_device_context(&self, attrs: &[Attribute]) -> DeviceContext {
-        for attr in attrs {
-            match attr {
-                Attribute::Cpu => return DeviceContext::Cpu,
-                Attribute::Gpu => return DeviceContext::Gpu,
-                Attribute::Device(_) => return DeviceContext::Device,
-            }
-        }
-        DeviceContext::Unknown
+        attrs.first().map_or(DeviceContext::Unknown, |attr| match attr {
+            Attribute::Cpu => DeviceContext::Cpu,
+            Attribute::Gpu => DeviceContext::Gpu,
+            Attribute::Device(_) => DeviceContext::Device,
+        })
     }
 
     /// E4006: device transfer without explicit copy.
+    /// Deferred to v1.1 — implemented but not wired into main checker path.
+    #[allow(dead_code)]
     fn check_device_transfer(
         &mut self,
         name: &str,
@@ -646,6 +649,8 @@ impl<'a> BorrowChecker<'a> {
     }
 
     /// E4007: cannot borrow @gpu tensor as &mut from @cpu.
+    /// Deferred to v1.1 — implemented but not wired into main checker path.
+    #[allow(dead_code)]
     fn check_device_borrow(
         &mut self,
         name: &str,
@@ -669,6 +674,8 @@ impl<'a> BorrowChecker<'a> {
     // ── Lifetime (simplified) ─────────────────────────────────
 
     /// E4005: reference escapes scope.
+    /// Deferred to v1.1 — implemented but not wired into main checker path.
+    #[allow(dead_code)]
     fn check_reference_escape(
         &mut self,
         name: &str,

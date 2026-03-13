@@ -337,7 +337,7 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
     };
 
     // Type check
-    let (typed_program, check_errors) = axonc::check_source(&source, file);
+    let (typed_program, check_errors, checker) = axonc::check_source_full(&source, file);
 
     let mut reporter = ErrorReporter::new(json_errors);
     for e in &check_errors {
@@ -350,7 +350,6 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
     }
 
     // Build MIR
-    let (checker, _) = axonc::typeck::check(&source, file);
     let mut mir_builder = axonc::mir::MirBuilder::new(&checker.interner);
     let mir_program = mir_builder.build(&typed_program);
 

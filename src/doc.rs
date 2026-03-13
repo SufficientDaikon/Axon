@@ -33,10 +33,10 @@ impl DocItemKind {
     fn label(&self) -> &'static str {
         match self {
             DocItemKind::Function => "Function",
-            DocItemKind::Struct => "Struct",
+            DocItemKind::Struct => "Model",
             DocItemKind::Enum => "Enum",
             DocItemKind::Trait => "Trait",
-            DocItemKind::Impl => "Impl",
+            DocItemKind::Impl => "Extend",
             DocItemKind::Module => "Module",
             DocItemKind::Field => "Field",
             DocItemKind::Method => "Method",
@@ -158,7 +158,7 @@ impl DocGenerator {
                     name: s.name.clone(),
                     kind: DocItemKind::Struct,
                     doc_comment: doc,
-                    signature: format!("struct {}{}", s.name, self.generics_str(&s.generics)),
+                    signature: format!("model {}{}", s.name, self.generics_str(&s.generics)),
                     children,
                     visibility: is_public,
                 })
@@ -226,9 +226,9 @@ impl DocGenerator {
 
                 let name = self.type_expr_str(&imp.type_name);
                 let sig = if let Some(trait_name) = &imp.trait_name {
-                    format!("impl {} for {}", self.type_expr_str(trait_name), name)
+                    format!("extend {} for {}", self.type_expr_str(trait_name), name)
                 } else {
-                    format!("impl {}", name)
+                    format!("extend {}", name)
                 };
 
                 Some(DocItem {
@@ -266,7 +266,7 @@ impl DocGenerator {
         sig.push_str(&params.join(", "));
         sig.push(')');
         if let Some(ret) = &f.return_type {
-            sig.push_str(" -> ");
+            sig.push_str(": ");
             sig.push_str(&self.type_expr_str(ret));
         }
         sig
@@ -290,7 +290,7 @@ impl DocGenerator {
     fn type_expr_str(&self, ty: &TypeExpr) -> String {
         match &ty.kind {
             TypeExprKind::Named(name) => name.clone(),
-            TypeExprKind::Path(parts) => parts.join("::"),
+            TypeExprKind::Path(parts) => parts.join("."),
             TypeExprKind::Generic { name, args } => {
                 let args_str: Vec<String> = args.iter().map(|a| match a {
                     TypeArg::Type(t) => self.type_expr_str(t),
@@ -322,7 +322,7 @@ impl DocGenerator {
             }
             TypeExprKind::Function { params, return_type } => {
                 let params_str: Vec<String> = params.iter().map(|p| self.type_expr_str(p)).collect();
-                format!("fn({}) -> {}", params_str.join(", "), self.type_expr_str(return_type))
+                format!("fn({}): {}", params_str.join(", "), self.type_expr_str(return_type))
             }
             TypeExprKind::Tuple(types) => {
                 let types_str: Vec<String> = types.iter().map(|t| self.type_expr_str(t)).collect();
@@ -576,25 +576,25 @@ mod tests {
 
     #[test]
     fn test_generate_function_doc() {
-        let src = "/// Adds two numbers.\npub fn add(a: Int32, b: Int32) -> Int32 { return a + b; }";
+        let src = "/// Adds two numbers.\npub fn add(a: Int32, b: Int32): Int32 { return a + b; }";
         let html = DocGenerator::generate(src, "math.axon");
         assert!(html.contains("add"));
         assert!(html.contains("Function"));
-        assert!(html.contains("fn add(a: Int32, b: Int32) -&gt; Int32"));
+        assert!(html.contains("fn add(a: Int32, b: Int32): Int32"));
     }
 
     #[test]
     fn test_generate_struct_doc() {
-        let src = "/// A 2D point.\npub struct Point { pub x: Float64, pub y: Float64, }";
+        let src = "/// A 2D point.\npub model Point { pub x: Float64, pub y: Float64, }";
         let html = DocGenerator::generate(src, "geom.axon");
         assert!(html.contains("Point"));
-        assert!(html.contains("Struct"));
+        assert!(html.contains("Model"));
         assert!(html.contains("A 2D point."));
     }
 
     #[test]
     fn test_html_output() {
-        let src = "pub fn hello() -> String { return \"world\"; }";
+        let src = "pub fn hello(): String { return \"world\"; }";
         let html = DocGenerator::generate(src, "test.axon");
         assert!(html.contains("<!DOCTYPE html>"));
         assert!(html.contains("<title>"));
@@ -630,21 +630,21 @@ mod tests {
 
     #[test]
     fn test_generate_markdown_output() {
-        let src = "/// Adds two numbers.\npub fn add(a: Int32, b: Int32) -> Int32 { return a + b; }";
+        let src = "/// Adds two numbers.\npub fn add(a: Int32, b: Int32): Int32 { return a + b; }";
         let md = DocGenerator::generate_markdown(src, "math.axon");
         assert!(md.contains("# Module `math`"), "should have module header");
         assert!(md.contains("## Function `add`"), "should have function section");
         assert!(md.contains("```axon"), "should have code block");
-        assert!(md.contains("fn add(a: Int32, b: Int32) -> Int32"), "should have signature");
+        assert!(md.contains("fn add(a: Int32, b: Int32): Int32"), "should have signature");
         assert!(md.contains("Adds two numbers."), "should have doc comment");
     }
 
     #[test]
     fn test_generate_markdown_struct() {
-        let src = "/// A point.\npub struct Point { pub x: Float64, pub y: Float64, }";
+        let src = "/// A point.\npub model Point { pub x: Float64, pub y: Float64, }";
         let md = DocGenerator::generate_markdown(src, "geom.axon");
         assert!(md.contains("# Module `geom`"));
-        assert!(md.contains("## Struct `Point`"));
+        assert!(md.contains("## Model `Point`"));
         assert!(md.contains("A point."));
         assert!(md.contains("**Field**"));
     }

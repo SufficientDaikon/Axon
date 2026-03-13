@@ -1529,7 +1529,7 @@
           <li><a href="#features">Features</a></li>
           <li><a href="#roadmap">Roadmap</a></li>
           <li><a href="#architecture">Architecture</a></li>
-          <li><a href="#cli" class="nav-cta">Get Started</a></li>
+          <li><a href="documentation.html" class="nav-cta">Docs</a></li>
         </ul>
         <button
           class="nav-mobile-toggle"
@@ -1580,16 +1580,16 @@
               <span class="hero-code-filename">neural_net.axon</span>
             </div>
             <div class="hero-code-body">
-              <pre><span class="kw">struct</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+              <pre><span class="kw">model</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
     <span class="pr">fc1</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">784</span>, <span class="num">256</span><span class="p">&gt;</span>,
     <span class="pr">fc2</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">256</span>, <span class="num">128</span><span class="p">&gt;</span>,
     <span class="pr">fc3</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">128</span>, <span class="num">10</span><span class="p">&gt;</span>,
 <span class="p">}</span>
 
-<span class="kw">impl</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
-    <span class="kw">fn</span> <span class="fn">forward</span><span class="p">(</span><span class="op">&amp;</span><span class="kw">self</span>, <span class="pr">x</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">784</span>]<span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">10</span>]<span class="p">&gt;</span> <span class="p">{</span>
-        <span class="kw">let</span> <span class="pr">h1</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc1</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">x</span><span class="p">)</span><span class="p">)</span>;
-        <span class="kw">let</span> <span class="pr">h2</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc2</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h1</span><span class="p">)</span><span class="p">)</span>;
+<span class="kw">extend</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+    <span class="kw">fn</span> <span class="fn">forward</span><span class="p">(</span><span class="op">&amp;</span><span class="kw">self</span>, <span class="pr">x</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">784</span>]<span class="p">&gt;</span><span class="p">)</span><span class="op">:</span> <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">10</span>]<span class="p">&gt;</span> <span class="p">{</span>
+        <span class="kw">val</span> <span class="pr">h1</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc1</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">x</span><span class="p">)</span><span class="p">)</span>;
+        <span class="kw">val</span> <span class="pr">h2</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc2</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h1</span><span class="p">)</span><span class="p">)</span>;
         <span class="kw">return</span> <span class="kw">self</span>.<span class="pr">fc3</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h2</span><span class="p">)</span>;
     <span class="p">}</span>
 <span class="p">}</span></pre>
@@ -1743,9 +1743,9 @@
             </div>
             <div class="code-body">
               <pre><span class="kw">fn</span> <span class="fn">matrix_multiply_example</span><span class="p">()</span> <span class="p">{</span>
-    <span class="kw">let</span> <span class="pr">A</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="num">128</span>, <span class="num">256</span>]<span class="p">&gt;</span> <span class="op">=</span> <span class="fn">randn</span><span class="p">(</span>[<span class="num">128</span>, <span class="num">256</span>]<span class="p">)</span>;
-    <span class="kw">let</span> <span class="pr">B</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="num">256</span>, <span class="num">512</span>]<span class="p">&gt;</span> <span class="op">=</span> <span class="fn">randn</span><span class="p">(</span>[<span class="num">256</span>, <span class="num">512</span>]<span class="p">)</span>;
-    <span class="kw">let</span> <span class="pr">C</span> <span class="op">=</span> <span class="pr">A</span> <span class="op">@</span> <span class="pr">B</span>;  <span class="cmt">// Compiler infers: Tensor&lt;Float32, [128, 512]&gt;</span>
+    <span class="kw">val</span> <span class="pr">A</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="num">128</span>, <span class="num">256</span>]<span class="p">&gt;</span> <span class="op">=</span> <span class="fn">randn</span><span class="p">(</span>[<span class="num">128</span>, <span class="num">256</span>]<span class="p">)</span>;
+    <span class="kw">val</span> <span class="pr">B</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="num">256</span>, <span class="num">512</span>]<span class="p">&gt;</span> <span class="op">=</span> <span class="fn">randn</span><span class="p">(</span>[<span class="num">256</span>, <span class="num">512</span>]<span class="p">)</span>;
+    <span class="kw">val</span> <span class="pr">C</span> <span class="op">=</span> <span class="pr">A</span> <span class="op">@</span> <span class="pr">B</span>;  <span class="cmt">// Compiler infers: Tensor&lt;Float32, [128, 512]&gt;</span>
 <span class="p">}</span></pre>
             </div>
           </div>
@@ -1760,16 +1760,16 @@
               <span class="code-filename">model.axon</span>
             </div>
             <div class="code-body">
-              <pre><span class="kw">struct</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+              <pre><span class="kw">model</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
     <span class="pr">fc1</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">784</span>, <span class="num">256</span><span class="p">&gt;</span>,
     <span class="pr">fc2</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">256</span>, <span class="num">128</span><span class="p">&gt;</span>,
     <span class="pr">fc3</span>: <span class="typ">Linear</span><span class="p">&lt;</span><span class="num">128</span>, <span class="num">10</span><span class="p">&gt;</span>,
 <span class="p">}</span>
 
-<span class="kw">impl</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
-    <span class="kw">fn</span> <span class="fn">forward</span><span class="p">(</span><span class="op">&amp;</span><span class="kw">self</span>, <span class="pr">x</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">784</span>]<span class="p">&gt;</span><span class="p">)</span> <span class="op">-&gt;</span> <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">10</span>]<span class="p">&gt;</span> <span class="p">{</span>
-        <span class="kw">let</span> <span class="pr">h1</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc1</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">x</span><span class="p">)</span><span class="p">)</span>;
-        <span class="kw">let</span> <span class="pr">h2</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc2</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h1</span><span class="p">)</span><span class="p">)</span>;
+<span class="kw">extend</span> <span class="typ">NeuralNet</span> <span class="p">{</span>
+    <span class="kw">fn</span> <span class="fn">forward</span><span class="p">(</span><span class="op">&amp;</span><span class="kw">self</span>, <span class="pr">x</span>: <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">784</span>]<span class="p">&gt;</span><span class="p">)</span><span class="op">:</span> <span class="typ">Tensor</span><span class="p">&lt;</span><span class="typ">Float32</span>, [<span class="op">?</span>, <span class="num">10</span>]<span class="p">&gt;</span> <span class="p">{</span>
+        <span class="kw">val</span> <span class="pr">h1</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc1</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">x</span><span class="p">)</span><span class="p">)</span>;
+        <span class="kw">val</span> <span class="pr">h2</span> <span class="op">=</span> <span class="fn">relu</span><span class="p">(</span><span class="kw">self</span>.<span class="pr">fc2</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h1</span><span class="p">)</span><span class="p">)</span>;
         <span class="kw">return</span> <span class="kw">self</span>.<span class="pr">fc3</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">h2</span><span class="p">)</span>;
     <span class="p">}</span>
 <span class="p">}</span></pre>
@@ -1790,12 +1790,12 @@
     <span class="pr">model</span>: <span class="op">&amp;</span><span class="kw">mut</span> <span class="typ">NeuralNet</span>,
     <span class="pr">data</span>: <span class="typ">DataLoader</span>,
     <span class="pr">optimizer</span>: <span class="op">&amp;</span><span class="kw">mut</span> <span class="typ">Adam</span>,
-<span class="p">)</span> <span class="op">-&gt;</span> <span class="typ">Float32</span> <span class="p">{</span>
-    <span class="kw">let</span> <span class="kw">mut</span> <span class="pr">total_loss</span> <span class="op">=</span> <span class="num">0.0</span>;
+<span class="p">)</span><span class="op">:</span> <span class="typ">Float32</span> <span class="p">{</span>
+    <span class="kw">var</span> <span class="pr">total_loss</span> <span class="op">=</span> <span class="num">0.0</span>;
     <span class="kw">for</span> <span class="pr">batch</span> <span class="kw">in</span> <span class="pr">data</span> <span class="p">{</span>
-        <span class="kw">let</span> <span class="p">(</span><span class="pr">inputs</span>, <span class="pr">targets</span><span class="p">)</span> <span class="op">=</span> <span class="pr">batch</span>;
-        <span class="kw">let</span> <span class="pr">predictions</span> <span class="op">=</span> <span class="pr">model</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">inputs</span><span class="p">)</span>;
-        <span class="kw">let</span> <span class="pr">loss</span> <span class="op">=</span> <span class="fn">cross_entropy</span><span class="p">(</span><span class="pr">predictions</span>, <span class="pr">targets</span><span class="p">)</span>;
+        <span class="kw">val</span> <span class="p">(</span><span class="pr">inputs</span>, <span class="pr">targets</span><span class="p">)</span> <span class="op">=</span> <span class="pr">batch</span>;
+        <span class="kw">val</span> <span class="pr">predictions</span> <span class="op">=</span> <span class="pr">model</span>.<span class="fn">forward</span><span class="p">(</span><span class="pr">inputs</span><span class="p">)</span>;
+        <span class="kw">val</span> <span class="pr">loss</span> <span class="op">=</span> <span class="fn">cross_entropy</span><span class="p">(</span><span class="pr">predictions</span>, <span class="pr">targets</span><span class="p">)</span>;
         <span class="pr">total_loss</span> <span class="op">+=</span> <span class="pr">loss</span>.<span class="fn">item</span><span class="p">()</span>;
         <span class="pr">loss</span>.<span class="fn">backward</span><span class="p">()</span>;
         <span class="pr">optimizer</span>.<span class="fn">step</span><span class="p">()</span>;

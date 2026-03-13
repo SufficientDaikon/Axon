@@ -7,21 +7,21 @@ with at least one systems or ML language (Rust, Python, C++).
 
 ## Variables
 
-Variables are declared with `let`. They are **immutable by default**.
+Variables are declared with `val`. They are **immutable by default**.
 
 ```axon
-let x = 42;              // immutable, type inferred as Int32
-let y: Float64 = 3.14;   // explicit type annotation
-let mut counter = 0;      // mutable variable
+val x = 42;              // immutable, type inferred as Int32
+val y: Float64 = 3.14;   // explicit type annotation
+var counter = 0;          // mutable variable
 counter += 1;
 ```
 
 Type inference works across expressions — you rarely need annotations:
 
 ```axon
-let name = "Axon";            // String
-let active = true;            // Bool
-let scores = [95, 87, 92];    // Vec<Int32>
+val name = "Axon";            // String
+val active = true;            // Bool
+val scores = [95, 87, 92];    // Vec<Int32>
 ```
 
 ---
@@ -29,10 +29,10 @@ let scores = [95, 87, 92];    // Vec<Int32>
 ## Functions
 
 Functions are declared with `fn`. Parameters require type annotations;
-return types follow `->`.
+return types follow `:`.
 
 ```axon
-fn add(a: Int32, b: Int32) -> Int32 {
+fn add(a: Int32, b: Int32): Int32 {
     a + b   // last expression is the return value
 }
 
@@ -41,7 +41,7 @@ fn greet(name: String) {
 }
 
 fn main() {
-    let sum = add(3, 4);
+    val sum = add(3, 4);
     greet("World");
 }
 ```
@@ -51,7 +51,7 @@ fn main() {
 Functions performing low-level operations can be marked `unsafe`:
 
 ```axon
-unsafe fn raw_pointer_access(ptr: *mut Float32) -> Float32 {
+unsafe fn raw_pointer_access(ptr: *mut Float32): Float32 {
     // low-level memory access
 }
 ```
@@ -87,11 +87,11 @@ unsafe fn raw_pointer_access(ptr: *mut Float32) -> Float32 {
 ### Integer Literals
 
 ```axon
-let dec = 42;          // decimal
-let hex = 0xFF;        // hexadecimal
-let bin = 0b1010;      // binary
-let oct = 0o77;        // octal
-let sci = 1.5e10;      // scientific notation
+val dec = 42;          // decimal
+val hex = 0xFF;        // hexadecimal
+val bin = 0b1010;      // binary
+val oct = 0o77;        // octal
+val sci = 1.5e10;      // scientific notation
 ```
 
 ---
@@ -103,7 +103,7 @@ let sci = 1.5e10;      // scientific notation
 `if` is an expression — it returns a value:
 
 ```axon
-let max = if a > b { a } else { b };
+val max = if a > b { a } else { b };
 
 if score >= 90 {
     println("Excellent");
@@ -117,7 +117,7 @@ if score >= 90 {
 ### While Loops
 
 ```axon
-let mut i = 0;
+var i = 0;
 while i < 10 {
     println("{}", i);
     i += 1;
@@ -155,31 +155,31 @@ match option_val {
 
 ---
 
-## Structs
+## Models
 
 Named product types with fields:
 
 ```axon
-struct Point {
+model Point {
     x: Float64,
     y: Float64,
 }
 
-let p = Point { x: 1.0, y: 2.0 };
+val p = Point { x: 1.0, y: 2.0 };
 println("({}, {})", p.x, p.y);
 ```
 
-### Methods via `impl`
+### Methods via `extend`
 
 ```axon
-impl Point {
-    fn distance(&self, other: &Point) -> Float64 {
-        let dx = self.x - other.x;
-        let dy = self.y - other.y;
+extend Point {
+    fn distance(&self, other: &Point): Float64 {
+        val dx = self.x - other.x;
+        val dy = self.y - other.y;
         (dx * dx + dy * dy).sqrt()
     }
 
-    fn origin() -> Point {
+    fn origin(): Point {
         Point { x: 0.0, y: 0.0 }
     }
 }
@@ -198,28 +198,28 @@ enum Shape {
     Triangle { base: Float64, height: Float64 },
 }
 
-fn area(shape: Shape) -> Float64 {
+fn area(shape: Shape): Float64 {
     match shape {
-        Shape::Circle(r) => 3.14159 * r * r,
-        Shape::Rectangle(w, h) => w * h,
-        Shape::Triangle { base, height } => 0.5 * base * height,
+        Shape.Circle(r) => 3.14159 * r * r,
+        Shape.Rectangle(w, h) => w * h,
+        Shape.Triangle { base, height } => 0.5 * base * height,
     }
 }
 ```
 
 ---
 
-## Traits and Impl Blocks
+## Traits and Extend Blocks
 
 Traits define shared behavior:
 
 ```axon
 trait Printable {
-    fn to_string(&self) -> String;
+    fn to_string(&self): String;
 }
 
-impl Printable for Point {
-    fn to_string(&self) -> String {
+extend Printable for Point {
+    fn to_string(&self): String {
         format("({}, {})", self.x, self.y)
     }
 }
@@ -247,19 +247,19 @@ trait Drawable: Printable {
 
 ## Generics
 
-Functions, structs, and traits can be generic:
+Functions, models, and traits can be generic:
 
 ```axon
-fn max<T: Ord>(a: T, b: T) -> T {
+fn max<T: Ord>(a: T, b: T): T {
     if a > b { a } else { b }
 }
 
-struct Pair<A, B> {
+model Pair<A, B> {
     first: A,
     second: B,
 }
 
-impl<A: Display, B: Display> Pair<A, B> {
+extend<A: Display, B: Display> Pair<A, B> {
     fn show(&self) {
         println("({}, {})", self.first, self.second);
     }
@@ -275,21 +275,21 @@ shape verification:
 
 ```axon
 // Tensor with known shape
-let weights: Tensor<Float32, [784, 256]> = randn([784, 256]);
+val weights: Tensor<Float32, [784, 256]> = randn([784, 256]);
 
 // Dynamic batch dimension with ?
-let input: Tensor<Float32, [?, 784]> = load_batch();
+val input: Tensor<Float32, [?, 784]> = load_batch();
 
 // Matrix multiply — shapes checked at compile time
-let output = input @ weights;   // Tensor<Float32, [?, 256]>
+val output = input @ weights;   // Tensor<Float32, [?, 256]>
 ```
 
 Shape mismatches are caught before your code ever runs:
 
 ```axon
-let a: Tensor<Float32, [3, 4]> = randn([3, 4]);
-let b: Tensor<Float32, [5, 6]> = randn([5, 6]);
-let c = a @ b;   // ERROR[E3001]: shape mismatch — inner dims 4 ≠ 5
+val a: Tensor<Float32, [3, 4]> = randn([3, 4]);
+val b: Tensor<Float32, [5, 6]> = randn([5, 6]);
+val c = a @ b;   // ERROR[E3001]: shape mismatch — inner dims 4 ≠ 5
 ```
 
 See the [Tensor Guide](tensors.md) for the full story.
@@ -301,7 +301,7 @@ See the [Tensor Guide](tensors.md) for the full story.
 Axon uses `Option<T>` and `Result<T, E>` for safe error handling:
 
 ```axon
-fn find(haystack: Vec<Int32>, needle: Int32) -> Option<Int32> {
+fn find(haystack: Vec<Int32>, needle: Int32): Option<Int32> {
     for i in 0..haystack.len() {
         if haystack[i] == needle {
             return Some(i);
@@ -310,9 +310,9 @@ fn find(haystack: Vec<Int32>, needle: Int32) -> Option<Int32> {
     None
 }
 
-fn read_config(path: String) -> Result<Config, IOError> {
-    let file = File::open(path)?;    // propagate error with ?
-    let data = file.read_all()?;
+fn read_config(path: String): Result<Config, IOError> {
+    val file = File.open(path)?;    // propagate error with ?
+    val data = file.read_all()?;
     parse_config(data)
 }
 ```
@@ -327,7 +327,7 @@ Organize code into modules with `mod` and `use`:
 
 ```axon
 mod math {
-    pub fn square(x: Float64) -> Float64 {
+    pub fn square(x: Float64): Float64 {
         x * x
     }
 
@@ -336,7 +336,7 @@ mod math {
     }
 }
 
-use math::square;
+use math.square;
 
 fn main() {
     println("{}", square(4.0));   // 16.0

@@ -12,7 +12,9 @@ use crate::types::*;
 // Constraint
 // ═══════════════════════════════════════════════════════════════
 
+// Constraint solver planned for v1.1 — currently unification is done eagerly inline.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 enum Constraint {
     Eq(TypeId, TypeId, Span),
     HasTrait(TypeId, String, Span),
@@ -275,7 +277,7 @@ impl TypeChecker {
 
     // ── Substitution resolution ────────────────────────────────
 
-    fn resolve_type(&self, id: TypeId) -> TypeId {
+    pub fn resolve_type(&self, id: TypeId) -> TypeId {
         let ty = self.interner.resolve(id);
         if let Type::TypeVar(var) = ty {
             let var = *var;
@@ -839,6 +841,57 @@ impl TypeChecker {
                 let _arg_ty = self.check_expr(&args[0]);
                 return TypeId::UNIT;
             }
+
+            // ── Tensor built-in functions ──
+            // These are free functions that map to C runtime calls.
+            // Only intercept tensor_* prefixed names to avoid conflicts with
+            // existing stub function definitions used by some tests.
+            match name.as_str() {
+                // Creation: tensor_zeros(dim1, dim2, ...) -> Tensor
+                "tensor_zeros" | "tensor_ones" | "tensor_rand"
+                | "tensor_zeros2" | "tensor_ones2" | "tensor_rand2" => {
+                    for arg in args {
+                        self.check_expr(arg);
+                    }
+                    return self.interner.intern(Type::Tensor(crate::types::TensorType {
+                        dtype: TypeId::FLOAT32,
+                        shape: args.iter().map(|_| crate::types::ShapeDimResolved::Dynamic).collect(),
+                    }));
+                }
+                // tensor_print(t) -> void
+                "tensor_print" => {
+                    for arg in args { self.check_expr(arg); }
+                    return TypeId::UNIT;
+                }
+                // tensor_item(t) -> Float64
+                "tensor_item" => {
+                    for arg in args { self.check_expr(arg); }
+                    return TypeId::FLOAT64;
+                }
+                // tensor_backward(t) / tensor_zero_grad(t) / tape_clear() / sgd_step(t, lr) / etc. -> void
+                "tensor_backward" | "tensor_zero_grad" | "tape_clear" | "autograd_enable" | "autograd_disable"
+                | "sgd_step" | "tensor_set_requires_grad" => {
+                    for arg in args { self.check_expr(arg); }
+                    return TypeId::UNIT;
+                }
+                // tensor_grad(t) -> Tensor
+                "tensor_grad" => {
+                    for arg in args { self.check_expr(arg); }
+                    return self.interner.intern(Type::Tensor(crate::types::TensorType {
+                        dtype: TypeId::FLOAT32,
+                        shape: vec![crate::types::ShapeDimResolved::Dynamic],
+                    }));
+                }
+                // tensor_mse_loss(pred, target) / tensor_cross_entropy_loss(pred, target) -> Tensor
+                "tensor_mse_loss" | "tensor_cross_entropy_loss" => {
+                    for arg in args { self.check_expr(arg); }
+                    return self.interner.intern(Type::Tensor(crate::types::TensorType {
+                        dtype: TypeId::FLOAT32,
+                        shape: vec![crate::types::ShapeDimResolved::Known(1)],
+                    }));
+                }
+                _ => {}
+            }
         }
 
         let func_ty = self.check_expr(func);
@@ -1250,7 +1303,7 @@ impl TypeChecker {
         fields: &[StructLiteralField],
         span: &Span,
     ) -> TypeId {
-        let struct_name = name.join("::");
+        let struct_name = name.join(".");
 
         // Look up the struct definition
         if let Some(sym_id) = self.symbols.lookup(&struct_name) {
@@ -1283,7 +1336,7 @@ impl TypeChecker {
                     if !provided.contains(&fname.as_str()) {
                         self.errors.push(CompileError::new(
                             "E2005",
-                            format!("missing field `{}` in struct `{}`", fname, name),
+                            format!("missing field `{}` in model `{}`", fname, name),
                             span.clone(),
                         ));
                     }
@@ -1703,7 +1756,7 @@ mod tests {
 
     #[test]
     fn infer_integer_literal() {
-        let src = "fn main() -> Int64 { return 42; }";
+        let src = "fn main(): Int64 { return 42; }";
         check_ok(src);
     }
 
@@ -1711,7 +1764,7 @@ mod tests {
 
     #[test]
     fn infer_float_literal() {
-        let src = "fn main() -> Float64 { return 3.14; }";
+        let src = "fn main(): Float64 { return 3.14; }";
         check_ok(src);
     }
 
@@ -1719,7 +1772,7 @@ mod tests {
 
     #[test]
     fn binary_op_same_types() {
-        let src = "fn add(a: Int64, b: Int64) -> Int64 { return a + b; }";
+        let src = "fn add(a: Int64, b: Int64): Int64 { return a + b; }";
         check_ok(src);
     }
 
@@ -1735,7 +1788,7 @@ mod tests {
 
     #[test]
     fn function_call_type_check() {
-        let src = "fn double(x: Int64) -> Int64 { return x + x; }\nfn main() -> Int64 { return double(5); }";
+        let src = "fn double(x: Int64): Int64 { return x + x; }\nfn main(): Int64 { return double(5); }";
         check_ok(src);
     }
 
@@ -1745,7 +1798,7 @@ mod tests {
     fn let_with_annotation_match() {
         let src = r#"
             fn main() {
-                let x: Int64 = 42;
+                val x: Int64 = 42;
             }
         "#;
         check_ok(src);
@@ -1757,7 +1810,7 @@ mod tests {
     fn let_with_annotation_mismatch() {
         let src = r#"
             fn main() {
-                let x: Bool = 42;
+                val x: Bool = 42;
             }
         "#;
         check_has_error_code(src, "E2001");
@@ -1768,7 +1821,7 @@ mod tests {
     #[test]
     fn if_else_type_unification() {
         // Both branches return the same type via return statements
-        let src = "fn pick(cond: Bool) -> Int64 { if cond { return 1; } else { return 2; } }";
+        let src = "fn pick(cond: Bool): Int64 { if cond { return 1; } else { return 2; } }";
         check_ok(src);
     }
 
@@ -1777,7 +1830,7 @@ mod tests {
     #[test]
     fn if_else_branch_mismatch() {
         // Return type mismatch: Int64 vs Bool against declared return Int64
-        let src = "fn pick(cond: Bool) -> Int64 { if cond { return 1; } else { return true; } }";
+        let src = "fn pick(cond: Bool): Int64 { if cond { return 1; } else { return true; } }";
         check_has_error_code(src, "E2001");
     }
 
@@ -1785,7 +1838,7 @@ mod tests {
 
     #[test]
     fn type_var_unification() {
-        let src = "fn identity(x: Int64) -> Int64 { let y = x; return y; }";
+        let src = "fn identity(x: Int64): Int64 { val y = x; return y; }";
         check_ok(src);
     }
 
@@ -1808,7 +1861,7 @@ mod tests {
 
     #[test]
     fn match_type_check() {
-        let src = "fn test(x: Int64) -> Int64 { return match x { 1 => 10, 2 => 20, _ => 0, }; }";
+        let src = "fn test(x: Int64): Int64 { return match x { 1 => 10, 2 => 20, _ => 0, }; }";
         check_ok(src);
     }
 
@@ -1816,7 +1869,7 @@ mod tests {
 
     #[test]
     fn struct_literal_type_check() {
-        let src = "struct Point { x: Int64, y: Int64 }\nfn make() { let p = Point { x: 1, y: 2 }; }";
+        let src = "model Point { x: Int64, y: Int64 }\nfn make() { val p = Point { x: 1, y: 2 }; }";
         check_ok(src);
     }
 
@@ -1826,7 +1879,7 @@ mod tests {
     fn reference_type_check() {
         let src = r#"
             fn test(x: Int64) {
-                let r = &x;
+                val r = &x;
             }
         "#;
         check_ok(src);
@@ -1857,7 +1910,7 @@ mod tests {
 
     #[test]
     fn comparison_returns_bool() {
-        let src = "fn test(a: Int64, b: Int64) -> Bool { return a < b; }";
+        let src = "fn test(a: Int64, b: Int64): Bool { return a < b; }";
         check_ok(src);
     }
 
@@ -1865,7 +1918,7 @@ mod tests {
 
     #[test]
     fn logical_ops_require_bool() {
-        let src = "fn test(a: Bool, b: Bool) -> Bool { return a && b; }";
+        let src = "fn test(a: Bool, b: Bool): Bool { return a && b; }";
         check_ok(src);
     }
 
@@ -1881,7 +1934,7 @@ mod tests {
 
     #[test]
     fn wrong_arg_count() {
-        let src = "fn foo(x: Int64) -> Int64 { return x; }\nfn main() { foo(1, 2); }";
+        let src = "fn foo(x: Int64): Int64 { return x; }\nfn main() { foo(1, 2); }";
         check_has_error_code(src, "E2003");
     }
 
@@ -1899,7 +1952,7 @@ mod tests {
     fn assignment_to_immutable() {
         let src = r#"
             fn test() {
-                let x: Int64 = 1;
+                val x: Int64 = 1;
                 x = 2;
             }
         "#;
@@ -1912,7 +1965,7 @@ mod tests {
     fn mutable_assignment_ok() {
         let src = r#"
             fn test() {
-                let mut x: Int64 = 1;
+                var x: Int64 = 1;
                 x = 2;
             }
         "#;
@@ -1923,7 +1976,7 @@ mod tests {
 
     #[test]
     fn boolean_not() {
-        let src = "fn test(a: Bool) -> Bool { return !a; }";
+        let src = "fn test(a: Bool): Bool { return !a; }";
         check_ok(src);
     }
 
@@ -1939,7 +1992,7 @@ mod tests {
 
     #[test]
     fn tuple_type_check() {
-        let src = "fn test() -> (Int64, Bool) { return (42, true); }";
+        let src = "fn test(): (Int64, Bool) { return (42, true); }";
         check_ok(src);
     }
 
@@ -1971,7 +2024,7 @@ mod tests {
 
     #[test]
     fn print_variable_typechecks() {
-        let src = "fn main() { let x: Int64 = 10; print(x); }";
+        let src = "fn main() { val x: Int64 = 10; print(x); }";
         check_ok(src);
     }
 
@@ -1991,13 +2044,13 @@ mod tests {
 
     #[test]
     fn match_exhaustive_with_wildcard_no_warning() {
-        let src = "fn test(x: Int64) -> Int64 { return match x { 1 => 10, _ => 0, }; }";
+        let src = "fn test(x: Int64): Int64 { return match x { 1 => 10, _ => 0, }; }";
         check_ok(src);
     }
 
     #[test]
     fn match_non_exhaustive_int_emits_warning() {
-        let src = "fn test(x: Int64) -> Int64 { return match x { 1 => 10, 2 => 20, }; }";
+        let src = "fn test(x: Int64): Int64 { return match x { 1 => 10, 2 => 20, }; }";
         let (_, errors) = check(src, "test.axon");
         assert!(
             errors.iter().any(|e| e.error_code == "W1001"),
@@ -2011,7 +2064,7 @@ mod tests {
 
     #[test]
     fn match_bool_non_exhaustive_emits_warning() {
-        let src = "fn test(x: Bool) -> Int64 { return match x { true => 1, }; }";
+        let src = "fn test(x: Bool): Int64 { return match x { true => 1, }; }";
         let (_, errors) = check(src, "test.axon");
         assert!(
             errors.iter().any(|e| e.error_code == "W1001"),
@@ -2029,14 +2082,14 @@ mod tests {
 
     #[test]
     fn match_bool_exhaustive_no_warning() {
-        let src = "fn test(x: Bool) -> Int64 { return match x { true => 1, false => 0, }; }";
+        let src = "fn test(x: Bool): Int64 { return match x { true => 1, false => 0, }; }";
         check_ok(src);
     }
 
     #[test]
     fn match_identifier_pattern_is_catch_all() {
         // An identifier pattern like `y` binds anything, so it's a catch-all
-        let src = "fn test(x: Int64) -> Int64 { return match x { 1 => 10, y => y, }; }";
+        let src = "fn test(x: Int64): Int64 { return match x { 1 => 10, y => y, }; }";
         check_ok(src);
     }
 }

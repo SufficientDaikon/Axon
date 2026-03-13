@@ -16,11 +16,11 @@ We'll fit a line **y = wx + b** to synthetic data using gradient descent.
 ## Step 1: Generate Synthetic Data
 
 ```axon
-fn generate_data(n: Int32) -> (Tensor<Float32, [?, 1]>, Tensor<Float32, [?, 1]>) {
+fn generate_data(n: Int32): (Tensor<Float32, [?, 1]>, Tensor<Float32, [?, 1]>) {
     // True parameters: y = 3.5x + 2.0 + noise
-    let x = randn([n, 1]);
-    let noise = randn([n, 1]) * 0.3;
-    let y = x * 3.5 + 2.0 + noise;
+    val x = randn([n, 1]);
+    val noise = randn([n, 1]) * 0.3;
+    val y = x * 3.5 + 2.0 + noise;
     (x, y)
 }
 ```
@@ -32,20 +32,20 @@ fn generate_data(n: Int32) -> (Tensor<Float32, [?, 1]>, Tensor<Float32, [?, 1]>)
 Linear regression is a single linear transformation:
 
 ```axon
-struct LinearRegression {
+model LinearRegression {
     weight: Tensor<Float32, [1, 1]>,
     bias: Tensor<Float32, [1]>,
 }
 
-impl LinearRegression {
-    fn new() -> LinearRegression {
+extend LinearRegression {
+    fn new(): LinearRegression {
         LinearRegression {
             weight: randn([1, 1]),
             bias: zeros([1]),
         }
     }
 
-    fn forward(&self, x: Tensor<Float32, [?, 1]>) -> Tensor<Float32, [?, 1]> {
+    fn forward(&self, x: Tensor<Float32, [?, 1]>): Tensor<Float32, [?, 1]> {
         x @ self.weight + self.bias
     }
 }
@@ -61,8 +61,8 @@ Mean Squared Error — the standard loss for regression:
 fn mse_loss(
     predictions: Tensor<Float32, [?, 1]>,
     targets: Tensor<Float32, [?, 1]>,
-) -> Tensor<Float32, []> {
-    let diff = predictions - targets;
+): Tensor<Float32, []> {
+    val diff = predictions - targets;
     (diff * diff).mean()
 }
 ```
@@ -74,29 +74,29 @@ fn mse_loss(
 Now we use Axon's autograd to compute gradients and update parameters:
 
 ```axon
-use std::autograd::GradTensor;
-use std::optim::SGD;
+use std.autograd.GradTensor;
+use std.optim.SGD;
 
 fn train() {
     // Generate training data
-    let (x_train, y_train) = generate_data(200);
+    val (x_train, y_train) = generate_data(200);
 
     // Initialize model
-    let mut model = LinearRegression::new();
+    var net = LinearRegression.new();
 
     // Optimizer: SGD with learning rate 0.01
-    let mut optimizer = SGD::new(
-        [&model.weight, &model.bias],
+    var optimizer = SGD.new(
+        [&net.weight, &net.bias],
         lr: 0.01,
     );
 
     // Training loop
     for epoch in 0..100 {
         // Forward pass
-        let predictions = model.forward(x_train);
+        val predictions = net.forward(x_train);
 
         // Compute loss
-        let loss = mse_loss(predictions, y_train);
+        val loss = mse_loss(predictions, y_train);
 
         // Backward pass — compute gradients
         loss.backward();
@@ -111,8 +111,8 @@ fn train() {
     }
 
     // Print learned parameters
-    println("Learned weight: {:.4} (true: 3.5)", model.weight.item());
-    println("Learned bias:   {:.4} (true: 2.0)", model.bias.item());
+    println("Learned weight: {:.4} (true: 3.5)", net.weight.item());
+    println("Learned bias:   {:.4} (true: 2.0)", net.bias.item());
 }
 ```
 
@@ -121,15 +121,15 @@ fn train() {
 ## Step 5: Evaluate the Model
 
 ```axon
-fn evaluate(model: &LinearRegression) {
+fn evaluate(net: &LinearRegression) {
     // Generate test data
-    let (x_test, y_test) = generate_data(50);
+    val (x_test, y_test) = generate_data(50);
 
     // Predict
-    let predictions = model.forward(x_test);
+    val predictions = net.forward(x_test);
 
     // Compute test loss
-    let test_loss = mse_loss(predictions, y_test);
+    val test_loss = mse_loss(predictions, y_test);
     println("Test MSE: {:.4}", test_loss.item());
 
     // Print a few predictions
@@ -151,23 +151,23 @@ fn evaluate(model: &LinearRegression) {
 ## Step 6: Full Program
 
 ```axon
-use std::autograd::GradTensor;
-use std::optim::SGD;
+use std.autograd.GradTensor;
+use std.optim.SGD;
 
-struct LinearRegression {
+model LinearRegression {
     weight: Tensor<Float32, [1, 1]>,
     bias: Tensor<Float32, [1]>,
 }
 
-impl LinearRegression {
-    fn new() -> LinearRegression {
+extend LinearRegression {
+    fn new(): LinearRegression {
         LinearRegression {
             weight: randn([1, 1]),
             bias: zeros([1]),
         }
     }
 
-    fn forward(&self, x: Tensor<Float32, [?, 1]>) -> Tensor<Float32, [?, 1]> {
+    fn forward(&self, x: Tensor<Float32, [?, 1]>): Tensor<Float32, [?, 1]> {
         x @ self.weight + self.bias
     }
 }
@@ -175,8 +175,8 @@ impl LinearRegression {
 fn mse_loss(
     predictions: Tensor<Float32, [?, 1]>,
     targets: Tensor<Float32, [?, 1]>,
-) -> Tensor<Float32, []> {
-    let diff = predictions - targets;
+): Tensor<Float32, []> {
+    val diff = predictions - targets;
     (diff * diff).mean()
 }
 
@@ -184,19 +184,19 @@ fn main() {
     println("=== Linear Regression in Axon ===\n");
 
     // Data
-    let (x_train, y_train) = generate_data(200);
+    val (x_train, y_train) = generate_data(200);
 
     // Model
-    let mut model = LinearRegression::new();
-    let mut optimizer = SGD::new(
-        [&model.weight, &model.bias],
+    var net = LinearRegression.new();
+    var optimizer = SGD.new(
+        [&net.weight, &net.bias],
         lr: 0.01,
     );
 
     // Train
     for epoch in 0..200 {
-        let pred = model.forward(x_train);
-        let loss = mse_loss(pred, y_train);
+        val pred = net.forward(x_train);
+        val loss = mse_loss(pred, y_train);
         loss.backward();
         optimizer.step();
         optimizer.zero_grad();
@@ -207,20 +207,20 @@ fn main() {
     }
 
     println("\nFinal parameters:");
-    println("  weight = {:.4} (true: 3.5)", model.weight.item());
-    println("  bias   = {:.4} (true: 2.0)", model.bias.item());
+    println("  weight = {:.4} (true: 3.5)", net.weight.item());
+    println("  bias   = {:.4} (true: 2.0)", net.bias.item());
 
     // Evaluate
-    let (x_test, y_test) = generate_data(50);
-    let test_pred = model.forward(x_test);
-    let test_loss = mse_loss(test_pred, y_test);
+    val (x_test, y_test) = generate_data(50);
+    val test_pred = net.forward(x_test);
+    val test_loss = mse_loss(test_pred, y_test);
     println("\nTest MSE: {:.6}", test_loss.item());
 }
 
-fn generate_data(n: Int32) -> (Tensor<Float32, [?, 1]>, Tensor<Float32, [?, 1]>) {
-    let x = randn([n, 1]);
-    let noise = randn([n, 1]) * 0.3;
-    let y = x * 3.5 + 2.0 + noise;
+fn generate_data(n: Int32): (Tensor<Float32, [?, 1]>, Tensor<Float32, [?, 1]>) {
+    val x = randn([n, 1]);
+    val noise = randn([n, 1]) * 0.3;
+    val y = x * 3.5 + 2.0 + noise;
     (x, y)
 }
 ```
@@ -250,7 +250,7 @@ axonc build linear_reg.axon -O 2 -o linear_reg
 
 | Concept          | Axon Feature                   |
 | ---------------- | ------------------------------ |
-| Model definition | Struct with tensor fields      |
+| Model definition | `model` with tensor fields     |
 | Forward pass     | `@` operator, element-wise ops |
 | Loss function    | Tensor reductions (`.mean()`)  |
 | Backpropagation  | `loss.backward()`              |

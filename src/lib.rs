@@ -43,10 +43,19 @@ pub fn ast_to_json(program: &ast::Program) -> String {
 
 /// Type-check an Axon source file and return the typed AST with any errors.
 pub fn check_source(source: &str, filename: &str) -> (tast::TypedProgram, Vec<error::CompileError>) {
+    let (typed_program, all_errors, _checker) = check_source_full(source, filename);
+    (typed_program, all_errors)
+}
+
+/// Type-check an Axon source file and return the typed AST, errors, AND the
+/// TypeChecker (needed by MIR/codegen to share the same TypeInterner).
+pub fn check_source_full(source: &str, filename: &str) -> (tast::TypedProgram, Vec<error::CompileError>, typeck::TypeChecker) {
     let (program, parse_errors) = parse_source(source, filename);
     if !parse_errors.is_empty() {
         let empty = tast::TypedProgram { items: vec![], span: crate::span::Span::dummy() };
-        return (empty, parse_errors);
+        // Return a dummy checker so the signature is uniform
+        let (checker, _) = typeck::check(source, filename);
+        return (empty, parse_errors, checker);
     }
 
     let (checker, check_errors) = typeck::check(source, filename);
@@ -63,7 +72,7 @@ pub fn check_source(source: &str, filename: &str) -> (tast::TypedProgram, Vec<er
     let mut all_errors = check_errors;
     all_errors.extend(borrow_errors);
 
-    (typed_program, all_errors)
+    (typed_program, all_errors, checker)
 }
 
 /// Format the typed AST as pretty-printed JSON.

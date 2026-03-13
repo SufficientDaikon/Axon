@@ -46,7 +46,7 @@ fn fuzz_null_bytes() {
 #[test]
 fn fuzz_unicode() {
     should_not_panic("// 日本語コメント");
-    should_not_panic("fn f() { let x = 42; }");
+    should_not_panic("fn f() { val x = 42; }");
     // Unicode identifiers and string content tested via comments and inside functions
 }
 
@@ -60,14 +60,14 @@ fn fuzz_keywords_alone() {
     // parser infinite loops. Top-level `let`, `if`, `while`, `for`, `return`, `match`
     // trigger a known parser issue (loops on non-item top-level statements).
     let safe_keywords = [
-        "fn", "struct", "enum", "trait", "impl", "pub",
+        "fn", "model", "enum", "trait", "extend", "pub",
         "use", "mod", "unsafe", "type", "const",
     ];
     for kw in &safe_keywords {
         should_not_panic(kw);
     }
     // Test statement keywords inside function bodies
-    let stmt_keywords = ["let", "if", "else", "while", "for", "return", "match"];
+    let stmt_keywords = ["val", "if", "else", "while", "for", "return", "match"];
     for kw in &stmt_keywords {
         should_not_panic(&format!("fn f() {{ {} }}", kw));
     }
@@ -104,7 +104,7 @@ fn fuzz_unclosed_string() {
 
 #[test]
 fn fuzz_unclosed_char() {
-    // NOTE: `let x = 'a` also triggers the parser issue with unterminated literals.
+    // NOTE: `val x = 'a` also triggers the parser issue with unterminated literals.
     // Using standalone char literal instead.
     should_not_panic("'a");
 }
@@ -130,7 +130,7 @@ fn fuzz_extra_closing() {
 fn fuzz_only_operators() {
     should_not_panic("+ - * / % = == != < > <= >=");
     should_not_panic("&& || ! & | ^ ~ << >>");
-    should_not_panic("-> => :: .. ..= += -= *= /=");
+    should_not_panic("=> .. ..= += -= *= /= |>");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -169,7 +169,7 @@ fn fuzz_deep_nesting() {
 
 #[test]
 fn fuzz_deep_expression_nesting() {
-    let mut s = String::from("fn f() { let x = ");
+    let mut s = String::from("fn f() { val x = ");
     for _ in 0..20 {
         s.push('(');
     }
@@ -198,7 +198,7 @@ fn fuzz_many_parameters() {
 fn fuzz_many_statements() {
     let mut s = String::from("fn main() {\n");
     for i in 0..200 {
-        s.push_str(&format!("    let x{} = {};\n", i, i));
+        s.push_str(&format!("    val x{} = {};\n", i, i));
     }
     s.push_str("}\n");
     should_not_panic(&s);
@@ -220,32 +220,32 @@ fn fuzz_typecheck_just_fn() {
 
 #[test]
 fn fuzz_typecheck_invalid_types() {
-    should_not_panic_typecheck("fn f(x: NonexistentType) -> Bogus { return x; }");
+    should_not_panic_typecheck("fn f(x: NonexistentType): Bogus { return x; }");
 }
 
 #[test]
 fn fuzz_typecheck_recursive() {
-    should_not_panic_typecheck("fn f() -> Int32 { return f(); }");
+    should_not_panic_typecheck("fn f(): Int32 { return f(); }");
 }
 
 #[test]
 fn fuzz_typecheck_mutual_recursion() {
-    should_not_panic_typecheck("fn a() -> Int32 { return b(); }\nfn b() -> Int32 { return a(); }");
+    should_not_panic_typecheck("fn a(): Int32 { return b(); }\nfn b(): Int32 { return a(); }");
 }
 
 #[test]
 fn fuzz_typecheck_type_mismatch() {
-    should_not_panic_typecheck("fn f() -> Int32 { return true; }");
+    should_not_panic_typecheck("fn f(): Int32 { return true; }");
 }
 
 #[test]
 fn fuzz_typecheck_undefined_var() {
-    should_not_panic_typecheck("fn f() -> Int32 { return undefined_var; }");
+    should_not_panic_typecheck("fn f(): Int32 { return undefined_var; }");
 }
 
 #[test]
 fn fuzz_typecheck_duplicate_params() {
-    should_not_panic_typecheck("fn f(x: Int32, x: Int32) -> Int32 { return x; }");
+    should_not_panic_typecheck("fn f(x: Int32, x: Int32): Int32 { return x; }");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -264,7 +264,7 @@ fn fuzz_formatter_garbage() {
 
 #[test]
 fn fuzz_formatter_valid() {
-    let _ = axonc::fmt::Formatter::format("fn main() -> Int32 { return 42; }", "fuzz.axon");
+    let _ = axonc::fmt::Formatter::format("fn main(): Int32 { return 42; }", "fuzz.axon");
 }
 
 #[test]
@@ -293,12 +293,12 @@ fn fuzz_linter_garbage() {
 
 #[test]
 fn fuzz_linter_valid() {
-    let _ = axonc::lint::Linter::lint("fn main() -> Int32 { return 42; }", "fuzz.axon");
+    let _ = axonc::lint::Linter::lint("fn main(): Int32 { return 42; }", "fuzz.axon");
 }
 
 #[test]
 fn fuzz_linter_warnings() {
-    let _ = axonc::lint::Linter::lint("fn main() { let unused_var: Int32 = 1; }", "fuzz.axon");
+    let _ = axonc::lint::Linter::lint("fn main() { val unused_var: Int32 = 1; }", "fuzz.axon");
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -308,16 +308,16 @@ fn fuzz_linter_warnings() {
 #[test]
 fn fuzz_generated_programs() {
     let templates = [
-        "fn f() { let x: Int32 = 1; }",
-        "fn f() -> Bool { return true; }",
-        "struct S { x: Int32, y: Float64 }",
+        "fn f() { val x: Int32 = 1; }",
+        "fn f(): Bool { return true; }",
+        "model S { x: Int32, y: Float64 }",
         "enum E { A, B(Int32), C { x: Float64 } }",
-        "fn f() { let mut v: Int32 = 0; while v < 10 { v = v + 1; } }",
-        "fn f(x: Int32) -> Int32 { match x { 0 => return 1, _ => return x * 2, } }",
-        "fn f(x: Int32, y: Int32) -> Bool { return x == y; }",
-        "fn f() { if true { let a = 1; } else { let b = 2; } }",
-        "trait Printable { fn to_string(self) -> String; }",
-        "fn f() -> Float64 { return 3.14; }",
+        "fn f() { var v: Int32 = 0; while v < 10 { v = v + 1; } }",
+        "fn f(x: Int32): Int32 { match x { 0 => return 1, _ => return x * 2, } }",
+        "fn f(x: Int32, y: Int32): Bool { return x == y; }",
+        "fn f() { if true { val a = 1; } else { val b = 2; } }",
+        "trait Printable { fn to_string(self): String; }",
+        "fn f(): Float64 { return 3.14; }",
     ];
     for t in &templates {
         should_not_panic(t);
@@ -331,8 +331,8 @@ fn fuzz_generated_programs() {
 
 #[test]
 fn fuzz_empty_struct() {
-    should_not_panic("struct Empty {}");
-    should_not_panic_typecheck("struct Empty {}");
+    should_not_panic("model Empty {}");
+    should_not_panic_typecheck("model Empty {}");
 }
 
 #[test]
@@ -349,7 +349,7 @@ fn fuzz_empty_trait() {
 
 #[test]
 fn fuzz_empty_impl() {
-    should_not_panic("impl Foo {}");
+    should_not_panic("extend Foo {}");
 }
 
 #[test]
@@ -377,18 +377,18 @@ fn fuzz_string_escapes() {
 
 #[test]
 fn fuzz_number_literals() {
-    should_not_panic("fn f() { let x = 0; }");
-    should_not_panic("fn f() { let x = 0x1F; }");
-    should_not_panic("fn f() { let x = 0b1010; }");
-    should_not_panic("fn f() { let x = 0o77; }");
-    should_not_panic("fn f() { let x = 1_000_000; }");
-    should_not_panic("fn f() { let x = 3.14e-10; }");
+    should_not_panic("fn f() { val x = 0; }");
+    should_not_panic("fn f() { val x = 0x1F; }");
+    should_not_panic("fn f() { val x = 0b1010; }");
+    should_not_panic("fn f() { val x = 0o77; }");
+    should_not_panic("fn f() { val x = 1_000_000; }");
+    should_not_panic("fn f() { val x = 3.14e-10; }");
 }
 
 #[test]
 fn fuzz_trailing_comma() {
     should_not_panic("fn f(a: Int32, b: Int32,) {}");
-    should_not_panic("struct S { x: Int32, y: Int32, }");
+    should_not_panic("model S { x: Int32, y: Int32, }");
 }
 
 #[test]
@@ -403,17 +403,17 @@ fn fuzz_semicolon_spam() {
 #[test]
 fn fuzz_all_constructs_combined() {
     let source = r#"
-        struct Point { x: Float64, y: Float64 }
+        model Point { x: Float64, y: Float64 }
         enum Shape { Circle(Float64), Rect { w: Float64, h: Float64 } }
-        trait Area { fn area(self) -> Float64; }
-        fn distance(a: Point, b: Point) -> Float64 {
-            let dx = a.x - b.x;
-            let dy = a.y - b.y;
+        trait Area { fn area(self): Float64; }
+        fn distance(a: Point, b: Point): Float64 {
+            val dx = a.x - b.x;
+            val dy = a.y - b.y;
             return dx * dx + dy * dy;
         }
-        fn main() -> Int32 {
-            let p = Point { x: 1.0, y: 2.0 };
-            let s = Shape::Circle(3.14);
+        fn main(): Int32 {
+            val p = Point { x: 1.0, y: 2.0 };
+            val s = Shape.Circle(3.14);
             return 0;
         }
     "#;
@@ -426,7 +426,7 @@ fn fuzz_repeated_definitions() {
     let mut source = String::new();
     for i in 0..100 {
         source.push_str(&format!("fn f{}() {{ }}\n", i));
-        source.push_str(&format!("struct S{} {{ x: Int32 }}\n", i));
+        source.push_str(&format!("model S{} {{ x: Int32 }}\n", i));
     }
     should_not_panic(&source);
     should_not_panic_typecheck(&source);

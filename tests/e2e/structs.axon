@@ -1,11 +1,11 @@
 // Simple struct test — Axon doesn't have struct literals in compiled programs yet,
 // so test what we CAN do: function calls that return values and bind to typed locals.
 // This tests the GEP/projection codegen paths indirectly.
-fn make_pair(a: Int64, b: Int64) -> Int64 {
+fn make_pair(a: Int64, b: Int64): Int64 {
     return a + b;
 }
 fn main() {
-    let result: Int64 = make_pair(10, 20);
+    val result: Int64 = make_pair(10, 20);
     println(result);
 }
 // expect: 30

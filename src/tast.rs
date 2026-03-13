@@ -347,8 +347,9 @@ impl<'a> TastBuilder<'a> {
                 Literal::String(_) => TypeId::STRING,
             },
             TypedExprKind::Identifier(name) => {
-                if let Some(sym_id) = self.checker.symbols.lookup(name) {
-                    self.checker.symbols.get_symbol(sym_id).ty
+                if let Some(sym_id) = self.checker.symbols.lookup_all(name) {
+                    let raw_ty = self.checker.symbols.get_symbol(sym_id).ty;
+                    self.checker.resolve_type(raw_ty)
                 } else {
                     TypeId::ERROR
                 }
@@ -369,10 +370,10 @@ impl<'a> TastBuilder<'a> {
                         return TypeId::UNIT;
                     }
                 }
-                let fn_ty = function.ty;
+                let fn_ty = self.checker.resolve_type(function.ty);
                 let resolved = self.checker.interner.resolve(fn_ty);
                 if let Type::Function { ret, .. } = resolved {
-                    *ret
+                    self.checker.resolve_type(*ret)
                 } else {
                     TypeId::ERROR
                 }
@@ -767,7 +768,7 @@ mod tests {
 
     #[test]
     fn build_simple_function() {
-        let src = "fn main() -> Int64 { return 42; }";
+        let src = "fn main(): Int64 { return 42; }";
         let (checker, _errors) = typeck::check(src, "test.axon");
         let builder = TastBuilder::new(&checker);
         let program = crate::parse_source(src, "test.axon").0;
@@ -781,7 +782,7 @@ mod tests {
 
     #[test]
     fn tast_serializes_to_json() {
-        let src = "fn add(x: Int64, y: Int64) -> Int64 { return x; }";
+        let src = "fn add(x: Int64, y: Int64): Int64 { return x; }";
         let (checker, _errors) = typeck::check(src, "test.axon");
         let builder = TastBuilder::new(&checker);
         let program = crate::parse_source(src, "test.axon").0;

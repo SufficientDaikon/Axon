@@ -1,4 +1,4 @@
-fn fib(n: Int64) -> Int64 {
+fn fib(n: Int64): Int64 {
     if n < 2 {
         return n;
     }
@@ -6,5 +6,5 @@ fn fib(n: Int64) -> Int64 {
 }
 
 fn main() {
-    let result: Int64 = fib(10);
+    val result: Int64 = fib(10);
 }

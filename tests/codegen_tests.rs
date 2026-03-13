@@ -6,10 +6,9 @@
 
 /// Run the full pipeline: source → parse → check → MIR → LLVM IR
 fn full_pipeline(source: &str) -> String {
-    let (typed_program, errors) = axonc::check_source(source, "test.axon");
+    let (typed_program, errors, checker) = axonc::check_source_full(source, "test.axon");
     assert!(errors.is_empty(), "Type check errors: {:?}", errors);
 
-    let (checker, _) = axonc::typeck::check(source, "test.axon");
     let mut builder = axonc::mir::MirBuilder::new(&checker.interner);
     let mir = builder.build(&typed_program);
 
@@ -22,10 +21,9 @@ fn full_pipeline(source: &str) -> String {
 
 /// Run source through to MIR and return it as string.
 fn to_mir(source: &str) -> String {
-    let (typed_program, errors) = axonc::check_source(source, "test.axon");
+    let (typed_program, errors, checker) = axonc::check_source_full(source, "test.axon");
     assert!(errors.is_empty(), "Type check errors: {:?}", errors);
 
-    let (checker, _) = axonc::typeck::check(source, "test.axon");
     let mut builder = axonc::mir::MirBuilder::new(&checker.interner);
     let mir = builder.build(&typed_program);
     format!("{}", mir)
@@ -55,14 +53,14 @@ fn test_empty_main() {
 
 #[test]
 fn test_return_integer() {
-    let ir = full_pipeline("fn main() -> Int64 { return 42; }");
+    let ir = full_pipeline("fn main(): Int64 { return 42; }");
     assert!(ir.contains("ret"), "IR should contain ret: {}", ir);
     assert!(ir.contains("i64"), "IR should contain i64: {}", ir);
 }
 
 #[test]
 fn test_return_float() {
-    let ir = full_pipeline("fn main() -> Float64 { return 3.14; }");
+    let ir = full_pipeline("fn main(): Float64 { return 3.14; }");
     assert!(ir.contains("ret"), "IR should contain ret: {}", ir);
     assert!(
         ir.contains("double"),
@@ -73,17 +71,17 @@ fn test_return_float() {
 
 #[test]
 fn test_return_bool() {
-    let ir = full_pipeline("fn main() -> Bool { return true; }");
+    let ir = full_pipeline("fn main(): Bool { return true; }");
     assert!(ir.contains("ret"), "IR should contain ret: {}", ir);
     assert!(ir.contains("i1"), "IR should contain i1 for Bool: {}", ir);
 }
 
 #[test]
 fn test_let_binding() {
-    let ir = full_pipeline("fn main() -> Int64 { let x: Int64 = 42; return x; }");
+    let ir = full_pipeline("fn main(): Int64 { val x: Int64 = 42; return x; }");
     assert!(
         ir.contains("alloca"),
-        "IR should contain alloca for let binding: {}",
+        "IR should contain alloca for val binding: {}",
         ir
     );
     assert!(
@@ -96,7 +94,7 @@ fn test_let_binding() {
 #[test]
 fn test_arithmetic_add() {
     let ir = full_pipeline(
-        "fn main() -> Int64 { let a: Int64 = 10; let b: Int64 = 20; return a + b; }",
+        "fn main(): Int64 { val a: Int64 = 10; val b: Int64 = 20; return a + b; }",
     );
     assert!(
         ir.contains("add"),
@@ -108,7 +106,7 @@ fn test_arithmetic_add() {
 #[test]
 fn test_arithmetic_sub() {
     let ir = full_pipeline(
-        "fn main() -> Int64 { let a: Int64 = 30; let b: Int64 = 10; return a - b; }",
+        "fn main(): Int64 { val a: Int64 = 30; val b: Int64 = 10; return a - b; }",
     );
     assert!(
         ir.contains("sub"),
@@ -120,7 +118,7 @@ fn test_arithmetic_sub() {
 #[test]
 fn test_arithmetic_mul() {
     let ir = full_pipeline(
-        "fn main() -> Int64 { let a: Int64 = 5; let b: Int64 = 6; return a * b; }",
+        "fn main(): Int64 { val a: Int64 = 5; val b: Int64 = 6; return a * b; }",
     );
     assert!(
         ir.contains("mul"),
@@ -132,7 +130,7 @@ fn test_arithmetic_mul() {
 #[test]
 fn test_arithmetic_div() {
     let ir = full_pipeline(
-        "fn main() -> Int64 { let a: Int64 = 100; let b: Int64 = 4; return a / b; }",
+        "fn main(): Int64 { val a: Int64 = 100; val b: Int64 = 4; return a / b; }",
     );
     assert!(
         ir.contains("div"),
@@ -144,7 +142,7 @@ fn test_arithmetic_div() {
 #[test]
 fn test_float_arithmetic() {
     let ir = full_pipeline(
-        "fn main() -> Float64 { let a: Float64 = 1.0; let b: Float64 = 2.0; return a + b; }",
+        "fn main(): Float64 { val a: Float64 = 1.0; val b: Float64 = 2.0; return a + b; }",
     );
     assert!(
         ir.contains("add") || ir.contains("fadd"),
@@ -165,7 +163,7 @@ fn test_float_arithmetic() {
 #[test]
 fn test_if_else_ir() {
     let ir = full_pipeline(
-        "fn main() -> Int64 { if true { return 1; } else { return 2; } }",
+        "fn main(): Int64 { if true { return 1; } else { return 2; } }",
     );
     assert!(ir.contains("br"), "IR should contain branch: {}", ir);
     // Should have multiple basic blocks
@@ -181,7 +179,7 @@ fn test_if_else_ir() {
 #[test]
 fn test_while_loop_ir() {
     let ir = full_pipeline(
-        "fn main() { let mut x: Int64 = 0; while x < 10 { x = x + 1; } }",
+        "fn main() { var x: Int64 = 0; while x < 10 { x = x + 1; } }",
     );
     assert!(ir.contains("br"), "IR should contain branch: {}", ir);
     assert!(
@@ -194,7 +192,7 @@ fn test_while_loop_ir() {
 #[test]
 fn test_comparison_ops() {
     let ir = full_pipeline(
-        "fn test_cmp(a: Int64) -> Bool { return a < 10; }\nfn main() { let r: Bool = test_cmp(5); }",
+        "fn test_cmp(a: Int64): Bool { return a < 10; }\nfn main() { val r: Bool = test_cmp(5); }",
     );
     assert!(
         ir.contains("icmp"),
@@ -206,7 +204,7 @@ fn test_comparison_ops() {
 #[test]
 fn test_logical_and() {
     let ir = full_pipeline(
-        "fn test_and(a: Bool, b: Bool) -> Bool { return a && b; }\nfn main() { let r: Bool = test_and(true, false); }",
+        "fn test_and(a: Bool, b: Bool): Bool { return a && b; }\nfn main() { val r: Bool = test_and(true, false); }",
     );
     assert!(
         ir.contains("and") || ir.contains("br"),
@@ -218,7 +216,7 @@ fn test_logical_and() {
 #[test]
 fn test_logical_or() {
     let ir = full_pipeline(
-        "fn test_or(a: Bool, b: Bool) -> Bool { return a || b; }\nfn main() { let r: Bool = test_or(true, false); }",
+        "fn test_or(a: Bool, b: Bool): Bool { return a || b; }\nfn main() { val r: Bool = test_or(true, false); }",
     );
     assert!(
         ir.contains("or") || ir.contains("br"),
@@ -230,7 +228,7 @@ fn test_logical_or() {
 #[test]
 fn test_negation() {
     let ir = full_pipeline(
-        "fn test_neg(x: Int64) -> Int64 { return -x; }\nfn main() { let r: Int64 = test_neg(5); }",
+        "fn test_neg(x: Int64): Int64 { return -x; }\nfn main() { val r: Int64 = test_neg(5); }",
     );
     assert!(
         ir.contains("sub") || ir.contains("neg"),
@@ -242,7 +240,7 @@ fn test_negation() {
 #[test]
 fn test_boolean_not() {
     let ir = full_pipeline(
-        "fn test_not(a: Bool) -> Bool { return !a; }\nfn main() { let r: Bool = test_not(true); }",
+        "fn test_not(a: Bool): Bool { return !a; }\nfn main() { val r: Bool = test_not(true); }",
     );
     assert!(
         ir.contains("xor") || ir.contains("icmp"),
@@ -254,9 +252,9 @@ fn test_boolean_not() {
 #[test]
 fn test_nested_if() {
     let ir = full_pipeline(
-        "fn test_nested(x: Bool, y: Bool) -> Int64 { \
+        "fn test_nested(x: Bool, y: Bool): Int64 { \
          if x { if y { return 1; } else { return 2; } } \
-         else { return 3; } }\nfn main() { let r: Int64 = test_nested(true, false); }",
+         else { return 3; } }\nfn main() { val r: Int64 = test_nested(true, false); }",
     );
     // Nested if-else should generate several basic blocks
     let define_count = ir.matches("br ").count();
@@ -275,8 +273,8 @@ fn test_nested_if() {
 #[test]
 fn test_multiple_functions() {
     let ir = full_pipeline(
-        "fn add(a: Int64, b: Int64) -> Int64 { return a + b; }\n\
-         fn main() -> Int64 { return add(1, 2); }",
+        "fn add(a: Int64, b: Int64): Int64 { return a + b; }\n\
+         fn main(): Int64 { return add(1, 2); }",
     );
     let define_count = ir.matches("define ").count();
     assert!(
@@ -291,7 +289,7 @@ fn test_multiple_functions() {
 #[test]
 fn test_function_params() {
     let ir = full_pipeline(
-        "fn sum(a: Int64, b: Int64) -> Int64 { return a + b; }\nfn main() { let r: Int64 = sum(1, 2); }",
+        "fn sum(a: Int64, b: Int64): Int64 { return a + b; }\nfn main() { val r: Int64 = sum(1, 2); }",
     );
     assert!(
         ir.contains("%arg0") && ir.contains("%arg1"),
@@ -318,8 +316,8 @@ fn test_void_function() {
 #[test]
 fn test_function_call_ir() {
     let ir = full_pipeline(
-        "fn foo(x: Int64) -> Int64 { return x; }\n\
-         fn main() -> Int64 { return foo(42); }",
+        "fn foo(x: Int64): Int64 { return x; }\n\
+         fn main(): Int64 { return foo(42); }",
     );
     assert!(
         ir.contains("call"),
@@ -331,7 +329,7 @@ fn test_function_call_ir() {
 #[test]
 fn test_multiple_params() {
     let ir = full_pipeline(
-        "fn triple(a: Int64, b: Float64, c: Bool) -> Int64 { return a; }\nfn main() { let r: Int64 = triple(1, 2.0, true); }",
+        "fn triple(a: Int64, b: Float64, c: Bool): Int64 { return a; }\nfn main() { val r: Int64 = triple(1, 2.0, true); }",
     );
     assert!(ir.contains("%arg0"), "IR should contain first param: {}", ir);
     assert!(ir.contains("%arg1"), "IR should contain second param: {}", ir);
@@ -347,11 +345,11 @@ fn test_multiple_params() {
 #[test]
 fn test_function_with_locals() {
     let ir = full_pipeline(
-        "fn compute() -> Int64 { \
-         let a: Int64 = 1; \
-         let b: Int64 = 2; \
-         let c: Int64 = 3; \
-         return a + b + c; }\nfn main() { let r: Int64 = compute(); }",
+        "fn compute(): Int64 { \
+         val a: Int64 = 1; \
+         val b: Int64 = 2; \
+         val c: Int64 = 3; \
+         return a + b + c; }\nfn main() { val r: Int64 = compute(); }",
     );
     let alloca_count = ir.matches("alloca").count();
     assert!(
@@ -379,7 +377,7 @@ fn test_mir_empty_function() {
 #[test]
 fn test_mir_basic_blocks() {
     let mir = to_mir(
-        "fn test_if(x: Bool) -> Int64 { if x { return 1; } else { return 2; } }",
+        "fn test_if(x: Bool): Int64 { if x { return 1; } else { return 2; } }",
     );
     // if/else should create multiple basic blocks
     let bb_count = mir.matches("bb").count();
@@ -394,7 +392,7 @@ fn test_mir_basic_blocks() {
 #[test]
 fn test_mir_while_loop() {
     let mir = to_mir(
-        "fn test_loop() { let mut i: Int64 = 0; while i < 10 { i = i + 1; } }",
+        "fn test_loop() { var i: Int64 = 0; while i < 10 { i = i + 1; } }",
     );
     // While loop creates at least header/body/exit blocks
     let bb_count = mir.matches("bb").count();
@@ -408,7 +406,7 @@ fn test_mir_while_loop() {
 
 #[test]
 fn test_mir_let_binding() {
-    let mir = to_mir("fn main() { let x: Int64 = 42; }");
+    let mir = to_mir("fn main() { val x: Int64 = 42; }");
     // Assign statement for the let binding
     assert!(
         mir.contains("="),
@@ -419,7 +417,7 @@ fn test_mir_let_binding() {
 
 #[test]
 fn test_mir_return() {
-    let mir = to_mir("fn main() -> Int64 { return 42; }");
+    let mir = to_mir("fn main(): Int64 { return 42; }");
     // Return terminator
     assert!(
         mir.contains("return") || mir.contains("Return"),
@@ -430,7 +428,7 @@ fn test_mir_return() {
 
 #[test]
 fn test_mir_display() {
-    let mir = to_mir("fn main() -> Int64 { return 1; }");
+    let mir = to_mir("fn main(): Int64 { return 1; }");
     // Display impl should produce readable output
     assert!(!mir.is_empty(), "MIR display should produce output");
     assert!(mir.contains("fn"), "MIR display should contain fn keyword");
@@ -565,7 +563,7 @@ fn test_runtime_c_source() {
 #[test]
 fn test_runtime_function_count() {
     let count = axonc::codegen::runtime::RUNTIME_FUNCTIONS.len();
-    assert_eq!(count, 26, "RUNTIME_FUNCTIONS should have 26 entries, got {}", count);
+    assert_eq!(count, 39, "RUNTIME_FUNCTIONS should have 39 entries, got {}", count);
 }
 
 #[test]
@@ -632,7 +630,7 @@ fn test_compile_return_42() {
         return;
     }
 
-    let ir = full_pipeline("fn main() -> Int64 { return 42; }");
+    let ir = full_pipeline("fn main(): Int64 { return 42; }");
 
     let dir = std::env::temp_dir().join("axon_codegen_test_ret42");
     let _ = std::fs::create_dir_all(&dir);
@@ -667,7 +665,7 @@ fn test_compile_return_42() {
 #[test]
 fn test_e2e_ir_is_valid_text() {
     // Verify generated IR is valid LLVM IR text (structural checks)
-    let ir = full_pipeline("fn main() -> Int64 { return 0; }");
+    let ir = full_pipeline("fn main(): Int64 { return 0; }");
     assert!(ir.contains("define"), "IR must have function definitions");
     assert!(ir.contains("ret"), "IR must have return instructions");
     assert!(
@@ -679,8 +677,8 @@ fn test_e2e_ir_is_valid_text() {
 #[test]
 fn test_e2e_multiple_functions_call() {
     let ir = full_pipeline(
-        "fn double(x: Int64) -> Int64 { return x + x; }\n\
-         fn main() -> Int64 { return double(21); }",
+        "fn double(x: Int64): Int64 { return x + x; }\n\
+         fn main(): Int64 { return double(21); }",
     );
     assert!(ir.contains("call"), "IR should contain call to double");
     assert!(ir.contains("@main"), "IR should define main");
@@ -695,8 +693,8 @@ fn test_e2e_multiple_functions_call() {
 #[test]
 fn test_e2e_with_control_flow() {
     let ir = full_pipeline(
-        "fn my_abs(x: Int64) -> Int64 { if x < 0 { return -x; } else { return x; } }\n\
-         fn main() -> Int64 { return my_abs(-5); }",
+        "fn my_abs(x: Int64): Int64 { if x < 0 { return -x; } else { return x; } }\n\
+         fn main(): Int64 { return my_abs(-5); }",
     );
     assert!(ir.contains("icmp"), "IR should contain comparison");
     assert!(ir.contains("br"), "IR should contain branch");
