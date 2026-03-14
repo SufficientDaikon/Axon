@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendRiskRegister>
+  <metadata><purpose>Risk identification, mitigation strategies, and residual risk tracking</purpose></metadata>
+
+  <risks>
+    <risk id="RISK-01" category="Technical" likelihood="high" impact="critical" phase="BETA">
+      <description>Operator fusion produces numerically incorrect results due to floating-point reordering or intermediate precision loss.</description>
+      <mitigation>Extensive numerical equivalence tests (epsilon &lt; 1e-6). Test with edge cases: very large, very small, NaN, Inf, zero-element tensors. Disable fusion per-pattern if any test fails.</mitigation>
+      <residual>Low — fusion disabled for any failing pattern until fixed.</residual>
+      <owner>WS3 executor</owner>
+    </risk>
+
+    <risk id="RISK-02" category="Technical" likelihood="medium" impact="critical" phase="BETA">
+      <description>Auto-parallelism introduces data races or non-deterministic results due to incorrect dependency analysis.</description>
+      <mitigation>Conservative dependency analysis — only parallelize when provably independent. Run parallel vs sequential comparison 1000x. Use thread sanitizer if available.</mitigation>
+      <residual>Low — parallelism disabled globally if any race detected.</residual>
+      <owner>WS4 executor</owner>
+    </risk>
+
+    <risk id="RISK-03" category="Performance" likelihood="medium" impact="high" phase="BETA">
+      <description>New MIR passes increase compile time beyond 15% threshold on standard benchmarks.</description>
+      <mitigation>Benchmark after each new pass. Profile with cargo flamegraph. Optimize hot paths. If threshold exceeded, make the pass opt-in only.</mitigation>
+      <residual>Medium — some passes may be opt-in rather than default.</residual>
+      <owner>WS1/WS3 executor</owner>
+    </risk>
+
+    <risk id="RISK-04" category="Compatibility" likelihood="low" impact="high" phase="ALPHA">
+      <description>Global NameInterner conflicts with existing TypeInterner, causing subtle bugs in type resolution.</description>
+      <mitigation>Keep interners completely separate (different types, different storage). Full test suite regression. No shared state.</mitigation>
+      <residual>Low — interners are independent by design.</residual>
+      <owner>WS1 executor</owner>
+    </risk>
+
+    <risk id="RISK-05" category="Scope" likelihood="high" impact="medium" phase="ALL">
+      <description>Context window overflow during AI execution causes "Error during execution" and lost work.</description>
+      <mitigation>Strict token budgets per phase (80K max). Handoff packets between phases. /compact before new phases. Subagents for exploration. Never read entire codebase.</mitigation>
+      <residual>Low — mitigated by context governance protocol.</residual>
+      <owner>All executors</owner>
+    </risk>
+
+    <risk id="RISK-06" category="Technical" likelihood="medium" impact="medium" phase="GAMMA">
+      <description>Linearity annotations interact unexpectedly with existing borrow checker, causing false positives or missed violations.</description>
+      <mitigation>Linear checking is a separate pass on top of borrow checking, not integrated into it. Extensive tests for interaction patterns. Opt-in only.</mitigation>
+      <residual>Medium — edge cases may require iteration.</residual>
+      <owner>WS6 executor</owner>
+    </risk>
+
+    <risk id="RISK-07" category="Technical" likelihood="low" impact="high" phase="BETA">
+      <description>Thread pool in C runtime causes issues on Windows (primary development platform) due to pthreads vs Windows threads.</description>
+      <mitigation>Use platform-agnostic threading (C11 threads or #ifdef for Windows CreateThread). Test on Windows specifically. Fall back to sequential if threading unavailable.</mitigation>
+      <residual>Low — sequential fallback always available.</residual>
+      <owner>WS4 executor</owner>
+    </risk>
+
+    <risk id="RISK-08" category="Dependencies" likelihood="low" impact="low" phase="ALPHA">
+      <description>stacker or insta crate introduces version conflict with existing Cargo.toml dependencies.</description>
+      <mitigation>Both are widely used, stable crates. Pin versions. Test cargo build before proceeding.</mitigation>
+      <residual>Negligible.</residual>
+      <owner>WS1/WS2 executor</owner>
+    </risk>
+
+    <risk id="RISK-09" category="Scope" likelihood="medium" impact="medium" phase="DELTA">
+      <description>with-block desugaring interacts poorly with existing error handling (Result + ? operator), creating confusing type errors.</description>
+      <mitigation>Clear documentation of how with-blocks interact with ?. Targeted error messages for common mistakes. Extensive test coverage.</mitigation>
+      <residual>Medium — may require ergonomic iteration.</residual>
+      <owner>WS7 executor</owner>
+    </risk>
+
+    <risk id="RISK-10" category="Platform" likelihood="medium" impact="low" phase="ALL">
+      <description>Git's link.exe shadows MSVC linker on Windows, causing build failures.</description>
+      <mitigation>Set LINK environment variable to MSVC linker path. Document in .dev/ files. Already known issue.</mitigation>
+      <residual>Low — workaround is established.</residual>
+      <owner>All executors</owner>
+    </risk>
+  </risks>
+
+  <riskMatrix>
+    <!-- Likelihood x Impact = Priority -->
+    <cell likelihood="high" impact="critical">RISK-01</cell>
+    <cell likelihood="medium" impact="critical">RISK-02</cell>
+    <cell likelihood="medium" impact="high">RISK-03 RISK-06</cell>
+    <cell likelihood="high" impact="medium">RISK-05</cell>
+    <cell likelihood="low" impact="high">RISK-04 RISK-07</cell>
+    <cell likelihood="medium" impact="medium">RISK-09</cell>
+    <cell likelihood="medium" impact="low">RISK-10</cell>
+    <cell likelihood="low" impact="low">RISK-08</cell>
+  </riskMatrix>
+</axonBendRiskRegister>

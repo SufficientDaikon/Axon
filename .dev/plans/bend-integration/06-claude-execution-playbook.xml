@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendExecutionPlaybook>
+  <metadata>
+    <purpose>Claude-optimized execution protocol for Bend integration phases</purpose>
+  </metadata>
+
+  <executionPrinciples>
+    <principle id="EP1">Work in phases. Never attempt more than one workstream in a single context window.</principle>
+    <principle id="EP2">Compact context before starting each new phase. Use /compact or summarize to handoff packet.</principle>
+    <principle id="EP3">Run cargo test after every file modification. Never proceed with failing tests.</principle>
+    <principle id="EP4">Use subagents for exploration and heavy file reading. Keep main context for decisions and code changes.</principle>
+    <principle id="EP5">Create each new module with tests immediately. Never defer tests to "later".</principle>
+    <principle id="EP6">Pin non-negotiables in every prompt: test baseline 1034+, zero warnings, project path h:/programing language/axon/.</principle>
+    <principle id="EP7">If context approaches 80K tokens, stop, create handoff packet, and start new session.</principle>
+  </executionPrinciples>
+
+  <phaseProtocol>
+    <phase id="ALPHA">
+      <contextBudget>80K tokens</contextBudget>
+      <sessionEstimate>2-3 sessions</sessionEstimate>
+      <entryCondition>No preconditions. This is the first phase.</entryCondition>
+      <exitCondition>All 1,034+ tests pass. Diagnostics accumulate. PassManager operational. 100+ snapshots. Handoff packet created.</exitCondition>
+      <handoffPacket>
+        <field>filesCreated (list of new files with line counts)</field>
+        <field>filesModified (list with summary of changes)</field>
+        <field>testsAdded (count and categories)</field>
+        <field>testBaseline (new total test count)</field>
+        <field>openRisks (any unresolved issues)</field>
+        <field>nextActions (what BETA should do first)</field>
+      </handoffPacket>
+    </phase>
+
+    <phase id="BETA">
+      <contextBudget>80K tokens per workstream</contextBudget>
+      <sessionEstimate>4-6 sessions (1-2 per workstream WS3/WS4/WS5)</sessionEstimate>
+      <entryCondition>ALPHA handoff packet loaded. PassManager confirmed operational.</entryCondition>
+      <exitCondition>Fusion 3x verified. Parallelism 2x verified. Fold/reduce functional. 200+ new tests.</exitCondition>
+      <handoffPacket>
+        <field>filesCreated (list of new files with line counts)</field>
+        <field>filesModified (list with summary of changes)</field>
+        <field>testsAdded (count and categories)</field>
+        <field>testBaseline (new total test count)</field>
+        <field>benchmarkResults (fusion throughput, parallelism scaling factors)</field>
+        <field>openRisks (any unresolved issues)</field>
+        <field>nextActions (what GAMMA should do first)</field>
+      </handoffPacket>
+    </phase>
+
+    <phase id="GAMMA">
+      <contextBudget>80K tokens</contextBudget>
+      <sessionEstimate>2-3 sessions</sessionEstimate>
+      <entryCondition>BETA handoff packet loaded. Fusion and parallelism confirmed working.</entryCondition>
+      <exitCondition>Linear types enforced. Zero-copy verified on 5+ patterns. ADT layouts benchmarked.</exitCondition>
+      <handoffPacket>
+        <field>filesCreated (list of new files with line counts)</field>
+        <field>filesModified (list with summary of changes)</field>
+        <field>testsAdded (count and categories)</field>
+        <field>testBaseline (new total test count)</field>
+        <field>linearityPatterns (list of verified zero-copy patterns)</field>
+        <field>adtBenchmarks (layout comparison results)</field>
+        <field>openRisks (any unresolved issues)</field>
+        <field>nextActions (what DELTA should do first)</field>
+      </handoffPacket>
+    </phase>
+
+    <phase id="DELTA">
+      <contextBudget>60K tokens</contextBudget>
+      <sessionEstimate>1-2 sessions</sessionEstimate>
+      <entryCondition>GAMMA handoff packet loaded.</entryCondition>
+      <exitCondition>with-blocks working. Docs updated. Math-notation designed.</exitCondition>
+      <handoffPacket>
+        <field>filesCreated (list of new files with line counts)</field>
+        <field>filesModified (list with summary of changes)</field>
+        <field>testsAdded (count and categories)</field>
+        <field>testBaseline (new total test count)</field>
+        <field>docsUpdated (list of documentation changes)</field>
+        <field>openRisks (any unresolved issues)</field>
+        <field>nextActions (what EPSILON should do first)</field>
+      </handoffPacket>
+    </phase>
+
+    <phase id="EPSILON">
+      <contextBudget>40K tokens</contextBudget>
+      <sessionEstimate>1 session</sessionEstimate>
+      <entryCondition>DELTA complete.</entryCondition>
+      <exitCondition>Design documents written and reviewed. No code changes.</exitCondition>
+      <handoffPacket>
+        <field>designDocsCreated (list of design documents with summaries)</field>
+        <field>openQuestions (unresolved design decisions)</field>
+        <field>futureWork (items for post-Bend-integration roadmap)</field>
+      </handoffPacket>
+    </phase>
+  </phaseProtocol>
+
+  <errorRecoveryProtocol>
+    <scenario name="ContextOverflow">
+      <symptom>Error during execution messages, sluggish responses, or repeated tool failures suggesting context limits.</symptom>
+      <action>Immediately stop. Run /compact. Create handoff packet. Resume in new session with packet.</action>
+    </scenario>
+
+    <scenario name="TestRegression">
+      <symptom>Existing test fails after code change.</symptom>
+      <action>Do NOT proceed. Diagnose root cause. Fix regression before any new work. If fix requires major refactor, create risk entry in handoff packet.</action>
+    </scenario>
+
+    <scenario name="CompilationFailure">
+      <symptom>cargo build fails.</symptom>
+      <action>Read error output carefully. Fix in smallest possible diff. Run cargo test after fix. Do not accumulate multiple unfixed errors.</action>
+    </scenario>
+
+    <scenario name="FusionIncorrectness">
+      <symptom>Fused output differs from unfused by more than epsilon.</symptom>
+      <action>Disable fusion for that pattern. Add failing test. Debug numerical issue. Do not ship incorrect fusion.</action>
+    </scenario>
+
+    <scenario name="ParallelismDeadlock">
+      <symptom>Test hangs indefinitely or produces non-deterministic failures.</symptom>
+      <action>Kill process. Revert to sequential execution for affected pass. Add timeout to parallel tests. Investigate dependency graph for cycles.</action>
+    </scenario>
+
+    <scenario name="LinkerShadowing">
+      <symptom>Unexpected linker errors on Windows — Git's link.exe shadows MSVC linker.</symptom>
+      <action>Set LINK environment variable to point to MSVC's link.exe. Verify with where link.exe before retrying.</action>
+    </scenario>
+  </errorRecoveryProtocol>
+
+  <sessionStartChecklist>
+    <step order="1">Load handoff packet from previous phase (if not ALPHA).</step>
+    <step order="2">Verify project path: h:/programing language/axon/</step>
+    <step order="3">Run cargo test and confirm baseline test count matches handoff packet.</step>
+    <step order="4">Run cargo build and confirm zero warnings.</step>
+    <step order="5">Load only the plan documents relevant to the current workstream.</step>
+    <step order="6">Create todo list for the session's deliverables.</step>
+    <step order="7">Begin work on first task.</step>
+  </sessionStartChecklist>
+
+  <sessionEndChecklist>
+    <step order="1">Run cargo test — all tests must pass.</step>
+    <step order="2">Run cargo build — zero warnings required.</step>
+    <step order="3">Create handoff packet with all required fields.</step>
+    <step order="4">Summarize what was accomplished and what remains.</step>
+    <step order="5">List any open risks or blockers for next session.</step>
+  </sessionEndChecklist>
+</axonBendExecutionPlaybook>

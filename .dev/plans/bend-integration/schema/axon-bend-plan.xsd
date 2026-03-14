@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       COMMON TYPES
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:simpleType name="phaseType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="ALPHA"/>
+      <xs:enumeration value="BETA"/>
+      <xs:enumeration value="GAMMA"/>
+      <xs:enumeration value="DELTA"/>
+      <xs:enumeration value="EPSILON"/>
+      <xs:enumeration value="ALL"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="priorityType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="P0"/>
+      <xs:enumeration value="P1"/>
+      <xs:enumeration value="P2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="likelihoodType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="low"/>
+      <xs:enumeration value="medium"/>
+      <xs:enumeration value="high"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="impactType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="low"/>
+      <xs:enumeration value="medium"/>
+      <xs:enumeration value="high"/>
+      <xs:enumeration value="critical"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="statusType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="pending"/>
+      <xs:enumeration value="in_progress"/>
+      <xs:enumeration value="complete"/>
+      <xs:enumeration value="blocked"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="adrStatusType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="proposed"/>
+      <xs:enumeration value="accepted"/>
+      <xs:enumeration value="deprecated"/>
+      <xs:enumeration value="superseded"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="epicIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="E\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="storyIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="E\d+-S\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="riskIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="RISK-\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="workstreamType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="WS\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       RISK REGISTER SCHEMA
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="riskType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="mitigation" type="xs:string"/>
+      <xs:element name="residual" type="xs:string"/>
+      <xs:element name="owner" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="riskIdType" use="required"/>
+    <xs:attribute name="category" type="xs:string" use="required"/>
+    <xs:attribute name="likelihood" type="likelihoodType" use="required"/>
+    <xs:attribute name="impact" type="impactType" use="required"/>
+    <xs:attribute name="phase" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EPIC / STORY SCHEMA
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="storyType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="storyIdType" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="epicType">
+    <xs:sequence>
+      <xs:element name="dependsOn" type="xs:string" minOccurs="0"/>
+      <xs:element name="stories">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="story" type="storyType" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="definitionOfDone">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="id" type="epicIdType" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="priority" type="priorityType" use="required"/>
+    <xs:attribute name="phase" type="phaseType" use="required"/>
+    <xs:attribute name="workstream" type="workstreamType" use="required"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       GATE SCHEMA
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="hardGateType">
+    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="criterion" type="xs:string" use="required"/>
+    <xs:attribute name="evidence" type="xs:string" use="required"/>
+    <xs:attribute name="status" type="statusType" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="softGateType">
+    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="criterion" type="xs:string" use="required"/>
+    <xs:attribute name="maxScore" type="xs:integer" use="required"/>
+    <xs:attribute name="score" type="xs:integer" use="required"/>
+    <xs:attribute name="status" type="statusType" use="required"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR SCHEMA
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="adrOptionType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="pros" type="xs:string"/>
+      <xs:element name="cons" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="adrType">
+    <xs:sequence>
+      <xs:element name="title" type="xs:string"/>
+      <xs:element name="context" type="xs:string"/>
+      <xs:element name="options">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="option" type="adrOptionType" minOccurs="2" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="decision" type="xs:string"/>
+      <xs:element name="rationale" type="xs:string"/>
+      <xs:element name="consequences">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="positive" type="xs:string"/>
+            <xs:element name="negative" type="xs:string"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="status" type="adrStatusType" use="required"/>
+    <xs:attribute name="date" type="xs:date" use="required"/>
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       BENCHMARK SCHEMA
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="benchmarkType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="setup" type="xs:string" minOccurs="0"/>
+      <xs:element name="variants" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="variant" maxOccurs="unbounded">
+              <xs:complexType mixed="true">
+                <xs:attribute name="name" type="xs:string" use="required"/>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="metrics" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+</xs:schema>

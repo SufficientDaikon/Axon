@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendValidationAndTesting>
+  <metadata><purpose>Comprehensive testing strategy, snapshot framework, golden-run baselines, stress suites, and regression gates</purpose></metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TESTING PHILOSOPHY
+       ═══════════════════════════════════════════════════════════════ -->
+  <philosophy>
+    <principle id="TP1">Every change must pass the full 1,034+ baseline test suite. No exceptions.</principle>
+    <principle id="TP2">New features require tests BEFORE merge — no "we'll add tests later" debt.</principle>
+    <principle id="TP3">Snapshot tests are the primary regression mechanism for compiler output.</principle>
+    <principle id="TP4">Numerical correctness for fusion must be within epsilon &lt; 1e-6 of unfused results.</principle>
+    <principle id="TP5">Parallel execution must produce bit-identical results to sequential execution.</principle>
+  </philosophy>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TEST LAYERS
+       ═══════════════════════════════════════════════════════════════ -->
+  <testLayers>
+    <layer id="L1" name="Unit Tests" location="#[cfg(test)] mod tests in each .rs file">
+      <description>Function-level tests within each module. Fastest feedback loop.</description>
+      <requirements>
+        <req>Every new public function must have at least 2 unit tests (normal + edge case).</req>
+        <req>Every new module must have &gt;= 10 unit tests.</req>
+        <req>Tests use #[test] annotation, no external dependencies for unit tests.</req>
+      </requirements>
+      <targets>
+        <target module="src/diagnostics.rs" minTests="15">Accumulation, fatal(), severity override, display formatting, error codes</target>
+        <target module="src/mir/transform/mod.rs" minTests="10">PassManager ordering, pass skipping, config parsing</target>
+        <target module="src/mir/transform/dead_code.rs" minTests="10">Reachability, removal, warnings for user functions</target>
+        <target module="src/mir/transform/const_fold.rs" minTests="10">Integer ops, float ops, overflow, division by zero</target>
+        <target module="src/mir/transform/fuse_ops.rs" minTests="15">Each fusion pattern, non-fusion cases, cross-block rejection</target>
+        <target module="src/mir/transform/parallelize.rs" minTests="10">DAG building, independence detection, side-effect exclusion</target>
+        <target module="src/mir/transform/linearize.rs" minTests="10">Use counting, zero-copy marking, multi-use detection</target>
+        <target module="src/mir/transform/float_combinators.rs" minTests="8">Extraction candidates, free-variable analysis</target>
+        <target module="src/mir/transform/inline.rs" minTests="8">Inline decisions, size thresholds, single-use inlining</target>
+        <target module="src/interner.rs" minTests="10">Interning, deduplication, equality, hash, coexistence with TypeInterner</target>
+      </targets>
+    </layer>
+
+    <layer id="L2" name="Integration Tests" location="tests/ directory">
+      <description>Cross-module tests that verify pipeline stages work together correctly.</description>
+      <requirements>
+        <req>Full pipeline tests: source → compile → run → verify output.</req>
+        <req>At least one integration test per new language feature.</req>
+        <req>Test error recovery: multiple errors in single compilation.</req>
+      </requirements>
+      <suites>
+        <suite name="diagnostics_integration" file="tests/diagnostics_tests.rs">
+          <test>multi_error_accumulation — program with 3+ errors shows all of them</test>
+          <test>warning_to_error_promotion — --deny upgrades warnings to errors</test>
+          <test>error_to_warning_demotion — --warn downgrades errors to warnings (where allowed)</test>
+          <test>phase_boundary_fatal — fatal() stops compilation between phases</test>
+        </suite>
+        <suite name="fusion_integration" file="tests/fusion_tests.rs">
+          <test>linear_relu_fusion_e2e — matmul+add+relu compiles to single fused call</test>
+          <test>mse_fusion_e2e — subtract+square+mean compiles to fused_mse call</test>
+          <test>elementwise_chain_e2e — 5 element-wise ops fuse to single pass</test>
+          <test>no_fusion_across_branch — fusion disabled when if/else separates ops</test>
+          <test>fusion_flag_toggle — -Ofuse-ops=off produces unfused code</test>
+        </suite>
+        <suite name="parallelism_integration" file="tests/parallel_tests.rs">
+          <test>independent_matmuls_parallel — two independent matmuls dispatch to thread pool</test>
+          <test>dependent_ops_sequential — data-dependent ops remain sequential</test>
+          <test>print_not_parallelized — side-effecting ops excluded from parallel regions</test>
+          <test>parallel_equals_sequential — 100 random programs produce identical results</test>
+        </suite>
+        <suite name="fold_reduce_integration" file="tests/fold_tests.rs">
+          <test>fold_sum — fold(0, [1,2,3,4,5], |a,x| a+x) == 15</test>
+          <test>reduce_product — reduce([1,2,3,4], |a,b| a*b) == 24</test>
+          <test>comprehension_map — [x*2 for x in [1,2,3]] == [2,4,6]</test>
+          <test>comprehension_filter — [x for x in [1,2,3,4,5] if x > 3] == [4,5]</test>
+        </suite>
+        <suite name="linearity_integration" file="tests/linearity_tests.rs">
+          <test>linear_single_use_ok — linear param used once compiles</test>
+          <test>linear_multi_use_error — linear param used twice is compile error</test>
+          <test>linear_no_use_error — linear param unused is compile error</test>
+          <test>linear_zero_copy_verified — allocation count is 0 for linear forward pass</test>
+        </suite>
+        <suite name="with_block_integration" file="tests/with_tests.rs">
+          <test>with_result_ok — with Result { ask x = Ok(1); Ok(x+1) } == Ok(2)</test>
+          <test>with_result_err — with Result { ask x = Err("e"); Ok(x) } == Err("e")</test>
+          <test>with_option_some — with Option { ask x = Some(1); Some(x+1) } == Some(2)</test>
+          <test>with_option_none — with Option { ask x = None; Some(x) } == None</test>
+        </suite>
+      </suites>
+    </layer>
+
+    <layer id="L3" name="Snapshot Tests" location="tests/snapshot_tests.rs + tests/snapshots/">
+      <description>Golden-file tests using insta crate for compiler output verification.</description>
+      <requirements>
+        <req>At least 100 snapshot tests total across all categories.</req>
+        <req>Snapshots must be reviewed with cargo insta review before committing.</req>
+        <req>Snapshot names must be descriptive: category__specific_test_name.</req>
+      </requirements>
+      <categories>
+        <category name="parse" dir="tests/snapshots/parse/" minCount="30">
+          <description>Parser output AST for all syntax constructs.</description>
+          <examples>parse__function_declaration, parse__pipe_operator, parse__model_definition, parse__match_expression, parse__fold_expression, parse__comprehension, parse__with_block</examples>
+        </category>
+        <category name="typecheck" dir="tests/snapshots/typecheck/" minCount="15">
+          <description>Type checker output for various type scenarios.</description>
+          <examples>typecheck__generic_inference, typecheck__tensor_shape_check, typecheck__trait_resolution, typecheck__linearity_enforcement</examples>
+        </category>
+        <category name="mir" dir="tests/snapshots/mir/" minCount="20">
+          <description>MIR dump output for key code patterns, before and after optimization.</description>
+          <examples>mir__simple_function, mir__tensor_ops, mir__after_dead_code, mir__after_fusion, mir__after_parallelize, mir__fold_lowering</examples>
+        </category>
+        <category name="llvm_ir" dir="tests/snapshots/llvm_ir/" minCount="10">
+          <description>LLVM IR codegen output for critical patterns.</description>
+          <examples>llvm__tensor_matmul, llvm__fused_linear_relu, llvm__parallel_dispatch, llvm__linear_param_zero_copy</examples>
+        </category>
+        <category name="errors" dir="tests/snapshots/errors/" minCount="40">
+          <description>Error message output for all error categories.</description>
+          <examples>error__type_mismatch, error__undefined_variable, error__borrow_violation, error__linear_multi_use, error__fusion_shape_mismatch</examples>
+        </category>
+        <category name="fusion" dir="tests/snapshots/fusion/" minCount="10">
+          <description>Fusion pattern matching output — before/after MIR.</description>
+          <examples>fusion__linear_relu_pattern, fusion__mse_pattern, fusion__elementwise_chain, fusion__no_match</examples>
+        </category>
+      </categories>
+      <workflow>
+        <step>1. Write test with insta::assert_snapshot!(name, output).</step>
+        <step>2. Run cargo insta test — generates pending snapshots.</step>
+        <step>3. Run cargo insta review — inspect and approve each snapshot.</step>
+        <step>4. Commit approved .snap files to tests/snapshots/.</step>
+        <step>5. CI runs cargo insta test --check — fails if snapshots don't match.</step>
+      </workflow>
+    </layer>
+
+    <layer id="L4" name="Benchmark Tests" location="benches/">
+      <description>Criterion benchmarks for performance-critical operations.</description>
+      <requirements>
+        <req>Benchmarks for each fusion pattern: fused vs unfused throughput.</req>
+        <req>Benchmarks for parallel scaling: 1, 2, 4, 8 threads.</req>
+        <req>Benchmarks for compile time: measure overhead of new passes.</req>
+      </requirements>
+      <suites>
+        <suite name="fusion_bench" file="benches/fusion_bench.rs">
+          <benchmark>linear_relu_fused_vs_unfused</benchmark>
+          <benchmark>mse_fused_vs_unfused</benchmark>
+          <benchmark>elementwise_chain_fused_vs_unfused</benchmark>
+          <benchmark>softmax_ce_fused_vs_unfused</benchmark>
+        </suite>
+        <suite name="parallel_bench" file="benches/parallel_bench.rs">
+          <benchmark>independent_matmuls_scaling</benchmark>
+          <benchmark>dag_width_vs_speedup</benchmark>
+          <benchmark>thread_pool_overhead</benchmark>
+        </suite>
+        <suite name="compile_time_bench" file="benches/compile_bench.rs">
+          <benchmark>baseline_no_passes</benchmark>
+          <benchmark>dead_code_pass_overhead</benchmark>
+          <benchmark>const_fold_pass_overhead</benchmark>
+          <benchmark>fusion_pass_overhead</benchmark>
+          <benchmark>all_passes_combined</benchmark>
+        </suite>
+      </suites>
+    </layer>
+
+    <layer id="L5" name="End-to-End Tests" location="tests/e2e/">
+      <description>Full .axon programs that compile, run, and verify output.</description>
+      <requirements>
+        <req>At least one e2e test per major new feature.</req>
+        <req>E2e tests include the .axon source, expected stdout, and expected exit code.</req>
+      </requirements>
+      <programs>
+        <program name="fold_fibonacci.axon">Compute fibonacci using fold. Verify output.</program>
+        <program name="parallel_matmul.axon">Two independent matmuls. Verify correct results.</program>
+        <program name="fused_neural_net.axon">Simple neural net forward pass. Verify fusion applied and correct output.</program>
+        <program name="linear_forward.axon">Linear parameter forward pass. Verify zero-copy behavior.</program>
+        <program name="with_block_io.axon">IO pipeline using with-block. Verify error propagation.</program>
+        <program name="comprehension_tensor.axon">Tensor comprehension creating grid. Verify shape and values.</program>
+      </programs>
+    </layer>
+  </testLayers>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       GOLDEN RUNS
+       ═══════════════════════════════════════════════════════════════ -->
+  <goldenRuns>
+    <description>Baseline test outputs captured at phase gates, stored in golden-runs/ directory.</description>
+    <captures>
+      <capture phase="ALPHA" file="golden-runs/alpha-baseline.json">
+        <contents>
+          <field>total_tests: number of tests passing</field>
+          <field>cargo_build_warnings: 0</field>
+          <field>snapshot_count: number of approved snapshots</field>
+          <field>timestamp: ISO 8601</field>
+          <field>commit_sha: git commit hash</field>
+        </contents>
+      </capture>
+      <capture phase="BETA" file="golden-runs/beta-baseline.json">
+        <contents>
+          <field>total_tests: number passing (must exceed alpha baseline)</field>
+          <field>fusion_benchmark_results: {pattern: ops_per_sec}</field>
+          <field>parallel_scaling_results: {cores: speedup_factor}</field>
+          <field>numerical_equivalence: {pattern: max_epsilon}</field>
+        </contents>
+      </capture>
+      <capture phase="GAMMA" file="golden-runs/gamma-baseline.json">
+        <contents>
+          <field>total_tests: number passing (must exceed beta baseline)</field>
+          <field>zero_copy_patterns_verified: count</field>
+          <field>adt_layout_benchmarks: {layout: throughput}</field>
+        </contents>
+      </capture>
+    </captures>
+  </goldenRuns>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       STRESS TESTS
+       ═══════════════════════════════════════════════════════════════ -->
+  <stressTests>
+    <test id="STRESS-01" name="Deep Nesting">
+      <description>200-level nested expression to test stack safety with stacker.</description>
+      <expected>Compiles without stack overflow. Output correct.</expected>
+    </test>
+    <test id="STRESS-02" name="Large Program">
+      <description>1000-function program to test dead code elimination scalability.</description>
+      <expected>Dead code pass completes in &lt;1 second. Only reachable functions remain.</expected>
+    </test>
+    <test id="STRESS-03" name="Many Errors">
+      <description>Program with 50+ intentional errors to test diagnostics accumulation at scale.</description>
+      <expected>All 50 errors reported. No crash. Grouped display works.</expected>
+    </test>
+    <test id="STRESS-04" name="Fusion Chain">
+      <description>Chain of 100 element-wise operations to test fusion pattern matching at scale.</description>
+      <expected>Fused to single kernel call. Compile time &lt;5 seconds.</expected>
+    </test>
+    <test id="STRESS-05" name="Parallel DAG Width">
+      <description>50 independent tensor operations to test parallelism DAG builder at scale.</description>
+      <expected>All 50 identified as independent. Parallel dispatch emitted.</expected>
+    </test>
+    <test id="STRESS-06" name="Interning Pressure">
+      <description>Program with 10,000 unique identifiers to test NameInterner memory and speed.</description>
+      <expected>Compiles. Memory usage within 2x of baseline. Identifier comparison is O(1).</expected>
+    </test>
+  </stressTests>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       REGRESSION GATES
+       ═══════════════════════════════════════════════════════════════ -->
+  <regressionGates>
+    <gate phase="EVERY_COMMIT">
+      <check>cargo test passes with 0 failures.</check>
+      <check>cargo build produces 0 warnings.</check>
+      <check>cargo insta test --check passes (snapshots match).</check>
+    </gate>
+    <gate phase="ALPHA_EXIT">
+      <check>Total test count &gt;= 1,034 + 30 (new diagnostics/pass tests).</check>
+      <check>Snapshot count &gt;= 30.</check>
+      <check>Diagnostics accumulate errors across parser + typeck in single compilation.</check>
+      <check>PassManager runs dead_code and const_fold without regression.</check>
+    </gate>
+    <gate phase="BETA_EXIT">
+      <check>Total test count &gt;= baseline + 100.</check>
+      <check>Fusion benchmarks: element-wise chain &gt;= 3x throughput vs unfused.</check>
+      <check>Parallel scaling: &gt;= 2x on 4 cores for independent matmul workloads.</check>
+      <check>Numerical equivalence: all fusion patterns within epsilon &lt; 1e-6.</check>
+      <check>Parallel correctness: 1000-run comparison shows identical results.</check>
+    </gate>
+    <gate phase="GAMMA_EXIT">
+      <check>Total test count &gt;= baseline + 130.</check>
+      <check>Linear annotation: 5+ zero-copy patterns verified.</check>
+      <check>ADT layout benchmarks complete for tagged vs packed.</check>
+    </gate>
+    <gate phase="DELTA_EXIT">
+      <check>Total test count &gt;= baseline + 150.</check>
+      <check>All new syntax documented with examples.</check>
+      <check>Documentation rebuilt and deployed.</check>
+    </gate>
+  </regressionGates>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TEST COUNT PROJECTIONS
+       ═══════════════════════════════════════════════════════════════ -->
+  <testProjections>
+    <phase name="ALPHA">
+      <existing>1,034</existing>
+      <newUnit>50</newUnit>
+      <newIntegration>10</newIntegration>
+      <newSnapshot>30</newSnapshot>
+      <projected>1,124</projected>
+    </phase>
+    <phase name="BETA">
+      <newUnit>60</newUnit>
+      <newIntegration>25</newIntegration>
+      <newSnapshot>50</newSnapshot>
+      <newBenchmark>12</newBenchmark>
+      <newE2e>6</newE2e>
+      <projected>1,277</projected>
+    </phase>
+    <phase name="GAMMA">
+      <newUnit>25</newUnit>
+      <newIntegration>10</newIntegration>
+      <newSnapshot>15</newSnapshot>
+      <projected>1,327</projected>
+    </phase>
+    <phase name="DELTA">
+      <newUnit>15</newUnit>
+      <newIntegration>5</newIntegration>
+      <newSnapshot>5</newSnapshot>
+      <projected>1,352</projected>
+    </phase>
+    <totalNewTests>318</totalNewTests>
+  </testProjections>
+</axonBendValidationAndTesting>

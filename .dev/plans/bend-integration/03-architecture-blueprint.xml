@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendArchitectureBlueprint>
+  <metadata>
+    <purpose>Target architecture, compiler pipeline extensions, module contracts, and data flow for Bend integration</purpose>
+  </metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CURRENT PIPELINE
+       ═══════════════════════════════════════════════════════════════ -->
+  <currentPipeline>
+    <stage id="S1" name="Lexer" file="src/lexer.rs">
+      <input>Source text (String)</input>
+      <output>Token stream (Vec&lt;Token&gt;)</output>
+    </stage>
+    <stage id="S2" name="Parser" file="src/parser.rs">
+      <input>Token stream</input>
+      <output>AST (Program)</output>
+    </stage>
+    <stage id="S3" name="TypeChecker" file="src/typeck.rs">
+      <input>AST, TypeInterner</input>
+      <output>Typed AST (TAST)</output>
+    </stage>
+    <stage id="S4" name="MIR Builder" file="src/mir.rs">
+      <input>TAST</input>
+      <output>MIR (CFG-based IR with basic blocks)</output>
+    </stage>
+    <stage id="S5" name="LLVM Codegen" file="src/codegen/llvm.rs">
+      <input>MIR</input>
+      <output>LLVM IR text (.ll file)</output>
+    </stage>
+    <stage id="S6" name="Clang Link" file="src/codegen/llvm.rs">
+      <input>LLVM IR + C runtime</input>
+      <output>Native binary</output>
+    </stage>
+    <orchestrator file="src/lib.rs" function="check_source_full">
+      <note>Returns TypeChecker instance. MIR and codegen share its TypeInterner.</note>
+    </orchestrator>
+  </currentPipeline>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TARGET PIPELINE (POST-INTEGRATION)
+       ═══════════════════════════════════════════════════════════════ -->
+  <targetPipeline>
+    <stage id="T1" name="Lexer" file="src/lexer.rs" change="minor">
+      <note>Add new tokens: fold, reduce, linear, unique, with, ask. Minimal changes.</note>
+    </stage>
+    <stage id="T2" name="Parser" file="src/parser.rs" change="moderate">
+      <note>Parse fold/reduce, comprehensions, with-blocks, linear annotations. Wrap recursion with stacker::maybe_grow.</note>
+    </stage>
+    <stage id="T3" name="TypeChecker" file="src/typeck.rs" change="moderate">
+      <note>Type-check new constructs. Enforce linearity. Thread Diagnostics instead of early-exit.</note>
+    </stage>
+    <stage id="T4" name="MIR Builder" file="src/mir.rs" change="moderate">
+      <note>Lower new AST nodes. Add TensorOp variants for fused ops. Add ParallelRegion markers.</note>
+    </stage>
+    <stage id="T5" name="MIR Transform Passes" file="src/mir/transform/" change="NEW">
+      <passOrder>
+        <pass order="1" file="dead_code.rs">Dead function elimination via call graph reachability</pass>
+        <pass order="2" file="const_fold.rs">Constant folding for scalars and tensor shapes</pass>
+        <pass order="3" file="linearize.rs">Variable use-count analysis for zero-copy optimization</pass>
+        <pass order="4" file="float_combinators.rs">Extract closed tensor subexpressions to top-level functions</pass>
+        <pass order="5" file="fuse_ops.rs">Pattern-match and fuse tensor operation chains</pass>
+        <pass order="6" file="inline.rs">Inline trivial functions and single-use combinators</pass>
+        <pass order="7" file="parallelize.rs">Build tensor DAG, identify independent subgraphs, annotate parallel regions</pass>
+      </passOrder>
+      <orchestrator file="src/mir/transform/mod.rs">PassManager runs passes in order, each receiving &amp;mut MirProgram and &amp;mut Diagnostics</orchestrator>
+    </stage>
+    <stage id="T6" name="LLVM Codegen" file="src/codegen/llvm.rs" change="moderate">
+      <note>Emit fused kernel calls. Handle parallel region dispatch. Support --enum-layout.</note>
+    </stage>
+    <stage id="T7" name="Clang Link" file="src/codegen/llvm.rs" change="minor">
+      <note>Link with extended runtime containing fused kernels and thread pool.</note>
+    </stage>
+
+    <crossCutting>
+      <module name="Diagnostics" file="src/diagnostics.rs">Threaded through ALL stages T1-T7. Created at pipeline start, rendered at end.</module>
+      <module name="NameInterner" file="src/interner.rs">Global. Available to all stages. Initialized before parsing.</module>
+      <module name="OptimizationConfig" file="src/lib.rs">Parsed from CLI flags. Passed to PassManager to toggle individual passes.</module>
+    </crossCutting>
+  </targetPipeline>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       NEW MODULES
+       ═══════════════════════════════════════════════════════════════ -->
+  <newModules>
+    <module id="M1" path="src/diagnostics.rs">
+      <responsibility>Accumulative error/warning collection with configurable severity and grouped display</responsibility>
+      <inputs>Diagnostic events from all compiler phases</inputs>
+      <outputs>Grouped, ANSI-colored diagnostic output; fatal() checkpoint results</outputs>
+      <contract>Never panics. fatal() returns Err only if errors accumulated. Thread-safe if needed.</contract>
+      <keyTypes>Diagnostics, Diagnostic, Severity, DiagnosticConfig, DiagnosticCategory, Phase</keyTypes>
+    </module>
+
+    <module id="M2" path="src/mir/transform/mod.rs">
+      <responsibility>PassManager orchestrating ordered MIR transformation passes</responsibility>
+      <inputs>Raw MIR from TAST lowering, OptimizationConfig</inputs>
+      <outputs>Optimized MIR ready for LLVM codegen</outputs>
+      <contract>Each pass receives &amp;mut MirProgram and &amp;mut Diagnostics. Passes are independent. Order fixed in PassManager. Individual passes skippable via config.</contract>
+      <keyTypes>Pass trait, PassManager, OptimizationConfig</keyTypes>
+    </module>
+
+    <module id="M3" path="src/mir/transform/dead_code.rs">
+      <responsibility>Dead function elimination via call graph reachability from main</responsibility>
+      <algorithm>Build call graph from MIR. BFS/DFS from main. Remove unreachable functions. Warn for non-builtin unreachable.</algorithm>
+    </module>
+
+    <module id="M4" path="src/mir/transform/const_fold.rs">
+      <responsibility>Constant folding for scalar arithmetic and tensor shape expressions</responsibility>
+      <algorithm>Walk MIR statements. If binary op on two constants, evaluate at compile time. Propagate through assignments.</algorithm>
+    </module>
+
+    <module id="M5" path="src/mir/transform/fuse_ops.rs">
+      <responsibility>Pattern-match tensor operation sequences and replace with fused kernel calls</responsibility>
+      <contract>Fused ops MUST be numerically equivalent (epsilon &lt; 1e-6). Must not fuse across control flow. Must not fuse side-effecting ops.</contract>
+      <fusionPatterns>
+        <pattern id="FP1" name="linear_relu">matmul + bias_add + relu → fused_linear_relu</pattern>
+        <pattern id="FP2" name="mse_loss">subtract + square + mean → fused_mse</pattern>
+        <pattern id="FP3" name="softmax_ce">softmax + cross_entropy → fused_softmax_ce</pattern>
+        <pattern id="FP4" name="elementwise_chain">N consecutive element-wise ops on same shape → single-pass kernel</pattern>
+        <pattern id="FP5" name="broadcast_binary">broadcast + binary op → fused broadcast-binary</pattern>
+      </fusionPatterns>
+    </module>
+
+    <module id="M6" path="src/mir/transform/parallelize.rs">
+      <responsibility>Build DAG of tensor operations, identify independent subgraphs, emit parallel dispatch</responsibility>
+      <contract>Only parallelize pure operations (no side effects, no shared mutable state). Parallel results MUST equal sequential.</contract>
+      <algorithm>Build DAG: nodes = tensor ops, edges = data deps. Topological sort. Identify width-2+ levels. Annotate with ParallelRegion.</algorithm>
+    </module>
+
+    <module id="M7" path="src/mir/transform/float_combinators.rs">
+      <responsibility>Extract closed tensor subexpressions to top-level functions</responsibility>
+      <algorithm>Walk MIR. For each tensor op sequence with no free non-tensor variables, extract to new function. Name: {parent}__K{N}.</algorithm>
+    </module>
+
+    <module id="M8" path="src/mir/transform/inline.rs">
+      <responsibility>Inline trivial functions (single basic block, no loops, small body) and single-use extracted combinators</responsibility>
+    </module>
+
+    <module id="M9" path="src/mir/transform/linearize.rs">
+      <responsibility>Analyze variable usage counts for zero-copy optimization</responsibility>
+      <algorithm>Walk MIR. Count uses per variable. 0 uses → mark for erasure. 1 use → mark zero-copy eligible. N uses → mark for explicit clone. Linear-annotated params: enforce exactly-1-use.</algorithm>
+    </module>
+
+    <module id="M10" path="src/interner.rs">
+      <responsibility>Global string interning for all identifiers</responsibility>
+      <contract>Thread-safe arena. O(1) comparison via pointer equality. All Name values are interned. Coexists with TypeInterner.</contract>
+    </module>
+  </newModules>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EXTENDED MODULES (EXISTING FILES THAT NEED MODIFICATION)
+       ═══════════════════════════════════════════════════════════════ -->
+  <extendedModules>
+    <module path="src/token.rs">
+      <changes>Add tokens: Fold, Reduce, Linear, Unique, With, Ask. Add For (comprehension context). Update keyword lookup.</changes>
+    </module>
+    <module path="src/parser.rs">
+      <changes>Parse fold/reduce, comprehensions, with-blocks, linear annotations. Wrap recursive calls with stacker::maybe_grow.</changes>
+    </module>
+    <module path="src/ast.rs">
+      <changes>Add: FoldExpr, ReduceExpr, Comprehension, WithBlock, AskExpr, LinearParam. Extend FnParam with linearity flag.</changes>
+    </module>
+    <module path="src/typeck.rs">
+      <changes>Type-check fold (accumulator inference), reduce (element type), with-blocks (bind chain), linearity (single-use). Thread Diagnostics.</changes>
+    </module>
+    <module path="src/mir.rs">
+      <changes>Lower new AST nodes. Add TensorOp::Fused* variants. Add ParallelRegion. Integrate PassManager call.</changes>
+    </module>
+    <module path="src/codegen/runtime.rs">
+      <changes>Add fused kernels: axon_fused_linear_relu, axon_fused_mse, axon_fused_softmax_ce, axon_fused_elementwise. Add thread pool: axon_parallel_dispatch, axon_parallel_join.</changes>
+    </module>
+    <module path="src/codegen/llvm.rs">
+      <changes>Emit fused kernel calls. Handle ParallelRegion → thread pool dispatch. Support --enum-layout tagged|packed.</changes>
+    </module>
+    <module path="src/main.rs">
+      <changes>Add CLI flags: --warn, --deny, --allow, -Ofuse-ops, -Oparallelize, -Odead-code, -Oconst-fold, -Oinline, -Olinearize, -Oall, --enum-layout.</changes>
+    </module>
+    <module path="src/borrow.rs">
+      <changes>Integrate linearity checking: linear-annotated parameters must be used exactly once.</changes>
+    </module>
+    <module path="src/lib.rs">
+      <changes>Wire Diagnostics through all phases. Integrate PassManager between MIR build and codegen. Parse OptimizationConfig from CLI.</changes>
+    </module>
+    <module path="Cargo.toml">
+      <changes>Add: stacker = "0.1", insta = "1.34" (dev-dep). Ensure no version conflicts.</changes>
+    </module>
+  </extendedModules>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DATA FLOW CONTRACTS
+       ═══════════════════════════════════════════════════════════════ -->
+  <dataFlowContracts>
+    <contract name="DiagnosticsFlow">
+      <description>Diagnostics collector created at pipeline start, threaded through every phase, rendered at pipeline end.</description>
+      <invariant>No phase may render diagnostics independently. Only the pipeline orchestrator renders.</invariant>
+      <invariant>fatal() checkpoints at phase boundaries: after parsing, after type checking, after MIR optimization.</invariant>
+      <invariant>Diagnostics survive across phase boundaries — errors from parsing are visible alongside type errors.</invariant>
+    </contract>
+    <contract name="MirPassChain">
+      <description>MIR passes execute in fixed order. Each pass receives valid MIR, must produce valid MIR.</description>
+      <invariant>Pass order: dead_code → const_fold → linearize → float_combinators → fuse_ops → inline → parallelize.</invariant>
+      <invariant>Passes individually toggleable via CLI without breaking chain.</invariant>
+      <invariant>Disabled pass is simply skipped — no stub needed.</invariant>
+    </contract>
+    <contract name="FusionCorrectness">
+      <description>Fused operations must produce identical results to unfused sequences.</description>
+      <invariant>Numerical equivalence: epsilon &lt; 1e-6 for all fusion patterns.</invariant>
+      <invariant>Fusion must not cross control flow boundaries.</invariant>
+      <invariant>Fusion must not reorder side-effecting operations.</invariant>
+    </contract>
+    <contract name="ParallelismSafety">
+      <description>Auto-parallelization must never change program semantics.</description>
+      <invariant>Only pure tensor ops with no shared mutable state may be parallelized.</invariant>
+      <invariant>Side-effecting ops (print, file IO, RNG) are NEVER parallelized.</invariant>
+      <invariant>Parallel results must be bit-identical to sequential results.</invariant>
+    </contract>
+    <contract name="InternerConsistency">
+      <description>NameInterner and TypeInterner coexist without interference.</description>
+      <invariant>NameInterner handles identifiers (variable, function, module names).</invariant>
+      <invariant>TypeInterner handles type representations (unchanged from current).</invariant>
+      <invariant>Neither interner references the other's data.</invariant>
+    </contract>
+    <contract name="LinearityEnforcement">
+      <description>Linear-annotated parameters are used exactly once.</description>
+      <invariant>Zero uses → compile error (unused linear parameter).</invariant>
+      <invariant>Multiple uses → compile error (linear parameter used more than once).</invariant>
+      <invariant>Non-linear parameters → existing borrow checker rules apply (unchanged).</invariant>
+    </contract>
+  </dataFlowContracts>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       STATE MACHINES
+       ═══════════════════════════════════════════════════════════════ -->
+  <stateMachines>
+    <machine name="CompilationPipeline">
+      <states>Init → Lexing → Parsing → TypeChecking → MirBuilding → MirOptimizing → Codegen → Linking → Done | Failed</states>
+      <transitions>
+        <transition from="Init" to="Lexing" trigger="source loaded"/>
+        <transition from="Lexing" to="Parsing" trigger="tokens produced"/>
+        <transition from="Parsing" to="TypeChecking" trigger="AST produced, fatal() Ok"/>
+        <transition from="TypeChecking" to="MirBuilding" trigger="TAST produced, fatal() Ok"/>
+        <transition from="MirBuilding" to="MirOptimizing" trigger="MIR produced"/>
+        <transition from="MirOptimizing" to="Codegen" trigger="all passes complete, fatal() Ok"/>
+        <transition from="Codegen" to="Linking" trigger="LLVM IR produced"/>
+        <transition from="Linking" to="Done" trigger="binary produced"/>
+        <transition from="*" to="Failed" trigger="fatal() returns Err"/>
+      </transitions>
+    </machine>
+    <machine name="PassManager">
+      <states>Ready → RunningPass(N) → PassComplete(N) → AllComplete</states>
+      <transitions>
+        <transition from="Ready" to="RunningPass(0)" trigger="optimize() called"/>
+        <transition from="RunningPass(N)" to="PassComplete(N)" trigger="pass.run() returns"/>
+        <transition from="PassComplete(N)" to="RunningPass(N+1)" trigger="next pass exists and enabled"/>
+        <transition from="PassComplete(N)" to="AllComplete" trigger="no more passes"/>
+      </transitions>
+    </machine>
+    <machine name="DiagnosticsLifecycle">
+      <states>Collecting → CheckpointOk → CheckpointFail → Rendering</states>
+      <transitions>
+        <transition from="Collecting" to="Collecting" trigger="add_diagnostic()"/>
+        <transition from="Collecting" to="CheckpointOk" trigger="fatal() with no errors"/>
+        <transition from="Collecting" to="CheckpointFail" trigger="fatal() with errors"/>
+        <transition from="CheckpointOk" to="Collecting" trigger="continue to next phase"/>
+        <transition from="CheckpointFail" to="Rendering" trigger="pipeline abort"/>
+        <transition from="*" to="Rendering" trigger="pipeline complete"/>
+      </transitions>
+    </machine>
+  </stateMachines>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TEST ARCHITECTURE
+       ═══════════════════════════════════════════════════════════════ -->
+  <testArchitecture>
+    <layer name="unit" location="#[cfg(test)] blocks in each module">
+      <requirement>Every new module must have &gt;= 10 unit tests.</requirement>
+      <requirement>Tests cover normal case, edge cases, and error cases.</requirement>
+    </layer>
+    <layer name="integration" location="tests/ directory">
+      <requirement>Cross-module tests for each new feature.</requirement>
+      <requirement>Full pipeline tests (source → binary → run → verify output).</requirement>
+    </layer>
+    <layer name="snapshot" location="tests/snapshots/">
+      <categories>parse, typecheck, mir, llvm_ir, errors, fusion</categories>
+      <requirement>At least 100 snapshot tests total.</requirement>
+      <tool>cargo-insta with cargo insta test / cargo insta review workflow.</tool>
+    </layer>
+    <layer name="benchmark" location="benches/">
+      <requirement>Criterion benchmarks for fusion throughput and parallel scaling.</requirement>
+      <metrics>ops/sec, memory bandwidth utilization, scaling factor</metrics>
+    </layer>
+    <layer name="e2e" location="tests/e2e/">
+      <requirement>.axon files that compile, run, and verify output.</requirement>
+      <requirement>At least one e2e test per major new feature.</requirement>
+    </layer>
+  </testArchitecture>
+</axonBendArchitectureBlueprint>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendContextGovernance>
+  <metadata>
+    <purpose>Context lifecycle, handoff packet schema, compression policy, and token budget rules for AI-driven execution</purpose>
+  </metadata>
+
+  <tokenBudgets>
+    <budget phase="ALPHA" maxInput="80000" maxOutput="40000"/>
+    <budget phase="BETA-WS3" maxInput="80000" maxOutput="40000"/>
+    <budget phase="BETA-WS4" maxInput="80000" maxOutput="40000"/>
+    <budget phase="BETA-WS5" maxInput="60000" maxOutput="30000"/>
+    <budget phase="GAMMA" maxInput="80000" maxOutput="40000"/>
+    <budget phase="DELTA" maxInput="60000" maxOutput="30000"/>
+    <budget phase="EPSILON" maxInput="40000" maxOutput="20000"/>
+  </tokenBudgets>
+
+  <handoffPacketSchema>
+    <field name="phase" type="string" required="true">Phase being completed (e.g., ALPHA)</field>
+    <field name="timestamp" type="datetime" required="true">Completion timestamp</field>
+    <field name="filesCreated" type="list" required="true">New files with paths and line counts</field>
+    <field name="filesModified" type="list" required="true">Modified files with change summaries</field>
+    <field name="testsAdded" type="integer" required="true">Number of new tests</field>
+    <field name="testBaseline" type="integer" required="true">Total test count after phase</field>
+    <field name="testsPassing" type="boolean" required="true">Whether all tests pass</field>
+    <field name="epicsClosed" type="list" required="true">Epic IDs completed</field>
+    <field name="storiesClosed" type="list" required="true">Story IDs completed</field>
+    <field name="openRisks" type="list" required="false">Unresolved risks or issues</field>
+    <field name="nextActions" type="list" required="true">Prioritized actions for next phase</field>
+    <field name="blockers" type="list" required="false">Anything blocking next phase</field>
+  </handoffPacketSchema>
+
+  <compressionRules>
+    <rule>Before starting any new phase, run /compact to reset context.</rule>
+    <rule>Load ONLY the handoff packet from previous phase, not the full transcript.</rule>
+    <rule>Load ONLY the plan documents relevant to the current workstream (not all 15).</rule>
+    <rule>Use Grep/Glob for targeted file access. Never read entire source files unless necessary.</rule>
+    <rule>Subagents handle exploration. Main context handles decisions and writes.</rule>
+    <rule>If context exceeds 60K tokens mid-phase, create intermediate handoff and restart.</rule>
+  </compressionRules>
+
+  <pinnedContext>
+    <pin>Project path: h:/programing language/axon/</pin>
+    <pin>Test baseline: 1,034+ (must never decrease)</pin>
+    <pin>Zero-warning compilation required</pin>
+    <pin>Key files: src/lib.rs (orchestration), src/mir.rs (MIR), src/typeck.rs (type checker)</pin>
+    <pin>Pipeline: Lexer -> Parser -> AST -> TypeChecker -> TAST -> MIR -> Passes -> LLVM IR -> clang</pin>
+    <pin>Syntax: val/var, model, extend, : (return type), . (path separator), |> (pipe)</pin>
+  </pinnedContext>
+
+  <contextLifecyclePolicy>
+    <stage name="SessionInit">
+      <description>Load minimal context: handoff packet, relevant plan documents, pinned context.</description>
+      <maxTokens>15000</maxTokens>
+    </stage>
+    <stage name="Exploration">
+      <description>Use subagents and targeted searches to gather information. Do not load full files into main context.</description>
+      <maxTokens>25000</maxTokens>
+    </stage>
+    <stage name="Implementation">
+      <description>Write code, run tests, iterate. This is the bulk of the token budget.</description>
+      <maxTokens>35000</maxTokens>
+    </stage>
+    <stage name="Validation">
+      <description>Run full test suite, verify acceptance criteria, prepare handoff.</description>
+      <maxTokens>10000</maxTokens>
+    </stage>
+    <stage name="Handoff">
+      <description>Create handoff packet, summarize session, list next actions.</description>
+      <maxTokens>5000</maxTokens>
+    </stage>
+  </contextLifecyclePolicy>
+
+  <antiPatterns>
+    <antiPattern name="FullFileLoading">
+      <description>Reading entire large source files (e.g., parser.rs at 2100+ lines) into context when only a specific function is needed.</description>
+      <remedy>Use Grep to find the specific function, then Read with offset/limit to load only the relevant section.</remedy>
+    </antiPattern>
+    <antiPattern name="MultiWorkstreamSession">
+      <description>Attempting to implement features from multiple workstreams in a single session.</description>
+      <remedy>Stick to one workstream per session. Create handoff packet before switching.</remedy>
+    </antiPattern>
+    <antiPattern name="DeferredTesting">
+      <description>Writing implementation code without immediately writing corresponding tests.</description>
+      <remedy>Write tests alongside or before implementation code. Never defer tests to a later session.</remedy>
+    </antiPattern>
+    <antiPattern name="SilentFailure">
+      <description>Proceeding past a test failure or compilation warning without addressing it.</description>
+      <remedy>Stop immediately. Fix the issue. Verify the fix. Only then continue with new work.</remedy>
+    </antiPattern>
+    <antiPattern name="StaleContext">
+      <description>Continuing work based on assumptions from earlier in the context that may no longer be accurate.</description>
+      <remedy>Re-verify file state with targeted reads before making changes that depend on earlier assumptions.</remedy>
+    </antiPattern>
+  </antiPatterns>
+</axonBendContextGovernance>

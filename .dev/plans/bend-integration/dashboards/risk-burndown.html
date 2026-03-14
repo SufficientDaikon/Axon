@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axon-Bend Integration — Risk &amp; Progress Dashboard</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --yellow: #d29922; --red: #f85149; --purple: #bc8cff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 24px; }
+  h1 { font-size: 1.8rem; margin-bottom: 8px; }
+  h2 { font-size: 1.2rem; color: var(--accent); margin: 24px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .card-title { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .card-value { font-size: 2rem; font-weight: 700; }
+  .card-detail { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+  .green { color: var(--green); }
+  .yellow { color: var(--yellow); }
+  .red { color: var(--red); }
+  .purple { color: var(--purple); }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+  .badge-crit { background: #f8514922; color: var(--red); }
+  .badge-high { background: #d2992222; color: var(--yellow); }
+  .badge-med  { background: #58a6ff22; color: var(--accent); }
+  .badge-low  { background: #3fb95022; color: var(--green); }
+  .phase-bar { display: flex; gap: 4px; margin-bottom: 16px; }
+  .phase-seg { flex: 1; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+  .phase-pending { background: var(--border); color: var(--muted); }
+  .phase-active { background: var(--accent); color: #fff; }
+  .phase-done { background: var(--green); color: #fff; }
+  .progress-bar { background: var(--border); height: 8px; border-radius: 4px; margin: 4px 0; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .risk-matrix { display: grid; grid-template-columns: auto repeat(4, 1fr); grid-template-rows: auto repeat(3, 1fr); gap: 2px; }
+  .risk-cell { padding: 8px; text-align: center; border-radius: 4px; font-size: 0.8rem; min-height: 48px; display: flex; align-items: center; justify-content: center; }
+  .rc-header { background: transparent; color: var(--muted); font-weight: 600; font-size: 0.75rem; }
+  .rc-crit-high { background: #f8514933; }
+  .rc-crit-med  { background: #f8514922; }
+  .rc-high-high { background: #d2992233; }
+  .rc-high-med  { background: #d2992222; }
+  .rc-med-med   { background: #58a6ff22; }
+  .rc-low       { background: #3fb95015; }
+  .timestamp { color: var(--muted); font-size: 0.8rem; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Axon-Bend Integration Dashboard</h1>
+<p class="subtitle">Risk burndown, phase progress, and quality gates — updated per phase completion</p>
+
+<!-- Phase Progress Bar -->
+<h2>Phase Progress</h2>
+<div class="phase-bar">
+  <div class="phase-seg phase-pending">ALPHA</div>
+  <div class="phase-seg phase-pending">BETA</div>
+  <div class="phase-seg phase-pending">GAMMA</div>
+  <div class="phase-seg phase-pending">DELTA</div>
+  <div class="phase-seg phase-pending">EPSILON</div>
+</div>
+
+<!-- Key Metrics -->
+<div class="grid">
+  <div class="card">
+    <div class="card-title">Test Baseline</div>
+    <div class="card-value green">1,034</div>
+    <div class="card-detail">Target: 1,234+ after all phases</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Hard Gates Passed</div>
+    <div class="card-value yellow">0 / 34</div>
+    <div class="card-detail">All must pass for phase exit</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Epics Complete</div>
+    <div class="card-value">0 / 14</div>
+    <div class="card-detail">82 stories across 5 phases</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Active Risks</div>
+    <div class="card-value red">10</div>
+    <div class="card-detail">1 critical, 2 high, 4 medium, 3 low</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Fusion Patterns</div>
+    <div class="card-value">0 / 5</div>
+    <div class="card-detail">Target: 3x+ throughput on element-wise</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Snapshot Tests</div>
+    <div class="card-value">0 / 100</div>
+    <div class="card-detail">parse, typecheck, mir, llvm_ir, errors</div>
+  </div>
+</div>
+
+<!-- Risk Matrix -->
+<h2>Risk Matrix</h2>
+<div class="risk-matrix">
+  <div class="risk-cell rc-header"></div>
+  <div class="risk-cell rc-header">Low</div>
+  <div class="risk-cell rc-header">Medium</div>
+  <div class="risk-cell rc-header">High</div>
+  <div class="risk-cell rc-header">Critical</div>
+
+  <div class="risk-cell rc-header">High</div>
+  <div class="risk-cell rc-high-med"></div>
+  <div class="risk-cell rc-high-high">RISK-05</div>
+  <div class="risk-cell rc-crit-med"></div>
+  <div class="risk-cell rc-crit-high">RISK-01</div>
+
+  <div class="risk-cell rc-header">Medium</div>
+  <div class="risk-cell rc-low">RISK-10</div>
+  <div class="risk-cell rc-med-med">RISK-09</div>
+  <div class="risk-cell rc-high-med">RISK-03, RISK-06</div>
+  <div class="risk-cell rc-crit-med">RISK-02</div>
+
+  <div class="risk-cell rc-header">Low</div>
+  <div class="risk-cell rc-low">RISK-08</div>
+  <div class="risk-cell rc-low"></div>
+  <div class="risk-cell rc-med-med">RISK-04, RISK-07</div>
+  <div class="risk-cell rc-high-med"></div>
+</div>
+
+<!-- Risk Register Table -->
+<h2>Risk Register</h2>
+<table>
+  <thead>
+    <tr><th>ID</th><th>Description</th><th>Category</th><th>L &times; I</th><th>Phase</th><th>Residual</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>RISK-01</td>
+      <td>Operator fusion numerical incorrectness</td>
+      <td>Technical</td>
+      <td><span class="badge badge-crit">High &times; Critical</span></td>
+      <td>BETA</td>
+      <td><span class="badge badge-low">Low</span></td>
+    </tr>
+    <tr>
+      <td>RISK-02</td>
+      <td>Auto-parallelism data races</td>
+      <td>Technical</td>
+      <td><span class="badge badge-crit">Med &times; Critical</span></td>
+      <td>BETA</td>
+      <td><span class="badge badge-low">Low</span></td>
+    </tr>
+    <tr>
+      <td>RISK-03</td>
+      <td>Compile time exceeds 15% threshold</td>
+      <td>Performance</td>
+      <td><span class="badge badge-high">Med &times; High</span></td>
+      <td>BETA</td>
+      <td><span class="badge badge-med">Medium</span></td>
+    </tr>
+    <tr>
+      <td>RISK-04</td>
+      <td>NameInterner / TypeInterner conflict</td>
+      <td>Compatibility</td>
+      <td><span class="badge badge-med">Low &times; High</span></td>
+      <td>ALPHA</td>
+      <td><span class="badge badge-low">Low</span></td>
+    </tr>
+    <tr>
+      <td>RISK-05</td>
+      <td>Context window overflow during AI execution</td>
+      <td>Scope</td>
+      <td><span class="badge badge-high">High &times; Medium</span></td>
+      <td>ALL</td>
+      <td><span class="badge badge-low">Low</span></td>
+    </tr>
+    <tr>
+      <td>RISK-06</td>
+      <td>Linearity / borrow checker interaction</td>
+      <td>Technical</td>
+      <td><span class="badge badge-high">Med &times; Medium</span></td>
+      <td>GAMMA</td>
+      <td><span class="badge badge-med">Medium</span></td>
+    </tr>
+    <tr>
+      <td>RISK-07</td>
+      <td>Windows threading issues in C runtime</td>
+      <td>Technical</td>
+      <td><span class="badge badge-med">Low &times; High</span></td>
+      <td>BETA</td>
+      <td><span class="badge badge-low">Low</span></td>
+    </tr>
+    <tr>
+      <td>RISK-08</td>
+      <td>stacker/insta dependency conflicts</td>
+      <td>Dependencies</td>
+      <td><span class="badge badge-low">Low &times; Low</span></td>
+      <td>ALPHA</td>
+      <td><span class="badge badge-low">Negligible</span></td>
+    </tr>
+    <tr>
+      <td>RISK-09</td>
+      <td>with-block / error handling interaction</td>
+      <td>Scope</td>
+      <td><span class="badge badge-med">Med &times; Medium</span></td>
+      <td>DELTA</td>
+      <td><span class="badge badge-med">Medium</span></td>
+    </tr>
+    <tr>
+      <td>RISK-10</td>
+      <td>Git link.exe shadows MSVC linker</td>
+      <td>Platform</td>
+      <td><span class="badge badge-low">Med &times; Low</span></td>
+      <td>ALL</td>
+      <td><span class="badge badge-low">Low</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Phase Gate Status -->
+<h2>Phase Gate Status</h2>
+<table>
+  <thead>
+    <tr><th>Phase</th><th>Hard Gates</th><th>Soft Avg</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ALPHA — Infrastructure</td>
+      <td>0 / 9</td>
+      <td>0.0 / 3.0</td>
+      <td><span class="badge badge-high">BLOCKED</span></td>
+    </tr>
+    <tr>
+      <td>BETA — Tensor Optimizations</td>
+      <td>0 / 11</td>
+      <td>0.0 / 3.0</td>
+      <td><span class="badge badge-high">BLOCKED</span></td>
+    </tr>
+    <tr>
+      <td>GAMMA — Type System</td>
+      <td>0 / 6</td>
+      <td>0.0 / 3.0</td>
+      <td><span class="badge badge-high">BLOCKED</span></td>
+    </tr>
+    <tr>
+      <td>DELTA — Ergonomics</td>
+      <td>0 / 5</td>
+      <td>0.0 / 3.0</td>
+      <td><span class="badge badge-high">BLOCKED</span></td>
+    </tr>
+    <tr>
+      <td>EPSILON — Advanced GPU</td>
+      <td>0 / 3</td>
+      <td>0.0 / 3.0</td>
+      <td><span class="badge badge-high">BLOCKED</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Epic Progress -->
+<h2>Epic Progress by Phase</h2>
+<table>
+  <thead>
+    <tr><th>Epic</th><th>Phase</th><th>Priority</th><th>Stories</th><th>Progress</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>E1 — Accumulative Diagnostics</td><td>ALPHA</td><td>P0</td><td>6</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></td></tr>
+    <tr><td>E2 — MIR Transform Passes</td><td>ALPHA</td><td>P0</td><td>6</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></td></tr>
+    <tr><td>E3 — Global Name Interning</td><td>ALPHA</td><td>P1</td><td>5</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></td></tr>
+    <tr><td>E4 — Stack Safety</td><td>ALPHA</td><td>P2</td><td>5</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></td></tr>
+    <tr><td>E5 — Snapshot Testing</td><td>ALPHA</td><td>P0</td><td>8</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--accent)"></div></div></td></tr>
+    <tr><td>E6 — Combinator Floating</td><td>BETA</td><td>P0</td><td>4</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--purple)"></div></div></td></tr>
+    <tr><td>E7 — Tensor Fusion</td><td>BETA</td><td>P0</td><td>11</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--purple)"></div></div></td></tr>
+    <tr><td>E8 — Auto Parallelism</td><td>BETA</td><td>P0</td><td>9</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--purple)"></div></div></td></tr>
+    <tr><td>E9 — Fold/Reduce</td><td>BETA</td><td>P1</td><td>8</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--purple)"></div></div></td></tr>
+    <tr><td>E10 — Linear Types</td><td>GAMMA</td><td>P0</td><td>7</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--yellow)"></div></div></td></tr>
+    <tr><td>E11 — ADT Layouts</td><td>GAMMA</td><td>P1</td><td>4</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--yellow)"></div></div></td></tr>
+    <tr><td>E12 — With-Blocks</td><td>DELTA</td><td>P1</td><td>6</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--green)"></div></div></td></tr>
+    <tr><td>E13 — Documentation</td><td>DELTA</td><td>P1</td><td>6</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--green)"></div></div></td></tr>
+    <tr><td>E14 — GPU Designs</td><td>EPSILON</td><td>P2</td><td>4</td>
+      <td><div class="progress-bar"><div class="progress-fill" style="width:0%;background:var(--muted)"></div></div></td></tr>
+  </tbody>
+</table>
+
+<p class="timestamp">Dashboard generated: <span id="ts"></span> | Plan version: 1.0 | Documents: 15/15</p>
+<script>document.getElementById('ts').textContent = new Date().toISOString().slice(0,19).replace('T',' ');</script>
+
+</body>
+</html>

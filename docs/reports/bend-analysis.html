@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bend Language Analysis &mdash; Lessons for Axon</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #d29922;
+    --accent4: #f85149;
+    --accent5: #bc8cff;
+    --gradient1: linear-gradient(135deg, #1a1b2e 0%, #162447 100%);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .hero {
+    background: var(--gradient1);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 2.8em;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+  }
+  .hero .subtitle {
+    font-size: 1.2em;
+    color: var(--text-dim);
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .hero .meta {
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: var(--text-dim);
+  }
+  .hero .meta span {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    margin: 4px;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin-bottom: 40px;
+  }
+  nav.toc h2 {
+    font-size: 1.3em;
+    margin-bottom: 16px;
+    color: var(--accent);
+  }
+  nav.toc ol {
+    columns: 2;
+    column-gap: 40px;
+    padding-left: 20px;
+  }
+  nav.toc li {
+    margin-bottom: 6px;
+  }
+  nav.toc a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  nav.toc a:hover { color: var(--accent); }
+  section {
+    margin-bottom: 48px;
+  }
+  h2.section-title {
+    font-size: 1.8em;
+    font-weight: 700;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 1.3em;
+    font-weight: 600;
+    margin: 24px 0 12px;
+    color: var(--accent5);
+  }
+  h4 {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin: 16px 0 8px;
+    color: var(--accent3);
+  }
+  p { margin-bottom: 12px; color: var(--text); }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .card-header .icon {
+    font-size: 1.6em;
+  }
+  .card-header h3 {
+    margin: 0;
+    color: var(--text);
+  }
+  .priority {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .priority.critical { background: #f8514922; color: var(--accent4); border: 1px solid #f8514944; }
+  .priority.high { background: #d2992222; color: var(--accent3); border: 1px solid #d2992244; }
+  .priority.medium { background: #58a6ff22; color: var(--accent); border: 1px solid #58a6ff44; }
+  .priority.low { background: #3fb95022; color: var(--accent2); border: 1px solid #3fb95044; }
+  .priority.info { background: #bc8cff22; color: var(--accent5); border: 1px solid #bc8cff44; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.95em;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: var(--surface2);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  tr:hover { background: var(--surface); }
+  code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+    color: var(--accent2);
+  }
+  pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text);
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .comparison-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr;
+    gap: 16px;
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .comparison-row:hover { background: var(--surface); }
+  .comparison-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr;
+    gap: 16px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 600;
+  }
+  .status-badge.has { background: #3fb95022; color: var(--accent2); }
+  .status-badge.missing { background: #f8514922; color: var(--accent4); }
+  .status-badge.partial { background: #d2992222; color: var(--accent3); }
+  .status-badge.na { background: #30363d; color: var(--text-dim); }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .summary-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .summary-stat .number {
+    font-size: 2.4em;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .summary-stat .label {
+    font-size: 0.85em;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+  .recommendation {
+    border-left: 3px solid var(--accent);
+    padding-left: 16px;
+    margin: 12px 0;
+  }
+  .recommendation.warn { border-left-color: var(--accent3); }
+  .recommendation.danger { border-left-color: var(--accent4); }
+  .recommendation.success { border-left-color: var(--accent2); }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin-bottom: 4px; }
+  footer {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-dim);
+    font-size: 0.85em;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+  @media (max-width: 768px) {
+    nav.toc ol { columns: 1; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .comparison-row, .comparison-header { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Bend Language Analysis</h1>
+  <p class="subtitle">
+    A comprehensive analysis of Bend's innovations and how they can be adopted to improve the Axon programming language.
+  </p>
+  <div class="meta">
+    <span>Bend v0.2.38</span>
+    <span>Axon v0.1.0-alpha.1</span>
+    <span>Generated 2026-03-14</span>
+    <span>16 Recommendations</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- Executive Summary -->
+<section id="summary">
+  <h2 class="section-title">Executive Summary</h2>
+  <p>
+    <strong>Bend</strong> is a massively parallel programming language by HigherOrderCO that compiles to interaction combinator nets (HVM2),
+    enabling automatic parallelism across CPUs and NVIDIA GPUs without threads, locks, or annotations. While Axon and Bend target different
+    niches &mdash; Axon is an ML-first systems language with compile-time tensor shapes, while Bend is a pure-functional parallel computing
+    language &mdash; Bend introduces several innovative ideas that Axon can adopt to significantly strengthen its compiler, runtime,
+    parallelism model, and developer experience.
+  </p>
+  <div class="summary-grid">
+    <div class="summary-stat">
+      <div class="number" style="color: var(--accent4);">4</div>
+      <div class="label">Critical Priority</div>
+    </div>
+    <div class="summary-stat">
+      <div class="number" style="color: var(--accent3);">5</div>
+      <div class="label">High Priority</div>
+    </div>
+    <div class="summary-stat">
+      <div class="number" style="color: var(--accent);">4</div>
+      <div class="label">Medium Priority</div>
+    </div>
+    <div class="summary-stat">
+      <div class="number" style="color: var(--accent2);">3</div>
+      <div class="label">Low / Exploratory</div>
+    </div>
+  </div>
+</section>
+
+<!-- Table of Contents -->
+<nav class="toc" id="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#summary">Executive Summary</a></li>
+    <li><a href="#feature-comparison">Feature Comparison Matrix</a></li>
+    <li><a href="#rec-parallelism">Implicit Parallelism Model</a></li>
+    <li><a href="#rec-fold-bend">Fold &amp; Bend Constructs</a></li>
+    <li><a href="#rec-dual-syntax">Dual Syntax System</a></li>
+    <li><a href="#rec-diagnostics">Accumulative Diagnostics</a></li>
+    <li><a href="#rec-transform">Transform Pass Architecture</a></li>
+    <li><a href="#rec-adts">ADT Encoding Strategies</a></li>
+    <li><a href="#rec-linearity">Linearity &amp; Affine Types</a></li>
+    <li><a href="#rec-monadic-io">Monadic IO Blocks</a></li>
+    <li><a href="#rec-golden-tests">Snapshot/Golden Testing</a></li>
+    <li><a href="#rec-combinators">Combinator Floating &amp; Inlining</a></li>
+    <li><a href="#rec-interning">Global String Interning</a></li>
+    <li><a href="#rec-list-comp">List Comprehensions</a></li>
+    <li><a href="#rec-superpositions">Superpositions for GPU Branching</a></li>
+    <li><a href="#rec-stack-safety">Stack-Safe Recursion</a></li>
+    <li><a href="#rec-fusing">Fusing Functions</a></li>
+    <li><a href="#rec-cli-opts">Granular Compiler Options</a></li>
+    <li><a href="#not-adopt">What NOT to Adopt</a></li>
+    <li><a href="#roadmap">Suggested Implementation Roadmap</a></li>
+  </ol>
+</nav>
+
+<!-- Feature Comparison Matrix -->
+<section id="feature-comparison">
+  <h2 class="section-title">Feature Comparison Matrix</h2>
+  <p>Side-by-side comparison of Bend and Axon across all major language dimensions.</p>
+
+  <div class="comparison-header">
+    <div>Feature</div>
+    <div>Bend</div>
+    <div>Axon</div>
+  </div>
+
+  <div class="comparison-row">
+    <div><strong>Parallelism</strong></div>
+    <div><span class="status-badge has">Implicit</span> via interaction nets</div>
+    <div><span class="status-badge partial">Manual</span> threads + mutex + channels</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>GPU Execution</strong></div>
+    <div><span class="status-badge has">CUDA</span> via HVM2 runtime</div>
+    <div><span class="status-badge partial">Planned</span> @gpu annotation, MLIR pipeline deferred</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Tensor Types</strong></div>
+    <div><span class="status-badge missing">None</span> no tensor concept</div>
+    <div><span class="status-badge has">First-class</span> Tensor&lt;F32, [N,M]&gt; + shape checker</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Autograd</strong></div>
+    <div><span class="status-badge missing">None</span></div>
+    <div><span class="status-badge has">Built-in</span> 23 differentiation ops, backward pass</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Type System</strong></div>
+    <div><span class="status-badge partial">Optional</span> HM inference, opt-in per function</div>
+    <div><span class="status-badge has">Required</span> HM inference, always on (no let-poly yet)</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Memory Model</strong></div>
+    <div><span class="status-badge has">Affine/Linear</span> auto-dup, no mutation</div>
+    <div><span class="status-badge has">Ownership</span> borrow checker, mut/immut refs</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Number Types</strong></div>
+    <div><span class="status-badge partial">24-bit only</span> u24/i24/f24</div>
+    <div><span class="status-badge has">Full range</span> 8/16/32/64-bit int + float</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Pattern Matching</strong></div>
+    <div><span class="status-badge has">ADT match</span> + switch + fold + equational</div>
+    <div><span class="status-badge has">Match expr</span> + guards + exhaustiveness</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Loops</strong></div>
+    <div><span class="status-badge na">None</span> fold/bend replace loops</div>
+    <div><span class="status-badge has">Full</span> for, while, loop</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Mutability</strong></div>
+    <div><span class="status-badge na">Immutable only</span></div>
+    <div><span class="status-badge has">val/var</span> immutable + mutable bindings</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Module System</strong></div>
+    <div><span class="status-badge has">Imports</span> from/import, glob, relative</div>
+    <div><span class="status-badge has">Modules</span> mod/use, visibility, packages</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Closures/Lambdas</strong></div>
+    <div><span class="status-badge has">First-class</span> lambda calculus core</div>
+    <div><span class="status-badge has">First-class</span> |params| body</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Error Handling</strong></div>
+    <div><span class="status-badge partial">IO monad</span> Result type</div>
+    <div><span class="status-badge has">Result/Option</span> + ? operator</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Pipe Operator</strong></div>
+    <div><span class="status-badge missing">None</span></div>
+    <div><span class="status-badge has">|&gt;</span> a |&gt; f(b) &rarr; f(a, b)</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Traits/Interfaces</strong></div>
+    <div><span class="status-badge missing">None</span> structural typing</div>
+    <div><span class="status-badge has">Traits</span> + bounds + operator overloading</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>LSP</strong></div>
+    <div><span class="status-badge missing">None</span></div>
+    <div><span class="status-badge has">Full</span> 10 capabilities</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Package Manager</strong></div>
+    <div><span class="status-badge missing">None</span></div>
+    <div><span class="status-badge has">axonc pkg</span> full lifecycle</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Diagnostics</strong></div>
+    <div><span class="status-badge has">Accumulative</span> configurable severity, grouped</div>
+    <div><span class="status-badge partial">Error codes</span> structured but not accumulative</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Test Framework</strong></div>
+    <div><span class="status-badge has">508 golden</span> snapshot-based (insta)</div>
+    <div><span class="status-badge has">1,034</span> Rust unit tests</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>REPL</strong></div>
+    <div><span class="status-badge missing">None</span></div>
+    <div><span class="status-badge has">Interactive</span> with history</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Formatter</strong></div>
+    <div><span class="status-badge missing">None</span></div>
+    <div><span class="status-badge has">axonc fmt</span></div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Doc Generator</strong></div>
+    <div><span class="status-badge missing">None</span></div>
+    <div><span class="status-badge has">HTML + MD</span></div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Codegen Target</strong></div>
+    <div><span class="status-badge partial">HVM2</span> interpreted interaction nets</div>
+    <div><span class="status-badge has">LLVM</span> native binary via clang</div>
+  </div>
+  <div class="comparison-row">
+    <div><strong>Standard Library</strong></div>
+    <div><span class="status-badge partial">~50 builtins</span> IO, math, list, map</div>
+    <div><span class="status-badge has">200+ functions</span> collections, nn, optim, data, metrics</div>
+  </div>
+</section>
+
+<!-- Recommendation 1: Implicit Parallelism -->
+<section id="rec-parallelism">
+  <h2 class="section-title">1. Implicit Parallelism Model</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority critical">Critical</span>
+      <h3>Adopt data-dependency-based auto-parallelism for tensor operations</h3>
+    </div>
+    <p>
+      Bend's killer feature is <strong>implicit parallelism</strong>: no threads, no locks, no annotations.
+      Independent computations automatically execute in parallel. While Axon shouldn't adopt interaction combinators
+      (they sacrifice single-core performance), the <em>principle</em> is directly applicable to tensor workloads.
+    </p>
+    <h4>What Bend Does</h4>
+    <ul>
+      <li>Programs compile to interaction nets where independent redexes reduce in parallel</li>
+      <li><code>H(f(x), g(y))</code> runs <code>f(x)</code> and <code>g(y)</code> in parallel automatically</li>
+      <li>Same source code, different backends: sequential (Rust), parallel (C/pthreads), massively parallel (CUDA)</li>
+      <li>Tree-structured computations scale to thousands of threads</li>
+    </ul>
+    <h4>How Axon Should Adapt This</h4>
+    <ul>
+      <li><strong>Build a tensor computation graph at compile time</strong> &mdash; analyze data dependencies between tensor operations in a function and identify independent subgraphs that can execute in parallel</li>
+      <li><strong>Auto-parallelize independent tensor ops</strong> &mdash; e.g., if <code>val a = matmul(x, w1)</code> and <code>val b = matmul(x, w2)</code> appear in the same scope, schedule them concurrently on GPU without user annotation</li>
+      <li><strong>Multi-backend from same source</strong> &mdash; <code>axonc build --target cpu</code> vs <code>axonc build --target cuda</code> should produce semantically identical programs with different parallelism strategies</li>
+      <li><strong>MIR-level dependency analysis</strong> &mdash; already have CFG-based MIR; add a data-dependency graph pass that identifies parallelizable regions</li>
+    </ul>
+    <div class="recommendation">
+      <strong>Implementation path:</strong> Add a <code>src/mir/parallelize.rs</code> pass that builds a DAG of tensor operations,
+      identifies independent subgraphs, and emits parallel dispatch nodes in the MIR. For CPU: thread pool. For GPU: CUDA streams.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 2: Fold & Bend Constructs -->
+<section id="rec-fold-bend">
+  <h2 class="section-title">2. Fold &amp; Bend Constructs</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority critical">Critical</span>
+      <h3>Add <code>fold</code> and <code>reduce</code> as first-class tensor operations</h3>
+    </div>
+    <p>
+      Bend's <code>fold</code> (consume recursive data) and <code>bend</code> (generate recursive data) are its primary
+      loop replacements. While Axon has traditional loops, these constructs map perfectly to tensor reductions and
+      parallel generation patterns that are central to ML workloads.
+    </p>
+    <h4>What Bend Does</h4>
+    <pre><code>// fold: consume a tree by recursing on ~-marked fields
+fold tree:
+  case Tree/Node:
+    return tree.left + tree.right
+  case Tree/Leaf:
+    return tree.value
+
+// bend: generate a tree in parallel
+bend depth = 0:
+  when depth < 10:
+    tree = ![fork(depth + 1), fork(depth + 1)]
+  else:
+    tree = !1</code></pre>
+    <h4>How Axon Should Adapt This</h4>
+    <pre><code>// Tensor fold (parallel reduction)
+val total = tensor.fold(0.0, |acc, x| acc + x)
+
+// Batch-parallel map-reduce
+val means = batches.fold(Tensor.zeros([10]),
+  |acc, batch| acc + model.forward(batch)) / n
+
+// Generate training data in parallel (bend-like)
+val dataset = Tensor.generate([1000, 784], |i, j| {
+  randn() * 0.1 + class_centers[i % 10][j]
+})</code></pre>
+    <div class="recommendation">
+      <strong>Key insight:</strong> Bend's fold/bend are desugared into recursive functions that parallelize over tree structure.
+      For Axon, <code>fold</code> over tensors should desugar into parallel reduction kernels, and <code>generate</code> should
+      desugar into parallel initialization kernels. This gives Axon the same parallelism benefits without requiring immutable-only semantics.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 3: Dual Syntax -->
+<section id="rec-dual-syntax">
+  <h2 class="section-title">3. Dual Syntax System</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority medium">Medium</span>
+      <h3>Consider a math-notation mode for tensor expressions</h3>
+    </div>
+    <p>
+      Bend lets you write the same function in Python-like or Haskell-like syntax, mixed freely in the same file.
+      While Axon shouldn't add a full second syntax, a <strong>math-notation mode</strong> for tensor expressions
+      would greatly improve readability for ML researchers.
+    </p>
+    <h4>What Bend Does</h4>
+    <pre><code># Imperative (Python-like)
+def add(x, y):
+  return x + y
+
+# Functional (Haskell-like)
+add x y = (+ x y)
+
+# Mixed freely in same file!</code></pre>
+    <h4>Proposed Axon Adaptation</h4>
+    <pre><code>// Standard Axon
+val loss = cross_entropy(softmax(linear(x, w) + b), labels)
+
+// Math-notation block (proposed)
+@math {
+  loss = CE(softmax(Wx + b), y)
+  grad_w = d(loss)/d(w)    // symbolic differentiation syntax
+  w' = w - lr * grad_w
+}</code></pre>
+    <div class="recommendation warn">
+      <strong>Caution:</strong> Bend's dual syntax adds complexity to their parser (two full parsers + conversion layer).
+      For Axon, a lightweight math-notation block is lower risk than a full dual syntax.
+      Consider this for v2.0+ only.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 4: Accumulative Diagnostics -->
+<section id="rec-diagnostics">
+  <h2 class="section-title">4. Accumulative Diagnostics</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority critical">Critical</span>
+      <h3>Adopt Bend's accumulative error collection with configurable severity</h3>
+    </div>
+    <p>
+      Bend collects ALL errors and warnings throughout compilation instead of failing on the first error.
+      Users see every problem at once, with per-warning severity control via CLI flags.
+      This is a massive developer experience improvement.
+    </p>
+    <h4>What Bend Does</h4>
+    <ul>
+      <li><code>Diagnostics</code> struct accumulates errors/warnings across all phases</li>
+      <li><code>fatal()</code> checkpoints &mdash; only bail if errors have accumulated</li>
+      <li>8 warning categories, each configurable: <code>-W unused_definition</code>, <code>-D recursion_cycle</code>, <code>-A irrefutable_match</code></li>
+      <li>ANSI-colored grouped output (warnings yellow, errors red, grouped by file/origin)</li>
+      <li>Errors carry source spans with file/line/char locations</li>
+    </ul>
+    <h4>How Axon Should Implement This</h4>
+    <ul>
+      <li>Replace early-exit error handling in typeck/borrow/codegen with an accumulative <code>Diagnostics</code> collector</li>
+      <li>Add <code>--warn</code>, <code>--deny</code>, <code>--allow</code> CLI flags for per-category severity control</li>
+      <li>Group errors by file, phase (parse/type/borrow/codegen), then display all at once</li>
+      <li>Add <code>fatal()</code> checkpoints at phase boundaries (e.g., after parsing, after type checking)</li>
+    </ul>
+    <div class="recommendation">
+      <strong>Implementation:</strong> Create <code>src/diagnostics.rs</code> with a <code>Diagnostics</code> struct containing
+      a <code>BTreeMap&lt;Phase, Vec&lt;Diagnostic&gt;&gt;</code>. Thread it through all compiler passes.
+      Existing error codes (E0100, E2001, etc.) map naturally to categories.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 5: Transform Pass Architecture -->
+<section id="rec-transform">
+  <h2 class="section-title">5. Transform Pass Architecture</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority high">High</span>
+      <h3>Adopt Bend's ordered-pass desugaring pipeline</h3>
+    </div>
+    <p>
+      Bend has 31+ ordered transformation passes that progressively simplify the AST. Each pass is a small,
+      focused module with clear input/output contracts. This architecture makes the compiler much more
+      maintainable and extensible than monolithic transformation phases.
+    </p>
+    <h4>What Bend Does</h4>
+    <ul>
+      <li>31 files in <code>src/fun/transform/</code>, each a single-purpose pass</li>
+      <li>Clear ordering: <code>check_shared_names &rarr; set_entrypoint &rarr; encode_adts &rarr; &hellip; &rarr; unique_names</code></li>
+      <li>Each pass takes a <code>&amp;mut Book</code> and transforms it in place</li>
+      <li>Dead code elimination, constant folding, linearization, etc. are all separate passes</li>
+    </ul>
+    <h4>How Axon Should Adapt This</h4>
+    <ul>
+      <li>Axon's current pipeline (Lexer &rarr; Parser &rarr; TypeChecker &rarr; TAST &rarr; MIR &rarr; LLVM) is good but monolithic within phases</li>
+      <li>Break up the MIR phase into ordered passes: <code>build_cfg &rarr; dead_code_elim &rarr; constant_fold &rarr; tensor_fusion &rarr; parallelize &rarr; optimize_memory</code></li>
+      <li>Each pass in its own file under <code>src/mir/transform/</code></li>
+      <li>Add a <code>PassManager</code> that runs passes in configurable order with diagnostics between each</li>
+    </ul>
+    <div class="recommendation">
+      <strong>Benefit:</strong> This directly enables Bend-inspired optimizations (combinator floating, linearization,
+      auto-parallelization) to be added as individual passes without touching existing code.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 6: ADT Encoding Strategies -->
+<section id="rec-adts">
+  <h2 class="section-title">6. ADT Encoding Strategies</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority high">High</span>
+      <h3>Learn from Bend's Scott/NumScott encoding for GPU-friendly enums</h3>
+    </div>
+    <p>
+      Bend offers two ADT encodings: <strong>Scott</strong> (pure lambda) and <strong>NumScott</strong> (numeric tag dispatch).
+      NumScott is more efficient on the HVM. Similarly, Axon's enum representation should be optimized for GPU execution.
+    </p>
+    <h4>What Bend Does</h4>
+    <pre><code>// Scott encoding: Ctr(a,b) -> λa. λb. λC1. λC2. (C_i a b)
+// NumScott encoding: Ctr(a,b) -> λa. λb. λx. (x TAG a b)
+// NumScott uses integer tag dispatch instead of lambda selection
+// Configurable via -Oadt-scott / -Oadt-num-scott</code></pre>
+    <h4>How Axon Should Adapt This</h4>
+    <ul>
+      <li>Current Axon enums use a discriminant + payload layout (standard Rust-like approach)</li>
+      <li>For GPU-targeted code, consider a <strong>tagged-union with integer dispatch</strong> (similar to NumScott) that avoids pointer-heavy layouts</li>
+      <li>Add a codegen option: <code>--enum-layout packed|tagged|scattered</code> for different target architectures</li>
+      <li>Particularly important for <code>Option&lt;Tensor&gt;</code> and <code>Result&lt;Tensor, E&gt;</code> in hot paths</li>
+    </ul>
+    <div class="recommendation">
+      <strong>Key insight:</strong> Bend's configurable encoding proves that different ADT representations
+      suit different backends. Axon should offer at least two: one optimized for CPU (cache-friendly tagged union)
+      and one for GPU (flat numeric dispatch).
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 7: Linearity & Affine Types -->
+<section id="rec-linearity">
+  <h2 class="section-title">7. Linearity &amp; Affine Types</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority high">High</span>
+      <h3>Add linear/affine type annotations for zero-copy tensor operations</h3>
+    </div>
+    <p>
+      Bend enforces that every variable is used exactly once (affine). Multi-use triggers automatic duplication.
+      For Axon's tensor operations, explicit linearity annotations would enable guaranteed zero-copy operations
+      and eliminate unnecessary tensor clones.
+    </p>
+    <h4>What Bend Does</h4>
+    <ul>
+      <li>Every variable used at most once; compiler inserts <code>dup</code> nodes for multi-use</li>
+      <li><code>linearize_vars</code> pass: 0 uses &rarr; erase, 1 use &rarr; keep, N uses &rarr; insert dup pattern</li>
+      <li>The programmer can see where copies happen by looking for multi-use variables</li>
+    </ul>
+    <h4>How Axon Should Adapt This</h4>
+    <pre><code>// Proposed: linear tensor annotation
+fn train_step(linear input: Tensor&lt;F32, [B, 784]&gt;): Tensor&lt;F32, [B, 10]&gt; {
+    // `input` MUST be used exactly once — guaranteed zero-copy
+    val h = relu(linear1.forward(input))  // input consumed here
+    // Using `input` again would be a compile error
+    linear2.forward(h)
+}
+
+// In-place mutation for unique tensors
+fn update_weights(unique w: &amp;mut Tensor&lt;F32, [N, M]&gt;, grad: &amp;Tensor&lt;F32, [N, M]&gt;) {
+    w -= lr * grad  // guaranteed in-place, no allocation
+}</code></pre>
+    <div class="recommendation">
+      <strong>Benefit:</strong> This is critical for GPU performance. Tensor copies are the #1 hidden cost in ML
+      training loops. Linearity annotations let the compiler guarantee zero-copy forwarding and in-place updates,
+      directly translating to faster training.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 8: Monadic IO Blocks -->
+<section id="rec-monadic-io">
+  <h2 class="section-title">8. Monadic IO Blocks</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority medium">Medium</span>
+      <h3>Adopt <code>with</code>/<code>ask</code> blocks for effectful tensor pipelines</h3>
+    </div>
+    <p>
+      Bend's <code>with IO:</code> blocks desugar <code>ask</code> (<code>&lt;-</code>) into monadic bind, providing
+      clean sequential syntax for effectful operations. Axon could use this pattern for training loops and data pipelines.
+    </p>
+    <h4>What Bend Does</h4>
+    <pre><code>def main() -> IO(u24):
+  with IO:
+    * <- IO/print("Hello!\n")
+    line <- IO/input()
+    return wrap(0)
+// Desugars to: IO/bind(IO/print("Hello!\n"), λ*. IO/bind(IO/input(), λline. IO/wrap(0)))</code></pre>
+    <h4>Proposed Axon Adaptation</h4>
+    <pre><code>// Training pipeline with monadic data loading
+fn train(loader: DataLoader) {
+    with loader:
+        val (images, labels) &lt;- next_batch()
+        val loss = model.forward(images) |&gt; cross_entropy(labels)
+        loss.backward()
+        optimizer.step()
+}
+
+// GPU computation pipeline
+fn inference(model: Model, input: Tensor) {
+    with Device.GPU(0):
+        val x &lt;- transfer(input)    // async GPU transfer
+        val y &lt;- model.forward(x)   // GPU computation
+        transfer_back(y)             // result back to CPU
+}</code></pre>
+    <div class="recommendation warn">
+      <strong>Consideration:</strong> This overlaps with Axon's existing <code>for..in</code> loops for data loading.
+      The <code>with</code> block adds value primarily for async/effectful pipelines (GPU transfers, distributed training).
+      Implement after GPU codegen is working.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 9: Snapshot Testing -->
+<section id="rec-golden-tests">
+  <h2 class="section-title">9. Snapshot/Golden Testing</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority high">High</span>
+      <h3>Add snapshot testing for compiler output stability</h3>
+    </div>
+    <p>
+      Bend uses <code>cargo-insta</code> with 508 <code>.bend</code> test files and 452 snapshots to verify
+      compiler output across all phases. This catches regressions in parsing, desugaring, codegen, and readback
+      automatically. Axon should adopt this for LLVM IR output, MIR dumps, and error messages.
+    </p>
+    <h4>What Bend Does</h4>
+    <ul>
+      <li>22 test categories: <code>compile_file</code>, <code>run_file</code>, <code>parse_file</code>, <code>desugar_file</code>, etc.</li>
+      <li>Each <code>.bend</code> file is a test input; corresponding <code>.snap</code> file is the expected output</li>
+      <li><code>cargo insta review</code> for interactive snapshot approval</li>
+      <li>Tests cover: parsing output, desugared AST, compiled HVM nets, execution results, error messages</li>
+    </ul>
+    <h4>How Axon Should Implement This</h4>
+    <ul>
+      <li>Add <code>insta</code> as a dev dependency</li>
+      <li>Create <code>tests/snapshots/</code> with categories: <code>parse/</code>, <code>typecheck/</code>, <code>mir/</code>, <code>llvm_ir/</code>, <code>errors/</code></li>
+      <li>Each <code>.axon</code> file produces a snapshot of the relevant compiler output</li>
+      <li>Error message snapshots are particularly valuable &mdash; ensures error quality doesn't regress</li>
+    </ul>
+    <div class="recommendation">
+      <strong>Quick win:</strong> Start with error message snapshots. These are the most user-facing output and
+      the most likely to regress during refactoring. Add MIR/LLVM IR snapshots later for codegen stability.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 10: Combinator Floating & Inlining -->
+<section id="rec-combinators">
+  <h2 class="section-title">10. Combinator Floating &amp; Inlining</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority high">High</span>
+      <h3>Adopt closed-subexpression extraction for tensor kernel optimization</h3>
+    </div>
+    <p>
+      Bend's <code>float_combinators</code> pass extracts closed sub-terms (no free variables) to top-level
+      definitions, reducing duplication and enabling better optimization. For Axon, this principle maps directly
+      to <strong>tensor kernel extraction</strong>.
+    </p>
+    <h4>What Bend Does</h4>
+    <ul>
+      <li>Identifies closed sub-expressions (lambda bodies with no free variables)</li>
+      <li>Hoists them to top-level as <code>{def}__C{N}</code> combinators</li>
+      <li>Reduces interaction net size (critical for CUDA's 64-node limit)</li>
+      <li>Combined with inlining of trivial definitions for balance</li>
+    </ul>
+    <h4>How Axon Should Adapt This</h4>
+    <ul>
+      <li><strong>Tensor kernel extraction:</strong> Identify sequences of tensor ops with no side effects &rarr; extract as standalone GPU kernels</li>
+      <li><strong>Operator fusion:</strong> <code>relu(matmul(x, w) + b)</code> should fuse into a single <code>fused_linear_relu</code> kernel</li>
+      <li><strong>MIR-level pass:</strong> Walk the MIR CFG, identify closed tensor operation subgraphs, extract to separate functions marked for GPU compilation</li>
+    </ul>
+    <div class="recommendation">
+      <strong>This is the GPU performance key.</strong> Modern ML compilers (XLA, TVM, Triton) all do operator fusion.
+      Bend's combinator floating is the same principle applied to lambda calculus. Axon should do it at the MIR level for tensor ops.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 11: Global String Interning -->
+<section id="rec-interning">
+  <h2 class="section-title">11. Global String Interning</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority medium">Medium</span>
+      <h3>Enhance Axon's interner with Bend's global pool pattern</h3>
+    </div>
+    <p>
+      Bend uses a global <code>STRINGS: GlobalPool&lt;String&gt;</code> where all <code>Name</code> values are interned
+      references. This makes name comparison O(1) and reduces memory usage. Axon already has a <code>TypeInterner</code>
+      but should extend interning to all identifiers.
+    </p>
+    <h4>Current Axon State</h4>
+    <ul>
+      <li><code>TypeInterner</code> in <code>src/types.rs</code> interns types for O(1) type equality</li>
+      <li>Variable names, function names, module paths are still heap-allocated <code>String</code></li>
+    </ul>
+    <h4>Recommended Enhancement</h4>
+    <ul>
+      <li>Add a global <code>NameInterner</code> that all identifier strings pass through</li>
+      <li>Replace <code>String</code> identifiers in AST/TAST/MIR with interned <code>Name</code> handles</li>
+      <li>Benefits: faster comparison in type checker and borrow checker, less memory pressure, cache-friendlier AST traversal</li>
+    </ul>
+    <div class="recommendation">
+      <strong>Estimated impact:</strong> 10-20% reduction in compiler memory usage on large programs,
+      measurable speedup in type checking due to O(1) name comparison.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 12: List Comprehensions -->
+<section id="rec-list-comp">
+  <h2 class="section-title">12. List Comprehensions</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority medium">Medium</span>
+      <h3>Add tensor comprehension syntax</h3>
+    </div>
+    <p>
+      Bend has <code>[x * 2 for x in list]</code> with optional filters. Axon should extend this concept
+      to tensor creation, which would feel natural to Python/NumPy users.
+    </p>
+    <h4>What Bend Does</h4>
+    <pre><code>[x * 2 for x in my_list]
+[x for x in list if x > 0]
+// Desugars to fold + conditional cons</code></pre>
+    <h4>Proposed Axon Adaptation</h4>
+    <pre><code>// Tensor comprehension
+val weights = [randn() * 0.01 for _ in 0..784 for _ in 0..256]
+    .reshape([784, 256])
+
+// Filtered comprehension for sparse tensors
+val mask = [1.0 if prob > 0.5 else 0.0 for prob in predictions]
+
+// Matrix comprehension
+val identity = [[if i == j { 1.0 } else { 0.0 } for j in 0..n] for i in 0..n]</code></pre>
+    <div class="recommendation">
+      <strong>Python compatibility win:</strong> ML researchers expect comprehension syntax from Python.
+      This is syntactic sugar that desugars to <code>Vec::from_iter</code> + tensor construction.
+      Low implementation cost, high ergonomic value.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 13: Superpositions for GPU -->
+<section id="rec-superpositions">
+  <h2 class="section-title">13. Superpositions for GPU Branching</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority low">Exploratory</span>
+      <h3>Study Bend's superposition model for GPU warp divergence optimization</h3>
+    </div>
+    <p>
+      Bend's <code>{a, b}</code> superpositions represent values that exist in multiple states simultaneously.
+      While this is an interaction-net concept, the idea maps to <strong>GPU warp divergence optimization</strong>:
+      computing both branches of a conditional and selecting the result, avoiding thread divergence.
+    </p>
+    <h4>Potential Axon Application</h4>
+    <pre><code>// Instead of branching (causes warp divergence on GPU):
+@gpu fn activate(x: Float32): Float32 {
+    if x > 0.0 { x } else { 0.0 }  // branch divergence!
+}
+
+// Compiler could automatically transform to:
+@gpu fn activate(x: Float32): Float32 {
+    x * (x > 0.0) as Float32  // branchless, no divergence
+}</code></pre>
+    <div class="recommendation warn">
+      <strong>Long-term research:</strong> This is an advanced optimization. Study Bend's superposition semantics
+      for inspiration, but implement as a standard LLVM-level branchless optimization pass for GPU-targeted code.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 14: Stack-Safe Recursion -->
+<section id="rec-stack-safety">
+  <h2 class="section-title">14. Stack-Safe Recursion</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority low">Low</span>
+      <h3>Add stack growth protection for deep recursive types</h3>
+    </div>
+    <p>
+      Bend uses the <code>stacker</code> crate with <code>maybe_grow(32KB, 1MB)</code> to prevent stack overflow
+      in deeply recursive AST traversals. Axon should adopt this for its own recursive descent parser and
+      tree-walking passes.
+    </p>
+    <h4>What Bend Does</h4>
+    <ul>
+      <li><code>stacker::maybe_grow(32 * 1024, 1024 * 1024, || { ... })</code> on every recursive call in Clone/Drop/traversal</li>
+      <li>Transparent to the programmer &mdash; no API change</li>
+      <li>Prevents crashes on deeply nested programs</li>
+    </ul>
+    <h4>How Axon Should Implement</h4>
+    <ul>
+      <li>Add <code>stacker = "0.1"</code> to Cargo.toml</li>
+      <li>Wrap recursive descent parser calls and AST traversals with <code>maybe_grow</code></li>
+      <li>Particularly important in: <code>parser.rs</code> (recursive descent), <code>typeck.rs</code> (recursive unification), <code>mir.rs</code> (CFG traversal)</li>
+    </ul>
+    <div class="recommendation success">
+      <strong>Quick win:</strong> ~30 minutes to implement. Prevents rare but catastrophic crashes on deeply nested input.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 15: Fusing Functions -->
+<section id="rec-fusing">
+  <h2 class="section-title">15. Fusing Functions</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority critical">Critical</span>
+      <h3>Implement operation fusion for tensor computation graphs</h3>
+    </div>
+    <p>
+      Bend has "fusing functions" where compositions like <code>f(f(f(x)))</code> execute in O(1) instead of O(n)
+      through interaction net fusion. The same principle &mdash; <strong>operator fusion</strong> &mdash; is the
+      #1 optimization in modern ML compilers (XLA, TVM, Triton, TensorRT).
+    </p>
+    <h4>What Bend Does</h4>
+    <pre><code>// "Fusing addition" — 2^N additions in O(N) steps via interaction net fusion
+Nat.add = @a @b
+  a (@pred (Nat.add pred b))    // Succ case: recurse
+  b                              // Zero case: return b</code></pre>
+    <h4>Critical Axon Implementation</h4>
+    <pre><code>// Axon should fuse these at compile time:
+val y = relu(matmul(x, w) + b)
+// Into a single kernel: fused_linear_relu(x, w, b)
+
+// Element-wise chain fusion:
+val z = exp(x + y) * sigmoid(x - y)
+// Into: fused_elementwise(x, y) — one memory pass instead of five
+
+// Reduction fusion:
+val loss = mean(square(predictions - labels))
+// Into: fused_mse(predictions, labels) — no intermediate tensors</code></pre>
+    <div class="recommendation danger">
+      <strong>This is the highest-impact optimization for ML performance.</strong> Every modern ML compiler does this.
+      Without operator fusion, Axon will be 5-10x slower than PyTorch/JAX on real workloads due to memory bandwidth
+      bottleneck from materializing intermediate tensors. Implement as a MIR pass that pattern-matches common
+      operation sequences and replaces them with fused runtime calls.
+    </div>
+  </div>
+</section>
+
+<!-- Recommendation 16: Granular Compiler Options -->
+<section id="rec-cli-opts">
+  <h2 class="section-title">16. Granular Compiler Options</h2>
+  <div class="card">
+    <div class="card-header">
+      <span class="priority low">Low</span>
+      <h3>Add per-optimization-pass CLI flags</h3>
+    </div>
+    <p>
+      Bend offers fine-grained compiler flags: <code>-Oeta</code>, <code>-Oprune</code>, <code>-Omerge</code>,
+      <code>-Oinline</code>, <code>-Ofloat-combinators</code>, <code>-Olinearize-matches</code>, etc.
+      This is invaluable for debugging compiler issues and benchmarking individual optimizations.
+    </p>
+    <h4>Proposed Axon Flags</h4>
+    <table>
+      <tr><th>Flag</th><th>Description</th></tr>
+      <tr><td><code>-Ofuse-ops</code></td><td>Enable tensor operation fusion</td></tr>
+      <tr><td><code>-Oparallelize</code></td><td>Enable auto-parallelization of independent tensor ops</td></tr>
+      <tr><td><code>-Odead-code</code></td><td>Enable dead code elimination</td></tr>
+      <tr><td><code>-Oconst-fold</code></td><td>Enable constant folding</td></tr>
+      <tr><td><code>-Oinline</code></td><td>Enable function inlining</td></tr>
+      <tr><td><code>-Olinearize</code></td><td>Enable linear type optimizations</td></tr>
+      <tr><td><code>-Oshape-specialize</code></td><td>Specialize functions for known tensor shapes</td></tr>
+      <tr><td><code>-Oall</code></td><td>Enable all optimizations</td></tr>
+    </table>
+    <div class="recommendation success">
+      <strong>Developer experience:</strong> Essential for debugging. When a compiled program produces wrong results,
+      binary-searching which optimization pass is the culprit saves hours of debugging.
+    </div>
+  </div>
+</section>
+
+<!-- What NOT to Adopt -->
+<section id="not-adopt">
+  <h2 class="section-title">What NOT to Adopt from Bend</h2>
+  <div class="card" style="border-color: var(--accent4);">
+    <p>Not every Bend feature is appropriate for Axon. Here's what to explicitly <strong>avoid</strong>:</p>
+    <table>
+      <tr><th>Bend Feature</th><th>Why NOT for Axon</th></tr>
+      <tr>
+        <td><strong>Interaction Combinators</strong></td>
+        <td>Axon targets LLVM native code. IC-based evaluation sacrifices single-core performance (Bend is 50-100x slower than C on single core). Keep LLVM IR.</td>
+      </tr>
+      <tr>
+        <td><strong>24-bit Numbers</strong></td>
+        <td>Axon has full 8/16/32/64-bit numeric types. 24-bit is a severe limitation imposed by HVM's architecture. Axon has the right approach.</td>
+      </tr>
+      <tr>
+        <td><strong>Pure Immutability</strong></td>
+        <td>Axon's <code>val</code>/<code>var</code> with ownership is strictly better for ML. In-place tensor updates are essential for training performance. Bend's immutability forces unnecessary copies.</td>
+      </tr>
+      <tr>
+        <td><strong>No Loops</strong></td>
+        <td>Axon's <code>for</code>/<code>while</code> loops are essential for training loops, data loading, and imperative algorithms. Bend's fold/bend-only model is hostile to ML workflows.</td>
+      </tr>
+      <tr>
+        <td><strong>Scopeless Lambdas ($x)</strong></td>
+        <td>These break referential transparency and make reasoning about code harder. Axon's closure model is cleaner.</td>
+      </tr>
+      <tr>
+        <td><strong>Lambda-Encoded ADTs</strong></td>
+        <td>Scott/NumScott encoding makes pattern matching slower. Axon should use native discriminated unions with direct tag checks. Study encoding strategies for GPU only.</td>
+      </tr>
+      <tr>
+        <td><strong>Full Dual Syntax</strong></td>
+        <td>Two complete parsers doubles maintenance cost. Bend's team maintains this, but for Axon it's not worth the complexity. A limited math-notation block is sufficient.</td>
+      </tr>
+      <tr>
+        <td><strong>HVM Runtime Dependency</strong></td>
+        <td>Bend is tightly coupled to HVM (exact version pin). Axon should maintain its independence and compile to standard LLVM IR + native code.</td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<!-- Roadmap -->
+<section id="roadmap">
+  <h2 class="section-title">Suggested Implementation Roadmap</h2>
+
+  <h3>Phase A: Quick Wins (1-2 weeks)</h3>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>Task</th><th>Priority</th><th>Effort</th></tr>
+      <tr><td>A1</td><td>Add <code>stacker</code> for stack-safe recursion</td><td><span class="priority low">Low</span></td><td>1 day</td></tr>
+      <tr><td>A2</td><td>Add <code>insta</code> snapshot testing for error messages</td><td><span class="priority high">High</span></td><td>2-3 days</td></tr>
+      <tr><td>A3</td><td>Per-optimization CLI flags (<code>-Ofuse</code>, <code>-Oparallel</code>, etc.)</td><td><span class="priority low">Low</span></td><td>1-2 days</td></tr>
+    </table>
+  </div>
+
+  <h3>Phase B: Core Infrastructure (2-4 weeks)</h3>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>Task</th><th>Priority</th><th>Effort</th></tr>
+      <tr><td>B1</td><td>Accumulative <code>Diagnostics</code> system with configurable severity</td><td><span class="priority critical">Critical</span></td><td>1 week</td></tr>
+      <tr><td>B2</td><td>Break MIR into ordered transform passes (<code>src/mir/transform/</code>)</td><td><span class="priority high">High</span></td><td>1 week</td></tr>
+      <tr><td>B3</td><td>Global <code>NameInterner</code> for all identifiers</td><td><span class="priority medium">Medium</span></td><td>3-4 days</td></tr>
+    </table>
+  </div>
+
+  <h3>Phase C: Tensor Optimizations (4-8 weeks)</h3>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>Task</th><th>Priority</th><th>Effort</th></tr>
+      <tr><td>C1</td><td><strong>Operator fusion pass</strong> (fused_linear_relu, fused_mse, etc.)</td><td><span class="priority critical">Critical</span></td><td>2-3 weeks</td></tr>
+      <tr><td>C2</td><td>Auto-parallelization pass for independent tensor ops</td><td><span class="priority critical">Critical</span></td><td>2-3 weeks</td></tr>
+      <tr><td>C3</td><td>Linear/affine type annotations for zero-copy tensors</td><td><span class="priority high">High</span></td><td>1-2 weeks</td></tr>
+    </table>
+  </div>
+
+  <h3>Phase D: Language Features (4-6 weeks)</h3>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>Task</th><th>Priority</th><th>Effort</th></tr>
+      <tr><td>D1</td><td>Tensor comprehension syntax</td><td><span class="priority medium">Medium</span></td><td>1 week</td></tr>
+      <tr><td>D2</td><td><code>fold</code>/<code>reduce</code> as parallel tensor operations</td><td><span class="priority critical">Critical</span></td><td>1-2 weeks</td></tr>
+      <tr><td>D3</td><td>GPU-optimized enum layouts</td><td><span class="priority high">High</span></td><td>1-2 weeks</td></tr>
+      <tr><td>D4</td><td><code>with</code> blocks for effectful pipelines</td><td><span class="priority medium">Medium</span></td><td>1 week</td></tr>
+    </table>
+  </div>
+
+  <h3>Phase E: Advanced (8+ weeks, post-GPU codegen)</h3>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>Task</th><th>Priority</th><th>Effort</th></tr>
+      <tr><td>E1</td><td>GPU warp divergence optimization (branchless transforms)</td><td><span class="priority low">Exploratory</span></td><td>2-3 weeks</td></tr>
+      <tr><td>E2</td><td>Math-notation block syntax</td><td><span class="priority medium">Medium</span></td><td>2-3 weeks</td></tr>
+      <tr><td>E3</td><td>Shape-specialized function compilation</td><td><span class="priority high">High</span></td><td>3-4 weeks</td></tr>
+    </table>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <p>Bend Language Analysis Report &mdash; Generated for the Axon Programming Language Project</p>
+  <p>Source: <code>H:\programing language\bend disected\</code> and <code>H:\programing language\repo\Bend\</code></p>
+  <p>Axon Compiler: <code>H:\programing language\axon\</code> &mdash; 1,034 tests passing</p>
+</footer>
+
+</body>
+</html>

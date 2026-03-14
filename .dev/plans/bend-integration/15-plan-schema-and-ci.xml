@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendPlanSchemaAndCI>
+  <metadata><purpose>Schema validation, linting rules, CI integration, and quality enforcement for the plan document package</purpose></metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCHEMA DEFINITION
+       ═══════════════════════════════════════════════════════════════ -->
+  <schemaDefinition>
+    <location>schema/axon-bend-plan.xsd</location>
+    <description>XSD schema validating structure of all plan XML documents. Ensures required fields, valid cross-references, and consistent formatting.</description>
+    <validationRules>
+      <rule id="XSD-01">Every risk must have id, category, likelihood, impact, phase attributes.</rule>
+      <rule id="XSD-02">Every epic must have id, name, priority, phase, workstream attributes.</rule>
+      <rule id="XSD-03">Every story must have an id matching pattern E{N}-S{N}.</rule>
+      <rule id="XSD-04">Every gate must have id, criterion, evidence, status attributes.</rule>
+      <rule id="XSD-05">Every prompt must have all 9 fields: context, role, objective, instructions, dos, donts, evidence, responseFormat and one of: steps or instructions.</rule>
+      <rule id="XSD-06">Every ADR must have id, status, date, title, context, options (2+), decision, rationale, consequences.</rule>
+      <rule id="XSD-07">Every benchmark must have id, name, description, and at least one metric.</rule>
+      <rule id="XSD-08">Traceability chains must reference valid recommendation, pillar, epic, and gate IDs.</rule>
+    </validationRules>
+  </schemaDefinition>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LINTING RULES
+       ═══════════════════════════════════════════════════════════════ -->
+  <lintingRules>
+    <rule id="LINT-01" severity="error">All 15 plan documents must exist.</rule>
+    <rule id="LINT-02" severity="error">All XML documents must be well-formed (parseable by any XML parser).</rule>
+    <rule id="LINT-03" severity="error">No orphan references: every epic, story, risk, gate ID referenced must be defined.</rule>
+    <rule id="LINT-04" severity="warning">Dependency graph must be acyclic.</rule>
+    <rule id="LINT-05" severity="warning">Every epic must have a definitionOfDone section.</rule>
+    <rule id="LINT-06" severity="warning">Every risk must have a mitigation strategy.</rule>
+    <rule id="LINT-07" severity="info">Traceability coverage should be 100% (all recommendations traced to gates).</rule>
+    <rule id="LINT-08" severity="info">Total story count should match backlog summary.</rule>
+    <rule id="LINT-09" severity="error">Gate scorecard must have at least 1 hard gate per phase.</rule>
+    <rule id="LINT-10" severity="warning">Prompts should reference files that exist in the codebase.</rule>
+  </lintingRules>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCRIPTS
+       ═══════════════════════════════════════════════════════════════ -->
+  <scripts>
+    <script name="validate_plans.py" location="scripts/validate_plans.py">
+      <description>Validate all plan XML documents against the XSD schema and cross-reference rules.</description>
+      <inputs>Plan directory path (default: current directory)</inputs>
+      <outputs>Validation report: PASS/FAIL per document, error details</outputs>
+      <exitCode>0 if all valid, 1 if any errors</exitCode>
+    </script>
+
+    <script name="lint_plans.py" location="scripts/lint_plans.py">
+      <description>Check plan documents for quality issues, orphan references, and completeness.</description>
+      <inputs>Plan directory path</inputs>
+      <outputs>Lint report with severity levels: errors (block), warnings (advisory), info (FYI)</outputs>
+      <exitCode>0 if no errors, 1 if errors found</exitCode>
+    </script>
+
+    <script name="plan_to_issues.py" location="scripts/plan_to_issues.py">
+      <description>Generate GitHub issues from implementation backlog epics/stories. Creates issues with labels, milestones, and dependency links.</description>
+      <inputs>
+        <input>Backlog XML path (05-implementation-backlog.xml)</input>
+        <input>GitHub repo (SufficientDaikon/Axon)</input>
+        <input>--dry-run flag for preview without creating</input>
+      </inputs>
+      <outputs>Created issue URLs or dry-run preview</outputs>
+      <issueFormat>
+        <title>[E{N}] {epic_name}: {story_description}</title>
+        <labels>phase:{ALPHA|BETA|GAMMA|DELTA|EPSILON}, priority:{P0|P1|P2}, workstream:{WS1-WS8}</labels>
+        <milestone>Phase {ALPHA|BETA|GAMMA|DELTA|EPSILON}</milestone>
+        <body>Epic: {epic_name}\nStory: {story_id}\nDefinition of Done: {items}\nDependencies: {deps}</body>
+      </issueFormat>
+    </script>
+  </scripts>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CI WORKFLOW
+       ═══════════════════════════════════════════════════════════════ -->
+  <ciWorkflow>
+    <file>.github/workflows/plan-quality.yml</file>
+    <trigger>Push to .dev/plans/bend-integration/**</trigger>
+    <jobs>
+      <job name="validate-xml">
+        <steps>
+          <step>Checkout repository</step>
+          <step>Setup Python 3.11</step>
+          <step>pip install lxml</step>
+          <step>python .dev/plans/bend-integration/scripts/validate_plans.py</step>
+        </steps>
+        <failureAction>Block merge</failureAction>
+      </job>
+      <job name="lint-plans">
+        <steps>
+          <step>Checkout repository</step>
+          <step>Setup Python 3.11</step>
+          <step>pip install lxml</step>
+          <step>python .dev/plans/bend-integration/scripts/lint_plans.py</step>
+        </steps>
+        <failureAction>Warning in PR comment (errors block, warnings advisory)</failureAction>
+      </job>
+      <job name="cross-reference-check">
+        <steps>
+          <step>Checkout repository</step>
+          <step>Setup Python 3.11</step>
+          <step>pip install lxml</step>
+          <step>python .dev/plans/bend-integration/scripts/lint_plans.py --strict-xref</step>
+        </steps>
+        <failureAction>Block merge if orphan references found</failureAction>
+      </job>
+    </jobs>
+  </ciWorkflow>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOCUMENT INVENTORY CHECKLIST
+       ═══════════════════════════════════════════════════════════════ -->
+  <documentInventory>
+    <document id="00" name="plan-index.xml" required="true" status="complete"/>
+    <document id="01" name="master-strategy.xml" required="true" status="complete"/>
+    <document id="02" name="capability-matrix.xml" required="true" status="complete"/>
+    <document id="03" name="architecture-blueprint.xml" required="true" status="complete"/>
+    <document id="04" name="workstreams-and-milestones.xml" required="true" status="complete"/>
+    <document id="05" name="implementation-backlog.xml" required="true" status="complete"/>
+    <document id="06" name="claude-execution-playbook.xml" required="true" status="complete"/>
+    <document id="07" name="prompt-library.xml" required="true" status="complete"/>
+    <document id="08" name="context-governance.xml" required="true" status="complete"/>
+    <document id="09" name="validation-and-testing.xml" required="true" status="complete"/>
+    <document id="10" name="gates-scorecard.xml" required="true" status="complete"/>
+    <document id="11" name="traceability-matrix.xml" required="true" status="complete"/>
+    <document id="12" name="risk-register.xml" required="true" status="complete"/>
+    <document id="13" name="benchmark-harness.xml" required="true" status="complete"/>
+    <document id="14" name="decision-records.xml" required="true" status="complete"/>
+    <document id="15" name="plan-schema-and-ci.xml" required="true" status="complete"/>
+    <completeness>15/15 (100%)</completeness>
+  </documentInventory>
+</axonBendPlanSchemaAndCI>

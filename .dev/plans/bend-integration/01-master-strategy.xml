@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendMasterStrategy>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EXECUTIVE INTENT
+       ═══════════════════════════════════════════════════════════════ -->
+  <executiveIntent>
+    <problem>
+      Axon is an ML-first systems language with first-class tensors, autograd, and LLVM codegen,
+      but it lacks the automatic parallelism, operator fusion, and advanced compiler optimizations
+      that define state-of-the-art ML compilers (XLA, TVM, Triton, JAX). Meanwhile, Bend — a
+      massively parallel language built on interaction combinators — demonstrates that implicit
+      parallelism, accumulative diagnostics, ordered transform passes, and linearity-aware
+      compilation can be achieved in a Rust-based compiler with modest codebase size.
+    </problem>
+    <goal>
+      Integrate Bend's most impactful innovations into Axon's compiler pipeline to deliver:
+      (1) automatic tensor-level parallelism without user annotations,
+      (2) fused tensor operation kernels that eliminate memory-bandwidth bottlenecks,
+      (3) an accumulative diagnostic system with per-warning severity control,
+      (4) a modular transform-pass architecture that enables rapid optimization development,
+      and (5) linearity annotations for guaranteed zero-copy tensor forwarding —
+      making Axon the first ML language that combines PyTorch-level ergonomics with
+      XLA-level compilation and Rust-level safety, all from a single unified source.
+    </goal>
+    <sotaPositioning>
+      No existing language achieves all five simultaneously:
+      — PyTorch: ergonomic but interpreted, no compile-time safety
+      — JAX/XLA: excellent fusion but Python-hosted, no ownership model
+      — Triton: GPU-only, no general-purpose language features
+      — Mojo: systems-level but closed-source, no tensor shape checking
+      — Bend: implicit parallelism but 24-bit only, no tensors, no mutation
+      — Axon (post-integration): all five pillars in one compiled language.
+    </sotaPositioning>
+  </executiveIntent>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TRANSFORMATION PILLARS
+       ═══════════════════════════════════════════════════════════════ -->
+  <transformationPillars>
+    <pillar id="P1" name="Automatic Tensor Parallelism">
+      <description>Data-dependency analysis at MIR level to identify and schedule independent tensor operations for concurrent execution across CPU threads and GPU streams, without user annotations.</description>
+      <bendInspiration>Bend's implicit parallelism via interaction net redex scheduling.</bendInspiration>
+      <axonAdaptation>MIR-level DAG analysis of tensor operations, not interaction nets. CPU: thread pool dispatch. GPU: CUDA stream scheduling.</axonAdaptation>
+      <sotaBenchmark>Match or exceed JAX's auto-vectorization on standard ML benchmarks (MNIST, ResNet-18, Transformer-base).</sotaBenchmark>
+    </pillar>
+
+    <pillar id="P2" name="Tensor Operation Fusion">
+      <description>Compile-time detection and fusion of tensor operation chains into single optimized kernels, eliminating intermediate tensor materialization and reducing memory bandwidth pressure by 5-10x.</description>
+      <bendInspiration>Bend's fusing functions and combinator floating — closed subexpression extraction to top-level definitions.</bendInspiration>
+      <axonAdaptation>MIR pattern matching for common fusion patterns (linear+relu, matmul+bias+activation, reduction chains). Generate fused C runtime kernels or LLVM IR.</axonAdaptation>
+      <sotaBenchmark>Achieve within 2x of XLA's fused kernel throughput on element-wise chains and matmul+activation patterns.</sotaBenchmark>
+    </pillar>
+
+    <pillar id="P3" name="Compiler Infrastructure Modernization">
+      <description>Accumulative diagnostics, modular transform passes, global name interning, stack-safe recursion, snapshot testing, and granular optimization flags — making Axon's compiler as maintainable as it is powerful.</description>
+      <bendInspiration>Bend's Diagnostics system (accumulative, configurable severity), 31-pass transform pipeline, stacker-based recursion, insta snapshot testing.</bendInspiration>
+      <axonAdaptation>New src/diagnostics.rs module, src/mir/transform/ pass directory, global NameInterner, stacker integration, insta test infrastructure.</axonAdaptation>
+      <sotaBenchmark>Zero regressions during integration. All 1,034+ tests pass after every phase. Error message quality verified by snapshot tests.</sotaBenchmark>
+    </pillar>
+
+    <pillar id="P4" name="Type System Extensions">
+      <description>Linearity annotations for zero-copy tensor forwarding, GPU-optimized ADT encoding strategies, and enhanced pattern matching with fold/reduce as first-class parallel primitives.</description>
+      <bendInspiration>Bend's affine variable semantics (auto-dup), Scott/NumScott ADT encoding, fold/bend loop constructs.</bendInspiration>
+      <axonAdaptation>Optional linear/unique annotations on function parameters, configurable enum layouts for GPU targets, tensor-aware fold/reduce syntax sugar.</axonAdaptation>
+      <sotaBenchmark>Demonstrate zero-copy tensor forwarding in training loops. Measure allocation reduction vs non-linear baseline.</sotaBenchmark>
+    </pillar>
+
+    <pillar id="P5" name="Language Ergonomics">
+      <description>Tensor comprehension syntax, monadic with-blocks for effectful pipelines, math-notation blocks, and list comprehensions — bringing Python-level expressiveness to a compiled, safe language.</description>
+      <bendInspiration>Bend's list comprehensions, with/ask monadic blocks, dual syntax system.</bendInspiration>
+      <axonAdaptation>Tensor comprehension as syntactic sugar over iterators + tensor constructors. with-blocks for GPU pipeline staging. Math-notation as future exploration.</axonAdaptation>
+      <sotaBenchmark>Migration survey: Python ML developers can transliterate 80%+ of PyTorch idioms to Axon without consulting documentation.</sotaBenchmark>
+    </pillar>
+  </transformationPillars>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT ENGINEERING FRAMEWORK
+       ═══════════════════════════════════════════════════════════════ -->
+  <promptEngineeringFramework>
+    <framework name="Hybrid-CO-STAR-RISEN-TIDD-EC">
+      <why>Combines strategic clarity, procedural rigor, and strict do/don't boundaries for high-reliability compiler engineering by AI agents.</why>
+      <requiredSections>
+        <section name="CONTEXT">Project state, codebase location, relevant files, current test count.</section>
+        <section name="ROLE">Specific compiler engineering role for this task.</section>
+        <section name="OBJECTIVE">Single measurable outcome with acceptance criteria.</section>
+        <section name="INSTRUCTIONS">Step-by-step implementation procedure.</section>
+        <section name="STEPS">Ordered substeps with file paths and expected changes.</section>
+        <section name="DO">Mandatory behaviors and quality requirements.</section>
+        <section name="DONT">Explicit prohibitions and anti-patterns.</section>
+        <section name="EVIDENCE">Required proof of completion (test output, diff, snapshot).</section>
+        <section name="RESPONSE_FORMAT">Expected output structure (files modified, tests added, summary).</section>
+      </requiredSections>
+    </framework>
+    <framework name="Chain-of-Density-Refinement">
+      <why>Each execution iteration adds missing specificity while keeping constraints explicit and stable. Prevents prompt drift across long compiler engineering sessions.</why>
+      <policy>Handoff packets between phases must be denser than the previous phase's packet — more facts, fewer words.</policy>
+    </framework>
+  </promptEngineeringFramework>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CONTEXT MANAGEMENT STRATEGY
+       ═══════════════════════════════════════════════════════════════ -->
+  <contextManagementStrategy>
+    <principle>Context is a controlled resource, not an unbounded transcript. Every token must earn its place.</principle>
+    <controls>
+      <control id="CM1">Phase handoff packets: decisions made, files changed, tests added, open risks, next actions. Max 2,000 tokens.</control>
+      <control id="CM2">Rolling summaries with evidence: file paths, line numbers, test names. No prose narratives.</control>
+      <control id="CM3">Pin non-negotiables in every prompt: test baseline (1,034+), zero-warning compilation, snapshot verification.</control>
+      <control id="CM4">Token budget per phase: max 80K input tokens. Compact context before starting new phase.</control>
+      <control id="CM5">Use subagents for exploration and heavy file reading. Keep main context for decisions and code changes.</control>
+      <control id="CM6">Never read the entire codebase. Use targeted Grep/Glob for specific locations.</control>
+    </controls>
+  </contextManagementStrategy>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SUCCESS METRICS
+       ═══════════════════════════════════════════════════════════════ -->
+  <successMetrics>
+    <metric id="SM1" name="TestBaseline" target=">=1034">All existing tests pass after every phase. No regressions.</metric>
+    <metric id="SM2" name="NewTests" target=">=200">At least 200 new tests covering all integrated features.</metric>
+    <metric id="SM3" name="FusionSpeedup" target=">=3x">Fused tensor operations achieve at least 3x throughput vs unfused on element-wise chains.</metric>
+    <metric id="SM4" name="ParallelScaling" target=">=2x on 4 cores">Auto-parallelized independent tensor ops scale linearly on multi-core CPU.</metric>
+    <metric id="SM5" name="DiagnosticCoverage" target="100%">Every compiler error has a structured code, source span, and suggestion.</metric>
+    <metric id="SM6" name="CompileTimeOverhead" target="&lt;15%">New passes increase compile time by no more than 15% on the standard benchmark suite.</metric>
+    <metric id="SM7" name="ZeroCopyVerified" target=">=5 patterns">At least 5 common tensor patterns verified zero-copy via linearity analysis.</metric>
+    <metric id="SM8" name="SnapshotCoverage" target=">=100 snapshots">At least 100 golden-test snapshots covering parse, typecheck, MIR, LLVM IR, and error output.</metric>
+  </successMetrics>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PHASED DELIVERY TIMELINE
+       ═══════════════════════════════════════════════════════════════ -->
+  <deliveryPhases>
+    <phase id="ALPHA" name="Infrastructure Foundation" duration="1-2 weeks">
+      <scope>Diagnostics system, MIR transform pass architecture, snapshot testing, stacker, name interning, CLI flags.</scope>
+      <gate>All 1,034 tests pass. Diagnostics accumulate across phases. At least 30 snapshot tests exist.</gate>
+    </phase>
+    <phase id="BETA" name="Core Tensor Optimizations" duration="4-6 weeks">
+      <scope>Operator fusion, auto-parallelism, fold/reduce primitives, combinator floating for tensor kernels.</scope>
+      <gate>Fusion benchmarks hit 3x target. Parallelism scales on 4 cores. 100+ new tests.</gate>
+    </phase>
+    <phase id="GAMMA" name="Type System Extensions" duration="2-4 weeks">
+      <scope>Linear/affine annotations, GPU-optimized ADT layouts, tensor comprehensions.</scope>
+      <gate>Zero-copy verified on 5+ patterns. ADT layout benchmarks complete.</gate>
+    </phase>
+    <phase id="DELTA" name="Language Ergonomics" duration="2-3 weeks">
+      <scope>List comprehensions, with-blocks, expression-level improvements.</scope>
+      <gate>New syntax fully documented. Migration guide updated. All tests pass.</gate>
+    </phase>
+    <phase id="EPSILON" name="Advanced and GPU-Deferred" duration="Ongoing">
+      <scope>Math-notation blocks, GPU warp optimization, shape specialization. Requires MLIR pipeline.</scope>
+      <gate>Design documents complete. Implementation deferred to GPU codegen phase.</gate>
+    </phase>
+  </deliveryPhases>
+</axonBendMasterStrategy>

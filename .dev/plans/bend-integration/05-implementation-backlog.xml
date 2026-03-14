@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendImplementationBacklog>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PHASE ALPHA — INFRASTRUCTURE FOUNDATION
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <epic id="E1" name="Accumulative Diagnostics System" priority="P0" phase="ALPHA" workstream="WS1">
+    <stories>
+      <story id="E1-S1">Create src/diagnostics.rs with Diagnostics struct, Severity enum (Allow/Warning/Error), DiagnosticConfig with per-category severity fields, and fatal() checkpoint method.</story>
+      <story id="E1-S2">Define diagnostic categories: ParseError, TypeError, BorrowError, MirError, CodegenError, UnusedVariable, UnusedImport, UnreachableCode, DeprecatedSyntax.</story>
+      <story id="E1-S3">Wire Diagnostics through lib.rs check_source_full() — replace all early-exit error handling with diagnostic accumulation.</story>
+      <story id="E1-S4">Add CLI flags --warn, --deny, --allow to src/main.rs and propagate to DiagnosticConfig.</story>
+      <story id="E1-S5">Implement grouped, colored display: errors red, warnings yellow, grouped by file then phase, with source spans.</story>
+      <story id="E1-S6">Write unit tests for Diagnostics (accumulation, fatal checkpoint, severity override, display formatting).</story>
+    </stories>
+    <definitionOfDone>
+      <item>All 1,034 existing tests pass.</item>
+      <item>Diagnostics accumulate errors from parse + typecheck + codegen in a single compilation.</item>
+      <item>fatal() returns Ok when no errors, Err when errors accumulated.</item>
+      <item>--warn/--deny/--allow flags modify severity correctly.</item>
+      <item>At least 15 new tests for diagnostics module.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E2" name="MIR Transform Pass Architecture" priority="P0" phase="ALPHA" workstream="WS1">
+    <dependsOn>E1</dependsOn>
+    <stories>
+      <story id="E2-S1">Create src/mir/transform/mod.rs with Pass trait (fn run(&amp;mut MirProgram, &amp;mut Diagnostics)) and PassManager struct.</story>
+      <story id="E2-S2">Create src/mir/transform/dead_code.rs — dead function elimination via call graph reachability from main.</story>
+      <story id="E2-S3">Create src/mir/transform/const_fold.rs — constant folding for scalar arithmetic and tensor shape expressions.</story>
+      <story id="E2-S4">Integrate PassManager into lib.rs pipeline between TAST-to-MIR lowering and LLVM codegen.</story>
+      <story id="E2-S5">Add -Odead-code and -Oconst-fold CLI flags. Add -Oall to enable all passes.</story>
+      <story id="E2-S6">Write unit and integration tests for each pass and for PassManager orchestration.</story>
+    </stories>
+    <definitionOfDone>
+      <item>PassManager runs passes in configurable order.</item>
+      <item>Dead code elimination removes unreachable functions.</item>
+      <item>Constant folding evaluates constant scalar expressions at compile time.</item>
+      <item>Each pass is individually toggleable via CLI flags.</item>
+      <item>At least 20 new tests across both passes and PassManager.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E3" name="Global Name Interning" priority="P1" phase="ALPHA" workstream="WS1">
+    <stories>
+      <story id="E3-S1">Create src/interner.rs with global NameInterner using thread-safe arena allocation.</story>
+      <story id="E3-S2">Define Name type as interned handle with Deref to &amp;str, O(1) Eq/Hash.</story>
+      <story id="E3-S3">Replace String identifiers in AST node types with Name.</story>
+      <story id="E3-S4">Update parser to intern all identifiers during parsing.</story>
+      <story id="E3-S5">Verify TypeInterner and NameInterner coexist without interference.</story>
+    </stories>
+    <definitionOfDone>
+      <item>All identifier comparisons are O(1) via pointer equality.</item>
+      <item>Memory usage reduced on sample programs (measured).</item>
+      <item>All 1,034+ tests pass.</item>
+      <item>TypeInterner unaffected.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E4" name="Stack Safety and CLI Flags" priority="P2" phase="ALPHA" workstream="WS1">
+    <stories>
+      <story id="E4-S1">Add stacker = "0.1" to Cargo.toml.</story>
+      <story id="E4-S2">Wrap recursive descent calls in parser.rs with maybe_grow(32KB, 1MB).</story>
+      <story id="E4-S3">Wrap recursive unification in typeck.rs with maybe_grow.</story>
+      <story id="E4-S4">Wrap recursive MIR traversals in mir.rs with maybe_grow.</story>
+      <story id="E4-S5">Add test with 200-level nested expression to verify no stack overflow.</story>
+    </stories>
+    <definitionOfDone>
+      <item>Deeply nested programs (200+ levels) compile without stack overflow.</item>
+      <item>No performance regression on normal programs.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E5" name="Snapshot Testing Infrastructure" priority="P0" phase="ALPHA" workstream="WS2">
+    <stories>
+      <story id="E5-S1">Add insta = "1.34" to [dev-dependencies] in Cargo.toml.</story>
+      <story id="E5-S2">Create tests/snapshot_tests.rs with test harness for .axon input files.</story>
+      <story id="E5-S3">Create tests/snapshots/ with subdirectories: parse/, typecheck/, mir/, llvm_ir/, errors/.</story>
+      <story id="E5-S4">Write 40+ error message snapshot tests covering all error codes.</story>
+      <story id="E5-S5">Write 30+ parser output snapshot tests for all syntax constructs.</story>
+      <story id="E5-S6">Write 20+ MIR dump snapshot tests for key code patterns.</story>
+      <story id="E5-S7">Write 10+ LLVM IR snapshot tests for codegen verification.</story>
+      <story id="E5-S8">Document snapshot workflow: cargo insta test, cargo insta review.</story>
+    </stories>
+    <definitionOfDone>
+      <item>insta builds and snapshot workflow functions.</item>
+      <item>At least 100 snapshot tests across all categories.</item>
+      <item>Error message snapshots cover all error code ranges.</item>
+      <item>Snapshot review workflow documented in .dev/SNAPSHOT_TESTING.md.</item>
+    </definitionOfDone>
+  </epic>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PHASE BETA — CORE TENSOR OPTIMIZATIONS
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <epic id="E6" name="Combinator Floating and Inlining" priority="P0" phase="BETA" workstream="WS3">
+    <dependsOn>E2</dependsOn>
+    <stories>
+      <story id="E6-S1">Create src/mir/transform/float_combinators.rs — identify closed tensor subexpressions and extract to top-level functions.</story>
+      <story id="E6-S2">Create src/mir/transform/inline.rs — inline trivial functions (single basic block, no loops) and single-use extracted combinators.</story>
+      <story id="E6-S3">Implement free-variable analysis for MIR basic blocks to identify extraction candidates.</story>
+      <story id="E6-S4">Write tests verifying extraction correctness and inlining decisions.</story>
+    </stories>
+    <definitionOfDone>
+      <item>Closed tensor op sequences are extracted to top-level functions.</item>
+      <item>Trivial functions are inlined back when beneficial.</item>
+      <item>Extraction does not change program semantics.</item>
+      <item>At least 15 new tests.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E7" name="Tensor Operation Fusion" priority="P0" phase="BETA" workstream="WS3">
+    <dependsOn>E2 E6</dependsOn>
+    <stories>
+      <story id="E7-S1">Create src/mir/transform/fuse_ops.rs with FusionPattern trait and pattern registry.</story>
+      <story id="E7-S2">Implement linear+relu fusion pattern: detect matmul→add→relu sequence, replace with fused_linear_relu call.</story>
+      <story id="E7-S3">Implement element-wise chain fusion: detect N consecutive element-wise ops on same shape, replace with single-pass kernel.</story>
+      <story id="E7-S4">Implement MSE loss fusion: detect subtract→square→mean, replace with fused_mse.</story>
+      <story id="E7-S5">Implement softmax+cross_entropy fusion.</story>
+      <story id="E7-S6">Add fused kernel C implementations to src/codegen/runtime.rs: axon_fused_linear_relu, axon_fused_mse, axon_fused_softmax_ce, axon_fused_elementwise.</story>
+      <story id="E7-S7">Add MIR TensorOp variants for fused operations.</story>
+      <story id="E7-S8">Update LLVM codegen to emit calls to fused runtime functions.</story>
+      <story id="E7-S9">Write numerical equivalence tests: fused output == unfused output within 1e-6.</story>
+      <story id="E7-S10">Write criterion benchmarks comparing fused vs unfused throughput.</story>
+      <story id="E7-S11">Add -Ofuse-ops CLI flag.</story>
+    </stories>
+    <definitionOfDone>
+      <item>All 5 fusion patterns produce correct output.</item>
+      <item>Numerical equivalence: epsilon &lt; 1e-6 for all patterns.</item>
+      <item>Element-wise chain fusion achieves &gt;=3x throughput vs unfused.</item>
+      <item>Fusion does not cross control flow boundaries.</item>
+      <item>-Ofuse-ops flag toggles fusion on/off.</item>
+      <item>At least 30 new tests.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E8" name="Automatic Tensor Parallelism" priority="P0" phase="BETA" workstream="WS4">
+    <dependsOn>E2 E7</dependsOn>
+    <stories>
+      <story id="E8-S1">Create src/mir/transform/parallelize.rs with tensor operation DAG builder.</story>
+      <story id="E8-S2">Implement data dependency analysis: identify read/write sets for each tensor operation.</story>
+      <story id="E8-S3">Identify independent subgraphs (no shared data dependencies) suitable for parallel execution.</story>
+      <story id="E8-S4">Annotate MIR with ParallelRegion markers for independent subgraphs.</story>
+      <story id="E8-S5">Add lightweight thread pool to runtime.rs: axon_parallel_dispatch, axon_parallel_join.</story>
+      <story id="E8-S6">Update LLVM codegen to emit thread pool dispatch for parallel regions.</story>
+      <story id="E8-S7">Write correctness tests: parallel results == sequential results for all test programs.</story>
+      <story id="E8-S8">Write scaling benchmarks on 1, 2, 4, 8 cores.</story>
+      <story id="E8-S9">Add -Oparallelize CLI flag.</story>
+    </stories>
+    <definitionOfDone>
+      <item>Independent tensor ops execute concurrently.</item>
+      <item>&gt;=2x scaling on 4 cores for independent matmul workloads.</item>
+      <item>Parallel results identical to sequential.</item>
+      <item>Side-effecting ops never parallelized.</item>
+      <item>At least 20 new tests.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E9" name="Fold/Reduce and Comprehensions" priority="P1" phase="BETA" workstream="WS5">
+    <dependsOn>E1</dependsOn>
+    <stories>
+      <story id="E9-S1">Add Fold and Reduce tokens to src/token.rs and keyword lookup.</story>
+      <story id="E9-S2">Add FoldExpr, ReduceExpr, Comprehension AST nodes to src/ast.rs.</story>
+      <story id="E9-S3">Parse fold/reduce expressions and list/tensor comprehensions in src/parser.rs.</story>
+      <story id="E9-S4">Type-check fold (infer accumulator type from init + closure), reduce (element type), comprehensions (iter element → result).</story>
+      <story id="E9-S5">Lower fold/reduce to MIR: desugar to loop + accumulator, with parallel reduction hint.</story>
+      <story id="E9-S6">Lower comprehensions to MIR: desugar to iterator chain + collect.</story>
+      <story id="E9-S7">Write tests covering fold, reduce, and comprehension on Vec, Tensor, Range.</story>
+      <story id="E9-S8">Update language tour documentation with fold/reduce/comprehension examples.</story>
+    </stories>
+    <definitionOfDone>
+      <item>fold, reduce, and comprehensions parse correctly.</item>
+      <item>Type checking infers correct types for all forms.</item>
+      <item>Codegen produces correct results.</item>
+      <item>At least 20 new tests.</item>
+      <item>Documentation updated.</item>
+    </definitionOfDone>
+  </epic>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PHASE GAMMA — TYPE SYSTEM EXTENSIONS
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <epic id="E10" name="Linear/Affine Type Annotations" priority="P0" phase="GAMMA" workstream="WS6">
+    <dependsOn>E1 E7</dependsOn>
+    <stories>
+      <story id="E10-S1">Add Linear and Unique tokens to src/token.rs.</story>
+      <story id="E10-S2">Add LinearParam annotation to function parameter AST nodes.</story>
+      <story id="E10-S3">Parse linear/unique annotations on function parameters in src/parser.rs.</story>
+      <story id="E10-S4">Type-check linearity: linear params must be used exactly once in function body.</story>
+      <story id="E10-S5">Integrate linearity checking into borrow checker (src/borrow.rs).</story>
+      <story id="E10-S6">Codegen optimization: skip reference counting for linear parameters.</story>
+      <story id="E10-S7">Verify zero-copy on 5+ common tensor patterns: forward pass, gradient update, data pipeline, reshape chain, activation chain.</story>
+    </stories>
+    <definitionOfDone>
+      <item>linear annotation enforced — multi-use is compile error with clear message.</item>
+      <item>Zero-copy verified on 5+ patterns via allocation tracking.</item>
+      <item>Opt-in — existing code unaffected.</item>
+      <item>At least 15 new tests.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E11" name="GPU-Optimized ADT Layouts" priority="P1" phase="GAMMA" workstream="WS6">
+    <dependsOn>E2</dependsOn>
+    <stories>
+      <story id="E11-S1">Add --enum-layout CLI flag with options: tagged (default), packed, scattered.</story>
+      <story id="E11-S2">Implement tagged layout in codegen (current behavior, documented).</story>
+      <story id="E11-S3">Implement packed layout: integer tag + flat payload, no pointers.</story>
+      <story id="E11-S4">Write benchmarks comparing layout performance for Option&lt;Tensor&gt; and Result&lt;Tensor, E&gt;.</story>
+    </stories>
+    <definitionOfDone>
+      <item>--enum-layout flag produces different codegen for tagged vs packed.</item>
+      <item>Benchmarks show measurable improvement for packed layout in tight loops.</item>
+      <item>Default (tagged) behavior unchanged.</item>
+    </definitionOfDone>
+  </epic>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PHASE DELTA — LANGUAGE ERGONOMICS
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <epic id="E12" name="Monadic With-Blocks" priority="P1" phase="DELTA" workstream="WS7">
+    <dependsOn>E9</dependsOn>
+    <stories>
+      <story id="E12-S1">Add With and Ask tokens to src/token.rs (if not already present).</story>
+      <story id="E12-S2">Add WithBlock and AskExpr AST nodes to src/ast.rs.</story>
+      <story id="E12-S3">Parse with-block syntax: with Type: ask pat = expr; body.</story>
+      <story id="E12-S4">Desugar with-blocks to bind chain: Type.bind(expr, |pat| body).</story>
+      <story id="E12-S5">Type-check with-blocks: verify bind and wrap methods exist on context type.</story>
+      <story id="E12-S6">Write tests for with-blocks with IO, Result, and Option contexts.</story>
+    </stories>
+    <definitionOfDone>
+      <item>with-blocks parse, desugar, type-check, and codegen correctly.</item>
+      <item>Works with IO, Result, and Option as context types.</item>
+      <item>At least 10 new tests.</item>
+    </definitionOfDone>
+  </epic>
+
+  <epic id="E13" name="Documentation and Migration Guides" priority="P1" phase="DELTA" workstream="WS7">
+    <dependsOn>E7 E8 E9 E10 E12</dependsOn>
+    <stories>
+      <story id="E13-S1">Update language tour with fold, reduce, comprehension, with-block, and linear examples.</story>
+      <story id="E13-S2">Update tensor guide with fusion behavior and parallel execution notes.</story>
+      <story id="E13-S3">Update CLI reference with all new -O flags and --enum-layout.</story>
+      <story id="E13-S4">Add "Optimizations" section to compiler documentation.</story>
+      <story id="E13-S5">Update from-python and from-pytorch migration guides with new syntax.</story>
+      <story id="E13-S6">Rebuild documentation.html.</story>
+    </stories>
+    <definitionOfDone>
+      <item>All new features documented with examples.</item>
+      <item>Migration guides updated.</item>
+      <item>documentation.html rebuilt and deployed.</item>
+    </definitionOfDone>
+  </epic>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PHASE EPSILON — ADVANCED / DEFERRED
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <epic id="E14" name="Advanced GPU Optimization Designs" priority="P2" phase="EPSILON" workstream="WS8">
+    <dependsOn>E7 E8</dependsOn>
+    <stories>
+      <story id="E14-S1">Write design document: GPU warp divergence branchless transform pass.</story>
+      <story id="E14-S2">Write design document: math-notation @math block syntax and parser.</story>
+      <story id="E14-S3">Write design document: shape-specialized function compilation (monomorphize for known shapes).</story>
+      <story id="E14-S4">Include performance projections and comparison benchmarks vs XLA/Triton.</story>
+    </stories>
+    <definitionOfDone>
+      <item>Design documents complete with architecture, data flow, pseudocode.</item>
+      <item>Performance projections include concrete target numbers.</item>
+      <item>No dead code introduced — designs only.</item>
+    </definitionOfDone>
+  </epic>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DEPENDENCY GRAPH SUMMARY
+       ═══════════════════════════════════════════════════════════════ -->
+  <dependencyGraph>
+    <edge from="E2" to="E1"/>
+    <edge from="E6" to="E2"/>
+    <edge from="E7" to="E2"/>
+    <edge from="E7" to="E6"/>
+    <edge from="E8" to="E2"/>
+    <edge from="E8" to="E7"/>
+    <edge from="E9" to="E1"/>
+    <edge from="E10" to="E1"/>
+    <edge from="E10" to="E7"/>
+    <edge from="E11" to="E2"/>
+    <edge from="E12" to="E9"/>
+    <edge from="E13" to="E7"/>
+    <edge from="E13" to="E8"/>
+    <edge from="E13" to="E9"/>
+    <edge from="E13" to="E10"/>
+    <edge from="E13" to="E12"/>
+    <edge from="E14" to="E7"/>
+    <edge from="E14" to="E8"/>
+    <!-- E3, E4, E5 have no blocking dependencies — can run in parallel with E1/E2 -->
+  </dependencyGraph>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       STORY COUNT SUMMARY
+       ═══════════════════════════════════════════════════════════════ -->
+  <summary>
+    <totalEpics>14</totalEpics>
+    <totalStories>82</totalStories>
+    <phase name="ALPHA" epics="5" stories="28"/>
+    <phase name="BETA" epics="4" stories="30"/>
+    <phase name="GAMMA" epics="2" stories="11"/>
+    <phase name="DELTA" epics="2" stories="9"/>
+    <phase name="EPSILON" epics="1" stories="4"/>
+    <estimatedNewTests>200+</estimatedNewTests>
+  </summary>
+</axonBendImplementationBacklog>

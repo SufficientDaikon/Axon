@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendBenchmarkHarness>
+  <metadata><purpose>Performance benchmark framework for tensor fusion, parallelism scaling, and compile-time overhead measurement</purpose></metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       BENCHMARK INFRASTRUCTURE
+       ═══════════════════════════════════════════════════════════════ -->
+  <infrastructure>
+    <tool name="Criterion" crate="criterion" version="0.5">
+      <description>Statistical benchmarking framework for Rust. Provides warmup, multiple iterations, outlier detection, and HTML reports.</description>
+      <setup>Add criterion = { version = "0.5", features = ["html_reports"] } to [dev-dependencies]. Add [[bench]] entries to Cargo.toml.</setup>
+    </tool>
+    <directory>benches/</directory>
+    <reportOutput>target/criterion/</reportOutput>
+    <ciIntegration>cargo bench -- --output-format bencher | tee bench-results.txt</ciIntegration>
+  </infrastructure>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FUSION BENCHMARKS
+       ═══════════════════════════════════════════════════════════════ -->
+  <benchmarkSuite id="BS-01" name="Tensor Fusion Throughput" file="benches/fusion_bench.rs">
+    <description>Compare fused vs unfused tensor operation throughput for each fusion pattern.</description>
+
+    <benchmark id="BM-01" name="linear_relu_fused_vs_unfused">
+      <description>matmul(A, B) + bias + relu: fused single-kernel vs 3 separate ops</description>
+      <setup>A: 256x256 f64, B: 256x256 f64, bias: 256 f64</setup>
+      <variants>
+        <variant name="unfused">matmul → add → relu (3 kernel calls, 2 intermediate tensors)</variant>
+        <variant name="fused">fused_linear_relu (1 kernel call, 0 intermediate tensors)</variant>
+      </variants>
+      <targetSpeedup>2x</targetSpeedup>
+      <metrics>ops/sec, memory_bandwidth_GB_s</metrics>
+    </benchmark>
+
+    <benchmark id="BM-02" name="mse_fused_vs_unfused">
+      <description>MSE loss: subtract + square + mean, fused vs unfused</description>
+      <setup>predicted: 1024 f64, target: 1024 f64</setup>
+      <variants>
+        <variant name="unfused">subtract → square → mean (3 ops, 2 intermediates)</variant>
+        <variant name="fused">fused_mse (1 op, 0 intermediates)</variant>
+      </variants>
+      <targetSpeedup>3x</targetSpeedup>
+      <metrics>ops/sec</metrics>
+    </benchmark>
+
+    <benchmark id="BM-03" name="softmax_ce_fused_vs_unfused">
+      <description>Softmax + cross-entropy: numerically stable fused vs naive unfused</description>
+      <setup>logits: 1024x10 f64, labels: 1024 i64</setup>
+      <variants>
+        <variant name="unfused">softmax → cross_entropy (2 ops, 1 intermediate)</variant>
+        <variant name="fused">fused_softmax_ce (1 op, 0 intermediates, log-sum-exp trick)</variant>
+      </variants>
+      <targetSpeedup>2x</targetSpeedup>
+      <metrics>ops/sec, numerical_stability</metrics>
+    </benchmark>
+
+    <benchmark id="BM-04" name="elementwise_chain_scaling">
+      <description>Chain of N element-wise ops on same-shaped tensor. Measure speedup as N grows.</description>
+      <setup>tensor: 10000 f64</setup>
+      <variants>
+        <variant name="unfused_2">2 separate element-wise ops</variant>
+        <variant name="unfused_5">5 separate element-wise ops</variant>
+        <variant name="unfused_10">10 separate element-wise ops</variant>
+        <variant name="fused_2">2 ops fused to single pass</variant>
+        <variant name="fused_5">5 ops fused to single pass</variant>
+        <variant name="fused_10">10 ops fused to single pass</variant>
+      </variants>
+      <targetSpeedup>3x for N=5, 5x for N=10</targetSpeedup>
+      <metrics>ops/sec, memory_reads_saved</metrics>
+    </benchmark>
+
+    <benchmark id="BM-05" name="broadcast_binary_fused_vs_unfused">
+      <description>broadcast + binary op: fused avoids materializing broadcasted tensor</description>
+      <setup>A: 1000x1 f64, B: 1x1000 f64</setup>
+      <variants>
+        <variant name="unfused">broadcast A to 1000x1000, then add B</variant>
+        <variant name="fused">fused_broadcast_add (compute on the fly)</variant>
+      </variants>
+      <targetSpeedup>2x (memory dominated)</targetSpeedup>
+      <metrics>ops/sec, peak_memory_MB</metrics>
+    </benchmark>
+  </benchmarkSuite>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PARALLELISM BENCHMARKS
+       ═══════════════════════════════════════════════════════════════ -->
+  <benchmarkSuite id="BS-02" name="Parallel Scaling" file="benches/parallel_bench.rs">
+    <description>Measure parallel speedup across thread counts for independent tensor workloads.</description>
+
+    <benchmark id="BM-06" name="independent_matmuls_scaling">
+      <description>N independent matrix multiplications dispatched to thread pool</description>
+      <setup>4 independent 512x512 f64 matmuls</setup>
+      <threadCounts>1, 2, 4, 8</threadCounts>
+      <targetScaling>
+        <target threads="2" speedup="1.8x"/>
+        <target threads="4" speedup="3.2x"/>
+        <target threads="8" speedup="5.0x"/>
+      </targetScaling>
+      <metrics>wall_time_ms, scaling_factor, efficiency_pct</metrics>
+    </benchmark>
+
+    <benchmark id="BM-07" name="dag_width_vs_speedup">
+      <description>Vary DAG width (number of independent ops) and measure scaling</description>
+      <setup>Tensor ops of fixed size, varying independence count: 1, 2, 4, 8, 16</setup>
+      <threadCount>4</threadCount>
+      <expected>Speedup grows with width up to thread count, then plateaus</expected>
+      <metrics>wall_time_ms, realized_parallelism</metrics>
+    </benchmark>
+
+    <benchmark id="BM-08" name="thread_pool_overhead">
+      <description>Measure dispatch/join overhead of thread pool vs direct sequential execution</description>
+      <setup>Single trivial operation (1x1 matmul) dispatched vs called directly</setup>
+      <expected>Overhead &lt; 50 microseconds per dispatch/join cycle</expected>
+      <metrics>overhead_us, breakeven_tensor_size</metrics>
+    </benchmark>
+
+    <benchmark id="BM-09" name="mixed_parallel_sequential">
+      <description>Realistic workload with mix of parallelizable and sequential ops</description>
+      <setup>Neural net forward pass: 2 independent branches merge at concat layer</setup>
+      <threadCounts>1, 2, 4</threadCounts>
+      <expected>~2x speedup on 4 cores for dual-branch architecture</expected>
+      <metrics>wall_time_ms, parallel_fraction</metrics>
+    </benchmark>
+  </benchmarkSuite>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       COMPILE-TIME BENCHMARKS
+       ═══════════════════════════════════════════════════════════════ -->
+  <benchmarkSuite id="BS-03" name="Compile Time Overhead" file="benches/compile_bench.rs">
+    <description>Measure compile-time overhead introduced by new MIR passes. Target: &lt; 15% total overhead.</description>
+
+    <benchmark id="BM-10" name="baseline_no_passes">
+      <description>Compile standard benchmark program with no optimization passes enabled</description>
+      <programs>
+        <program>Small: 50 lines, 3 functions</program>
+        <program>Medium: 200 lines, 15 functions, tensor ops</program>
+        <program>Large: 1000 lines, 50 functions, complex tensor pipeline</program>
+      </programs>
+      <metrics>compile_time_ms, peak_memory_MB</metrics>
+    </benchmark>
+
+    <benchmark id="BM-11" name="per_pass_overhead">
+      <description>Measure individual pass compile-time contribution</description>
+      <passes>dead_code, const_fold, linearize, float_combinators, fuse_ops, inline, parallelize</passes>
+      <programs>Medium benchmark program (200 lines)</programs>
+      <expected>No single pass adds &gt; 5% overhead</expected>
+      <metrics>pass_time_ms, percentage_of_total</metrics>
+    </benchmark>
+
+    <benchmark id="BM-12" name="all_passes_combined">
+      <description>Compile with all passes enabled — measure total overhead</description>
+      <programs>Medium + Large benchmark programs</programs>
+      <target>&lt; 15% total overhead vs no-pass baseline</target>
+      <metrics>compile_time_ms, overhead_pct</metrics>
+    </benchmark>
+  </benchmarkSuite>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MEMORY BENCHMARKS
+       ═══════════════════════════════════════════════════════════════ -->
+  <benchmarkSuite id="BS-04" name="Memory Usage" file="benches/memory_bench.rs">
+    <description>Track peak memory usage for compilation and for runtime tensor operations.</description>
+
+    <benchmark id="BM-13" name="compiler_memory">
+      <description>Peak RSS during compilation with all passes enabled</description>
+      <programs>Large benchmark program (1000 lines)</programs>
+      <target>&lt; 2x baseline memory usage</target>
+      <metrics>peak_rss_MB, allocations_count</metrics>
+    </benchmark>
+
+    <benchmark id="BM-14" name="fusion_memory_savings">
+      <description>Runtime peak memory with fused vs unfused: measure intermediate tensor elimination</description>
+      <programs>Element-wise chain of 10 ops on 1M element tensor</programs>
+      <expected>Fused uses ~1/10th the intermediate memory</expected>
+      <metrics>peak_runtime_memory_MB, intermediate_tensors_allocated</metrics>
+    </benchmark>
+
+    <benchmark id="BM-15" name="interner_memory">
+      <description>NameInterner memory usage vs baseline String identifiers</description>
+      <programs>Program with 10,000 unique identifiers</programs>
+      <expected>Interner uses less memory due to deduplication</expected>
+      <metrics>interner_arena_bytes, baseline_string_bytes, ratio</metrics>
+    </benchmark>
+  </benchmarkSuite>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       NUMERICAL EQUIVALENCE TESTS
+       ═══════════════════════════════════════════════════════════════ -->
+  <numericalEquivalence>
+    <description>All fusion patterns must produce results within epsilon of unfused computation. This is a correctness requirement, not a performance benchmark.</description>
+    <epsilon>1e-6</epsilon>
+    <testMatrix>
+      <test pattern="linear_relu" inputs="random_normal(256,256), random_normal(256,256), random_normal(256)" runs="1000"/>
+      <test pattern="mse" inputs="random_normal(1024), random_normal(1024)" runs="1000"/>
+      <test pattern="softmax_ce" inputs="random_normal(1024,10), random_int(1024, 0, 10)" runs="1000"/>
+      <test pattern="elementwise_chain" inputs="random_normal(10000)" runs="1000"/>
+      <test pattern="broadcast_binary" inputs="random_normal(1000,1), random_normal(1,1000)" runs="1000"/>
+    </testMatrix>
+    <edgeCases>
+      <case>Very large values (1e38)</case>
+      <case>Very small values (1e-38, subnormal)</case>
+      <case>NaN propagation</case>
+      <case>Infinity propagation</case>
+      <case>Zero-element tensors</case>
+      <case>Single-element tensors</case>
+    </edgeCases>
+  </numericalEquivalence>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       BENCHMARK REPORTING
+       ═══════════════════════════════════════════════════════════════ -->
+  <reporting>
+    <format>JSON + HTML (Criterion default)</format>
+    <storage>target/criterion/ (local), golden-runs/ (committed baselines)</storage>
+    <regressionDetection>
+      <policy>Any benchmark regressing &gt; 10% from golden baseline triggers CI warning.</policy>
+      <policy>Any benchmark regressing &gt; 20% blocks merge.</policy>
+    </regressionDetection>
+    <baselineCapture>
+      <command>cargo bench -- --save-baseline {phase_name}</command>
+      <command>cp target/criterion/*/new/estimates.json golden-runs/{phase_name}-bench.json</command>
+    </baselineCapture>
+  </reporting>
+</axonBendBenchmarkHarness>

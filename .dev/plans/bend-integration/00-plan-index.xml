@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendIntegrationIndex>
+  <metadata>
+    <project>AXON</project>
+    <planName>Bend Ideas Integration</planName>
+    <targetVersion>0.2.0-alpha</targetVersion>
+    <planningMode>FeatureIntegrationFromResearch</planningMode>
+    <status>Execution-Ready-Draft</status>
+    <primaryExecutor>Claude-family agent with tool access</primaryExecutor>
+    <sourceAnalysis>docs/reports/bend-analysis.html</sourceAnalysis>
+    <baselineTests>1034</baselineTests>
+    <created>2026-03-14</created>
+  </metadata>
+
+  <documents>
+    <document id="00" file="00-plan-index.xml"            purpose="Master index, reading order, and execution directives"/>
+    <document id="01" file="01-master-strategy.xml"        purpose="Vision, transformation pillars, success metrics, and SOTA positioning"/>
+    <document id="02" file="02-capability-matrix.xml"      purpose="Bend feature to Axon integration mapping with feasibility and impact scores"/>
+    <document id="03" file="03-architecture-blueprint.xml" purpose="Target architecture, compiler pipeline extensions, and data flow contracts"/>
+    <document id="04" file="04-workstreams-and-milestones.xml" purpose="8 workstreams, dependency graph, acceptance gates, and execution prompts"/>
+    <document id="05" file="05-implementation-backlog.xml" purpose="Epic-level executable backlog with stories, dependencies, and definition-of-done"/>
+    <document id="06" file="06-claude-execution-playbook.xml" purpose="Claude-optimized execution protocol, context budgets, and phase handoff schema"/>
+    <document id="07" file="07-prompt-library.xml"         purpose="Ready-to-run prompt templates per workstream, 9-field Hybrid-CO-STAR format"/>
+    <document id="08" file="08-context-governance.xml"     purpose="Context lifecycle, handoff packets, compression policy, and token budget rules"/>
+    <document id="09" file="09-validation-and-testing.xml" purpose="Snapshot testing strategy, golden-run baselines, stress and regression suites"/>
+    <document id="10" file="10-gates-scorecard.xml"        purpose="Release-readiness scorecard with hard stop/go criteria per phase"/>
+    <document id="11" file="11-traceability-matrix.xml"    purpose="Recommendation-to-epic-to-test-to-gate full traceability"/>
+    <document id="12" file="12-risk-register.xml"          purpose="Risk identification, mitigation strategies, and residual risk tracking"/>
+    <document id="13" file="13-benchmark-harness.xml"      purpose="Performance benchmark framework for tensor ops, fusion, and parallelism"/>
+    <document id="14" file="14-decision-records.xml"       purpose="Architectural decision records for key integration choices"/>
+    <document id="15" file="15-plan-schema-and-ci.xml"     purpose="XSD schema and CI quality enforcement for plan documents"/>
+  </documents>
+
+  <recommendedReadOrder>
+    <step>Read 01 (strategy) and 06 (execution playbook) first to align on vision and execution behavior.</step>
+    <step>Read 02 (capability matrix) and 03 (architecture) to understand what we're building and where it fits.</step>
+    <step>Read 04 (workstreams) and 05 (backlog) to see the full work breakdown and dependency graph.</step>
+    <step>Use 07 (prompts) and 08 (context governance) continuously during execution for quality and stability.</step>
+    <step>Use 09 (validation), 10 (gates), and 11 (traceability) as non-negotiable quality and release gates.</step>
+    <step>Consult 12 (risks), 13 (benchmarks), and 14 (decisions) as living references throughout.</step>
+  </recommendedReadOrder>
+
+  <executionDirectives>
+    <directive>Axon's existing 1,034 tests are the mandatory regression baseline — no plan phase may reduce test count.</directive>
+    <directive>All code changes must compile with zero warnings and pass full cargo test before marking any story complete.</directive>
+    <directive>Context budget per execution phase: max 80K tokens. Use handoff packets between phases.</directive>
+    <directive>Each workstream must produce at least one snapshot/golden-run test as evidence of correctness.</directive>
+    <directive>Bend ideas are adapted to Axon's paradigm (imperative, ownership-based, LLVM-targeting) — never copy Bend's implementation directly.</directive>
+    <directive>GPU codegen features (Phases C/E) are deferred until MLIR pipeline is operational — plan them but do not block on them.</directive>
+  </executionDirectives>
+
+  <nonNegotiables>
+    <rule id="NN1">No backward-incompatible syntax changes without full test migration.</rule>
+    <rule id="NN2">No new compiler pass may increase compile time by more than 15% without documented justification.</rule>
+    <rule id="NN3">Every new MIR transform pass must have unit tests AND integration tests.</rule>
+    <rule id="NN4">Operator fusion correctness must be verified by numerical equivalence tests (epsilon &lt; 1e-6).</rule>
+    <rule id="NN5">All plan XML documents must validate against the XSD schema before merge.</rule>
+  </nonNegotiables>
+</axonBendIntegrationIndex>

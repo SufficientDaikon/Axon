@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendGatesScorecard>
+  <metadata><purpose>Release-readiness scorecard with hard stop/go criteria per phase. Every gate must pass before proceeding to the next phase.</purpose></metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCORECARD STRUCTURE
+       ═══════════════════════════════════════════════════════════════ -->
+  <scoringRules>
+    <rule>HARD gates: binary pass/fail. ALL must pass. Any failure blocks phase exit.</rule>
+    <rule>SOFT gates: scored 0-3. Average must be >= 2.0. Individual scores >= 1 required.</rule>
+    <rule>Scoring: 0=Not started, 1=Partial/Deficient, 2=Meets expectations, 3=Exceeds expectations.</rule>
+    <rule>Phase exit requires: ALL hard gates pass AND soft gate average >= 2.0.</rule>
+  </scoringRules>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ALPHA GATE — INFRASTRUCTURE FOUNDATION
+       ═══════════════════════════════════════════════════════════════ -->
+  <gate phase="ALPHA" name="Infrastructure Foundation">
+    <hardGates>
+      <gate id="A-H1" criterion="All 1,034 existing tests pass" evidence="cargo test output" status="pending"/>
+      <gate id="A-H2" criterion="cargo build produces 0 warnings" evidence="cargo build output" status="pending"/>
+      <gate id="A-H3" criterion="Diagnostics accumulate errors across parser + typeck" evidence="Integration test showing 3+ errors in single compilation" status="pending"/>
+      <gate id="A-H4" criterion="fatal() returns Ok with no errors, Err with errors" evidence="Unit test output" status="pending"/>
+      <gate id="A-H5" criterion="PassManager runs dead_code + const_fold in sequence" evidence="Integration test with both passes enabled" status="pending"/>
+      <gate id="A-H6" criterion="Dead code elimination removes unreachable functions" evidence="MIR dump before/after comparison" status="pending"/>
+      <gate id="A-H7" criterion="Constant folding evaluates 2+3 at compile time" evidence="MIR dump showing constant result" status="pending"/>
+      <gate id="A-H8" criterion="CLI flags --warn/--deny/--allow parsed and applied" evidence="Test with --deny producing error" status="pending"/>
+      <gate id="A-H9" criterion="-Odead-code and -Oconst-fold flags toggle passes" evidence="Test with flag on vs off" status="pending"/>
+    </hardGates>
+    <softGates>
+      <gate id="A-S1" criterion="Diagnostic display quality (colors, grouping, spans)" maxScore="3" score="0" status="pending"/>
+      <gate id="A-S2" criterion="Snapshot test coverage (target: 30+)" maxScore="3" score="0" status="pending"/>
+      <gate id="A-S3" criterion="New test count (target: 50+ new tests)" maxScore="3" score="0" status="pending"/>
+      <gate id="A-S4" criterion="Documentation quality (.dev/ files updated)" maxScore="3" score="0" status="pending"/>
+      <gate id="A-S5" criterion="Code quality (no clippy warnings, consistent style)" maxScore="3" score="0" status="pending"/>
+    </softGates>
+    <exitCriteria>
+      <hardPassed>0/9</hardPassed>
+      <softAverage>0.0/3.0</softAverage>
+      <decision>BLOCKED</decision>
+    </exitCriteria>
+  </gate>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       BETA GATE — CORE TENSOR OPTIMIZATIONS
+       ═══════════════════════════════════════════════════════════════ -->
+  <gate phase="BETA" name="Core Tensor Optimizations">
+    <hardGates>
+      <gate id="B-H1" criterion="All tests pass (baseline + ALPHA additions)" evidence="cargo test output" status="pending"/>
+      <gate id="B-H2" criterion="Linear+relu fusion produces correct output" evidence="Numerical equivalence test (epsilon &lt; 1e-6)" status="pending"/>
+      <gate id="B-H3" criterion="MSE fusion produces correct output" evidence="Numerical equivalence test" status="pending"/>
+      <gate id="B-H4" criterion="Softmax+CE fusion produces correct output" evidence="Numerical equivalence test" status="pending"/>
+      <gate id="B-H5" criterion="Element-wise chain fusion >= 3x throughput" evidence="Criterion benchmark output" status="pending"/>
+      <gate id="B-H6" criterion="Parallel execution results == sequential results" evidence="1000-run comparison test" status="pending"/>
+      <gate id="B-H7" criterion="Parallel scaling >= 2x on 4 cores" evidence="Scaling benchmark output" status="pending"/>
+      <gate id="B-H8" criterion="Fusion does not cross control flow boundaries" evidence="Test with if/else between ops" status="pending"/>
+      <gate id="B-H9" criterion="Side-effecting ops never parallelized" evidence="Test with print in parallel region" status="pending"/>
+      <gate id="B-H10" criterion="fold/reduce/comprehension parse, typecheck, codegen correctly" evidence="Integration tests" status="pending"/>
+      <gate id="B-H11" criterion="Compile time overhead &lt; 15% with all passes enabled" evidence="Compile benchmark" status="pending"/>
+    </hardGates>
+    <softGates>
+      <gate id="B-S1" criterion="Fusion pattern coverage (5 patterns target)" maxScore="3" score="0" status="pending"/>
+      <gate id="B-S2" criterion="New test count (target: 100+ new in BETA)" maxScore="3" score="0" status="pending"/>
+      <gate id="B-S3" criterion="Benchmark quality and reproducibility" maxScore="3" score="0" status="pending"/>
+      <gate id="B-S4" criterion="MIR dump readability for fused/parallel ops" maxScore="3" score="0" status="pending"/>
+      <gate id="B-S5" criterion="Error message quality for new constructs" maxScore="3" score="0" status="pending"/>
+    </softGates>
+    <exitCriteria>
+      <hardPassed>0/11</hardPassed>
+      <softAverage>0.0/3.0</softAverage>
+      <decision>BLOCKED</decision>
+    </exitCriteria>
+  </gate>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       GAMMA GATE — TYPE SYSTEM EXTENSIONS
+       ═══════════════════════════════════════════════════════════════ -->
+  <gate phase="GAMMA" name="Type System Extensions">
+    <hardGates>
+      <gate id="G-H1" criterion="All tests pass (baseline + ALPHA + BETA additions)" evidence="cargo test" status="pending"/>
+      <gate id="G-H2" criterion="linear annotation enforces exactly-once use" evidence="Multi-use error test" status="pending"/>
+      <gate id="G-H3" criterion="Zero-copy verified on 5+ tensor patterns" evidence="Allocation tracking tests" status="pending"/>
+      <gate id="G-H4" criterion="Non-linear params completely unaffected by linearity" evidence="Existing borrow tests pass unchanged" status="pending"/>
+      <gate id="G-H5" criterion="--enum-layout flag produces different codegen" evidence="LLVM IR diff for tagged vs packed" status="pending"/>
+      <gate id="G-H6" criterion="Default enum layout behavior unchanged" evidence="All existing enum tests pass" status="pending"/>
+    </hardGates>
+    <softGates>
+      <gate id="G-S1" criterion="Linearity error message quality" maxScore="3" score="0" status="pending"/>
+      <gate id="G-S2" criterion="ADT layout benchmark results" maxScore="3" score="0" status="pending"/>
+      <gate id="G-S3" criterion="New test count (target: 30+ new in GAMMA)" maxScore="3" score="0" status="pending"/>
+    </softGates>
+    <exitCriteria>
+      <hardPassed>0/6</hardPassed>
+      <softAverage>0.0/3.0</softAverage>
+      <decision>BLOCKED</decision>
+    </exitCriteria>
+  </gate>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DELTA GATE — LANGUAGE ERGONOMICS
+       ═══════════════════════════════════════════════════════════════ -->
+  <gate phase="DELTA" name="Language Ergonomics">
+    <hardGates>
+      <gate id="D-H1" criterion="All tests pass (baseline + all prior additions)" evidence="cargo test" status="pending"/>
+      <gate id="D-H2" criterion="with-blocks parse, typecheck, codegen correctly" evidence="Integration tests for Result/Option" status="pending"/>
+      <gate id="D-H3" criterion="All new features documented with code examples" evidence="documentation.html rebuilt" status="pending"/>
+      <gate id="D-H4" criterion="Migration guides updated for new syntax" evidence="from-python, from-pytorch updated" status="pending"/>
+      <gate id="D-H5" criterion="CLI reference includes all new -O flags" evidence="cli-reference.md updated" status="pending"/>
+    </hardGates>
+    <softGates>
+      <gate id="D-S1" criterion="with-block error message quality" maxScore="3" score="0" status="pending"/>
+      <gate id="D-S2" criterion="Documentation completeness" maxScore="3" score="0" status="pending"/>
+      <gate id="D-S3" criterion="Total new test count (target: 200+)" maxScore="3" score="0" status="pending"/>
+    </softGates>
+    <exitCriteria>
+      <hardPassed>0/5</hardPassed>
+      <softAverage>0.0/3.0</softAverage>
+      <decision>BLOCKED</decision>
+    </exitCriteria>
+  </gate>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EPSILON GATE — ADVANCED / DEFERRED
+       ═══════════════════════════════════════════════════════════════ -->
+  <gate phase="EPSILON" name="Advanced GPU Optimization">
+    <hardGates>
+      <gate id="E-H1" criterion="Design documents complete for all 3 advanced features" evidence="Documents in .dev/" status="pending"/>
+      <gate id="E-H2" criterion="Performance projections include concrete target numbers" evidence="Projections section in each doc" status="pending"/>
+      <gate id="E-H3" criterion="No dead code introduced — designs only" evidence="cargo test unchanged" status="pending"/>
+    </hardGates>
+    <softGates>
+      <gate id="E-S1" criterion="Design document quality and feasibility" maxScore="3" score="0" status="pending"/>
+      <gate id="E-S2" criterion="Comparison benchmarks vs XLA/Triton included" maxScore="3" score="0" status="pending"/>
+    </softGates>
+    <exitCriteria>
+      <hardPassed>0/3</hardPassed>
+      <softAverage>0.0/3.0</softAverage>
+      <decision>BLOCKED</decision>
+    </exitCriteria>
+  </gate>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CUMULATIVE SCORECARD
+       ═══════════════════════════════════════════════════════════════ -->
+  <cumulativeScorecard>
+    <metric name="Total Hard Gates" count="34" passed="0"/>
+    <metric name="Total Soft Gates" count="18" avgScore="0.0"/>
+    <metric name="Test Baseline" current="1034" target="1234+"/>
+    <metric name="Snapshot Count" current="0" target="100+"/>
+    <metric name="Fusion Patterns" current="0" target="5"/>
+    <metric name="Zero Copy Patterns" current="0" target="5"/>
+    <metric name="Compile Overhead" current="0%" target="&lt;15%"/>
+    <overallReadiness>NOT STARTED</overallReadiness>
+  </cumulativeScorecard>
+</axonBendGatesScorecard>

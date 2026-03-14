@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendPromptLibrary>
+  <metadata><purpose>Ready-to-execute prompt templates for each major epic, following Hybrid-CO-STAR-RISEN-TIDD-EC format</purpose></metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E1 — ACCUMULATIVE DIAGNOSTICS SYSTEM
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E1" epic="E1" workstream="WS1" phase="ALPHA">
+    <context>
+      Axon compiler at h:/programing language/axon/. Pipeline: Lexer→Parser→TypeChecker→TAST→MIR→LLVM IR→binary.
+      Current error handling: early-exit on first error in each phase (parser returns Result, typeck returns Result).
+      Orchestrator: src/lib.rs check_source_full(). Test baseline: 1,034 tests. Zero warnings on cargo build.
+      Key files: src/lib.rs, src/parser.rs, src/typeck.rs, src/mir.rs, src/codegen/llvm.rs.
+    </context>
+    <role>Compiler infrastructure engineer specializing in diagnostic systems for programming language compilers.</role>
+    <objective>Create src/diagnostics.rs with an accumulative Diagnostics collector that replaces early-exit error handling across all compiler phases, enabling multiple errors to be reported in a single compilation.</objective>
+    <instructions>
+      <step>1. Read src/lib.rs to understand check_source_full() orchestration and current error flow.</step>
+      <step>2. Read src/parser.rs error handling — find all early-exits (return Err, ?).</step>
+      <step>3. Read src/typeck.rs error handling — find all early-exits.</step>
+      <step>4. Design Diagnostics struct: Vec of Diagnostic entries, each with Severity, source span, message, error code, suggestion.</step>
+      <step>5. Design DiagnosticConfig: per-category severity overrides (--warn, --deny, --allow).</step>
+      <step>6. Implement fatal() checkpoint: returns Err only if any Error-severity diagnostics accumulated.</step>
+      <step>7. Implement display: ANSI-colored, grouped by file then phase, with source spans and suggestions.</step>
+      <step>8. Wire Diagnostics into lib.rs — pass &amp;mut Diagnostics to parser, typeck. Call fatal() between phases.</step>
+      <step>9. Add CLI flags --warn, --deny, --allow to src/main.rs.</step>
+      <step>10. Write 15+ unit tests for accumulation, fatal(), severity override, display formatting.</step>
+    </instructions>
+    <dos>
+      <do>Keep Diagnostics as a simple Vec-based collector — no complex data structures.</do>
+      <do>Preserve ALL existing error messages — just change how they're collected and displayed.</do>
+      <do>Run cargo test after every major change. All 1,034 tests must pass.</do>
+      <do>Use #[cfg(test)] mod tests block in diagnostics.rs for unit tests.</do>
+      <do>Make fatal() return Result&lt;(), Vec&lt;Diagnostic&gt;&gt; for clean error propagation.</do>
+    </dos>
+    <donts>
+      <dont>Don't modify error messages — only change the collection mechanism.</dont>
+      <dont>Don't introduce thread-safety requirements yet (single-threaded compilation).</dont>
+      <dont>Don't remove any existing error handling code — layer diagnostics on top first.</dont>
+      <dont>Don't read the entire codebase. Use targeted grep for error patterns.</dont>
+    </donts>
+    <evidence>
+      <item>cargo test output showing 1,034+ tests passing (0 failures).</item>
+      <item>New test output showing diagnostics accumulate across parser + typeck.</item>
+      <item>Example compilation showing multiple errors in one pass.</item>
+    </evidence>
+    <responseFormat>
+      FILES_CREATED: [list]
+      FILES_MODIFIED: [list with line ranges]
+      TESTS_ADDED: [count and names]
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E2 — MIR TRANSFORM PASS ARCHITECTURE
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E2" epic="E2" workstream="WS1" phase="ALPHA">
+    <context>
+      Diagnostics system (E1) is complete. Axon MIR defined in src/mir.rs — CFG-based IR with basic blocks,
+      MirFunction, MirProgram. Codegen reads MIR directly. No optimization passes exist yet.
+      Key files: src/mir.rs (MIR types), src/lib.rs (pipeline), src/codegen/llvm.rs (codegen).
+    </context>
+    <role>Compiler optimization engineer specializing in pass manager design and MIR transformations.</role>
+    <objective>Create src/mir/transform/ module with Pass trait, PassManager, dead code elimination, and constant folding passes — establishing the infrastructure for all future MIR optimizations.</objective>
+    <instructions>
+      <step>1. Read src/mir.rs to understand MirProgram, MirFunction, MirBasicBlock, MirStatement, MirValue types.</step>
+      <step>2. Create src/mir/transform/mod.rs with Pass trait: fn name() -&gt; &amp;str; fn run(&amp;mut MirProgram, &amp;mut Diagnostics).</step>
+      <step>3. Create PassManager: ordered Vec of Box&lt;dyn Pass&gt;, optimize() method runs each in order.</step>
+      <step>4. Add OptimizationConfig struct: bool flags for each pass, parsed from CLI.</step>
+      <step>5. Create src/mir/transform/dead_code.rs: build call graph from MIR, BFS from main, remove unreachable functions.</step>
+      <step>6. Create src/mir/transform/const_fold.rs: walk statements, evaluate constant binary ops at compile time.</step>
+      <step>7. Integrate PassManager in lib.rs between TAST→MIR lowering and LLVM codegen.</step>
+      <step>8. Add -Odead-code, -Oconst-fold, -Oall CLI flags to src/main.rs.</step>
+      <step>9. Write 20+ tests: PassManager ordering, dead code removal, constant folding correctness.</step>
+    </instructions>
+    <dos>
+      <do>Make Pass trait object-safe for dynamic dispatch in PassManager.</do>
+      <do>Each pass receives &amp;mut MirProgram — mutates in place for efficiency.</do>
+      <do>Dead code pass should warn (not error) for unreachable user functions.</do>
+      <do>Const fold should handle integer overflow gracefully (wrap or warn).</do>
+    </dos>
+    <donts>
+      <dont>Don't implement fusion or parallelism passes yet — those are BETA phase.</dont>
+      <dont>Don't change MIR data structures — add new variants only if needed for pass results.</dont>
+      <dont>Don't make passes depend on each other — each must work independently.</dont>
+    </donts>
+    <evidence>
+      <item>cargo test showing all tests pass with PassManager integrated.</item>
+      <item>Test program with dead function — verify it's eliminated from MIR.</item>
+      <item>Test program with constant expression — verify compile-time evaluation.</item>
+    </evidence>
+    <responseFormat>
+      FILES_CREATED: [list]
+      FILES_MODIFIED: [list with line ranges]
+      TESTS_ADDED: [count and names]
+      PASS_ORDER: [ordered list of registered passes]
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E5 — SNAPSHOT TESTING INFRASTRUCTURE
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E5" epic="E5" workstream="WS2" phase="ALPHA">
+    <context>
+      Axon has 1,034+ tests but no snapshot/golden testing. Error messages, parser output, MIR dumps, and
+      LLVM IR are currently tested via string assertions that are fragile and hard to update.
+      Key files: tests/ directory (existing integration tests), src/parser.rs, src/typeck.rs, src/mir.rs.
+    </context>
+    <role>Test infrastructure engineer specializing in snapshot testing and golden-file verification systems.</role>
+    <objective>Establish insta-based snapshot testing covering parse output, type errors, MIR dumps, LLVM IR, and error messages — at least 100 snapshot tests total.</objective>
+    <instructions>
+      <step>1. Add insta = "1.34" to [dev-dependencies] in Cargo.toml.</step>
+      <step>2. Create tests/snapshot_tests.rs with helper functions to compile .axon snippets to various stages.</step>
+      <step>3. Create tests/snapshots/ with subdirectories: parse/, typecheck/, mir/, llvm_ir/, errors/.</step>
+      <step>4. Write 40+ error message snapshots covering all major error codes.</step>
+      <step>5. Write 30+ parser output snapshots for all syntax constructs.</step>
+      <step>6. Write 20+ MIR dump snapshots for key code patterns.</step>
+      <step>7. Write 10+ LLVM IR snapshots for codegen verification.</step>
+      <step>8. Run cargo insta test to generate initial snapshots, then cargo insta review to approve.</step>
+    </instructions>
+    <dos>
+      <do>Use insta::assert_snapshot! for string output and insta::assert_debug_snapshot! for structured data.</do>
+      <do>Name snapshots descriptively: "parse_function_with_pipe_operator", "error_type_mismatch_int_float".</do>
+      <do>Include both valid and invalid programs as test inputs.</do>
+      <do>Document the snapshot workflow in .dev/SNAPSHOT_TESTING.md.</do>
+    </dos>
+    <donts>
+      <dont>Don't modify any existing tests — snapshot tests are additive.</dont>
+      <dont>Don't snapshot internal implementation details that change frequently.</dont>
+      <dont>Don't check in unapproved snapshots — always run cargo insta review.</dont>
+    </donts>
+    <evidence>
+      <item>cargo insta test showing 100+ snapshots passing.</item>
+      <item>Snapshot files in tests/snapshots/ directory.</item>
+      <item>.dev/SNAPSHOT_TESTING.md with workflow documentation.</item>
+    </evidence>
+    <responseFormat>
+      FILES_CREATED: [list]
+      SNAPSHOT_COUNTS: {parse: N, typecheck: N, mir: N, llvm_ir: N, errors: N}
+      TOTAL_SNAPSHOTS: N
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E7 — TENSOR OPERATION FUSION
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E7" epic="E7" workstream="WS3" phase="BETA">
+    <context>
+      PassManager (E2) and combinator floating (E6) are complete. MIR has TensorOp variants for matmul,
+      add, relu, subtract, square, mean, softmax, cross_entropy, and element-wise ops.
+      Runtime (src/codegen/runtime.rs) has C implementations for individual tensor ops.
+      Key files: src/mir.rs, src/mir/transform/mod.rs, src/codegen/runtime.rs, src/codegen/llvm.rs.
+    </context>
+    <role>ML compiler engineer specializing in operator fusion and kernel optimization for tensor compilers.</role>
+    <objective>Implement 5 tensor fusion patterns that detect and replace tensor operation chains with fused kernel calls, achieving 3x+ throughput on element-wise chains.</objective>
+    <instructions>
+      <step>1. Read src/mir.rs to understand TensorOp variants and tensor operation representation.</step>
+      <step>2. Create src/mir/transform/fuse_ops.rs with FusionPattern trait and pattern registry.</step>
+      <step>3. Implement pattern 1: matmul+add+relu → fused_linear_relu (detect 3-op sequence in basic block).</step>
+      <step>4. Implement pattern 2: subtract+square+mean → fused_mse (MSE loss computation).</step>
+      <step>5. Implement pattern 3: softmax+cross_entropy → fused_softmax_ce (numerically stable).</step>
+      <step>6. Implement pattern 4: N consecutive element-wise ops on same shape → single-pass kernel.</step>
+      <step>7. Implement pattern 5: broadcast+binary_op → fused broadcast-binary.</step>
+      <step>8. Add fused kernel C implementations to src/codegen/runtime.rs.</step>
+      <step>9. Add MIR TensorOp::Fused* variants for each pattern.</step>
+      <step>10. Update src/codegen/llvm.rs to emit calls to fused runtime functions.</step>
+      <step>11. Write numerical equivalence tests: |fused - unfused| &lt; 1e-6.</step>
+      <step>12. Write criterion benchmarks for fused vs unfused throughput.</step>
+      <step>13. Add -Ofuse-ops CLI flag.</step>
+    </instructions>
+    <dos>
+      <do>Pattern match on basic block statement sequences — no cross-block fusion.</do>
+      <do>Verify numerical equivalence for EVERY fusion pattern with edge cases (NaN, Inf, zero-element).</do>
+      <do>Make each pattern independently disableable for debugging.</do>
+      <do>Document fusion decisions in MIR dump output when --verbose.</do>
+    </dos>
+    <donts>
+      <dont>Don't fuse across control flow boundaries (if/else, loops).</dont>
+      <dont>Don't fuse operations with side effects (print, file IO).</dont>
+      <dont>Don't reorder floating-point operations in ways that change results beyond epsilon.</dont>
+      <dont>Don't assume tensor shapes — validate shape compatibility before fusing.</dont>
+    </donts>
+    <evidence>
+      <item>Numerical equivalence tests passing for all 5 patterns.</item>
+      <item>Criterion benchmark showing &gt;=3x throughput for element-wise chain fusion.</item>
+      <item>MIR dump showing fused ops replacing unfused sequences.</item>
+    </evidence>
+    <responseFormat>
+      FILES_CREATED: [list]
+      FILES_MODIFIED: [list with line ranges]
+      FUSION_PATTERNS: [{name, ops_matched, fused_call}]
+      BENCHMARK_RESULT: {pattern, unfused_ops_sec, fused_ops_sec, speedup}
+      TESTS_ADDED: [count]
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E8 — AUTOMATIC TENSOR PARALLELISM
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E8" epic="E8" workstream="WS4" phase="BETA">
+    <context>
+      PassManager (E2) and fusion (E7) are complete. MIR has tensor operations with known data dependencies.
+      No parallelism exists — all ops execute sequentially. Target is CPU-level parallelism via thread pool.
+      Windows is primary platform — must handle Windows threading (CreateThread or C11 threads).
+      Key files: src/mir.rs, src/mir/transform/mod.rs, src/codegen/runtime.rs, src/codegen/llvm.rs.
+    </context>
+    <role>Parallel computing engineer specializing in automatic parallelization and dependency analysis for compilers.</role>
+    <objective>Implement automatic tensor parallelism that detects independent tensor operations via DAG analysis and dispatches them to a thread pool, achieving 2x+ scaling on 4 cores.</objective>
+    <instructions>
+      <step>1. Read src/mir.rs to understand tensor op representation and data flow.</step>
+      <step>2. Create src/mir/transform/parallelize.rs with tensor operation DAG builder.</step>
+      <step>3. Implement dependency analysis: track read/write sets per tensor operation.</step>
+      <step>4. Build DAG: nodes = tensor ops, edges = data dependencies between them.</step>
+      <step>5. Topological sort. Find "width-2+" levels (ops at same level are independent).</step>
+      <step>6. Annotate MIR with ParallelRegion { ops: Vec, join_point } markers.</step>
+      <step>7. Add thread pool to runtime.rs: axon_parallel_dispatch(fn_ptrs[], n), axon_parallel_join().</step>
+      <step>8. Use platform-agnostic threading (#ifdef _WIN32 for CreateThread, else pthreads).</step>
+      <step>9. Update LLVM codegen to emit parallel dispatch for ParallelRegion nodes.</step>
+      <step>10. Write correctness tests: parallel results == sequential results.</step>
+      <step>11. Write scaling benchmarks on 1, 2, 4, 8 threads.</step>
+      <step>12. Add -Oparallelize CLI flag.</step>
+    </instructions>
+    <dos>
+      <do>Only parallelize PURE operations — no side effects, no shared mutable state.</do>
+      <do>Conservative dependency analysis — when in doubt, assume dependency exists.</do>
+      <do>Provide sequential fallback for platforms where threading is unavailable.</do>
+      <do>Test on Windows specifically — this is the primary development platform.</do>
+    </dos>
+    <donts>
+      <dont>Don't parallelize operations with side effects (print, file IO, RNG).</dont>
+      <dont>Don't use pthreads directly on Windows — use platform abstraction.</dont>
+      <dont>Don't parallelize when overhead exceeds benefit (small tensors).</dont>
+      <dont>Don't introduce non-determinism — parallel results must be bit-identical to sequential.</dont>
+    </donts>
+    <evidence>
+      <item>Test showing parallel results == sequential results for 1000 runs.</item>
+      <item>Scaling benchmark: &gt;=2x on 4 cores for independent matmul workloads.</item>
+      <item>Windows build and test passing with thread pool.</item>
+    </evidence>
+    <responseFormat>
+      FILES_CREATED: [list]
+      FILES_MODIFIED: [list with line ranges]
+      PARALLELISM_STATS: {regions_found, avg_width, max_width}
+      SCALING_RESULT: {1_core, 2_core, 4_core, 8_core}
+      TESTS_ADDED: [count]
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E9 — FOLD/REDUCE AND COMPREHENSIONS
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E9" epic="E9" workstream="WS5" phase="BETA">
+    <context>
+      Diagnostics (E1) complete. Axon has for loops (C-style), iterators, Vec and Tensor types.
+      No fold/reduce syntax or comprehension syntax exists. Currently users write explicit loops.
+      Key files: src/token.rs, src/ast.rs, src/parser.rs, src/typeck.rs, src/mir.rs, src/codegen/llvm.rs.
+    </context>
+    <role>Programming language designer specializing in functional programming constructs and iterator abstractions.</role>
+    <objective>Add fold, reduce, and comprehension syntax to Axon — parse, type-check, lower to MIR, and generate correct code for all three constructs.</objective>
+    <instructions>
+      <step>1. Add Fold and Reduce tokens to src/token.rs and keyword lookup.</step>
+      <step>2. Add FoldExpr, ReduceExpr, Comprehension AST nodes to src/ast.rs.</step>
+      <step>3. Parse fold: fold(init, collection, |acc, elem| body).</step>
+      <step>4. Parse reduce: reduce(collection, |acc, elem| body).</step>
+      <step>5. Parse comprehension: [expr for x in iter] and [expr for x in iter if cond].</step>
+      <step>6. Type-check: fold (infer acc type from init + closure), reduce (element type), comprehension (iter element → result).</step>
+      <step>7. Lower fold/reduce to MIR: loop + accumulator pattern.</step>
+      <step>8. Lower comprehension to MIR: iterator chain + collect.</step>
+      <step>9. Write 20+ tests covering fold, reduce, comprehension on Vec, Tensor, Range.</step>
+    </instructions>
+    <dos>
+      <do>Follow existing parser patterns for expression parsing.</do>
+      <do>Reuse existing iterator infrastructure where possible.</do>
+      <do>Ensure fold/reduce work with all iterable types (Vec, Tensor, Range).</do>
+      <do>Add clear error messages for type mismatches in fold accumulator.</do>
+    </dos>
+    <donts>
+      <dont>Don't add parallel reduction yet — that's an optimization pass concern.</dont>
+      <dont>Don't change existing loop syntax or semantics.</dont>
+      <dont>Don't add lazy evaluation — keep eager semantics consistent with Axon.</dont>
+    </donts>
+    <evidence>
+      <item>Fold test: fold(0, [1,2,3], |acc, x| acc + x) == 6.</item>
+      <item>Reduce test: reduce([1,2,3], |a, b| a + b) == 6.</item>
+      <item>Comprehension test: [x * 2 for x in [1,2,3]] == [2,4,6].</item>
+    </evidence>
+    <responseFormat>
+      FILES_MODIFIED: [list with line ranges]
+      NEW_AST_NODES: [list]
+      NEW_TOKENS: [list]
+      TESTS_ADDED: [count]
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E10 — LINEAR/AFFINE TYPE ANNOTATIONS
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E10" epic="E10" workstream="WS6" phase="GAMMA">
+    <context>
+      Diagnostics (E1) and fusion (E7) complete. Axon has ownership/borrowing (src/borrow.rs) but no linearity.
+      Tensors are reference-counted — every pass/move involves refcount update. Linear annotation would
+      guarantee single-use, enabling zero-copy forwarding without refcount overhead.
+      Key files: src/token.rs, src/ast.rs, src/parser.rs, src/typeck.rs, src/borrow.rs, src/mir.rs.
+    </context>
+    <role>Type system engineer specializing in linear/affine type systems and ownership verification.</role>
+    <objective>Add opt-in linear annotations to function parameters that enforce exactly-once usage, enabling zero-copy tensor forwarding and eliminating reference counting overhead for annotated parameters.</objective>
+    <instructions>
+      <step>1. Add Linear and Unique tokens to src/token.rs.</step>
+      <step>2. Add LinearParam annotation to FnParam AST node in src/ast.rs.</step>
+      <step>3. Parse linear/unique keyword before parameter type in function signatures.</step>
+      <step>4. In typeck: track usage count of linear parameters. Error if used 0 or 2+ times.</step>
+      <step>5. In borrow.rs: integrate linearity checking as a separate pass on top of borrow checking.</step>
+      <step>6. In MIR: mark linear params, skip refcount increment/decrement for them.</step>
+      <step>7. In codegen: emit direct pointer pass instead of refcount-managed pass for linear params.</step>
+      <step>8. Write 15+ tests: valid single-use, error on multi-use, error on no-use, interaction with borrows.</step>
+    </instructions>
+    <dos>
+      <do>Make linearity checking a SEPARATE pass — don't modify the borrow checker's core logic.</do>
+      <do>Provide clear error messages: "linear parameter 'x' used 2 times (must be used exactly once)".</do>
+      <do>Ensure non-linear parameters are completely unaffected.</do>
+      <do>Test interaction with move semantics, borrowing, and closures.</do>
+    </dos>
+    <donts>
+      <dont>Don't make linearity mandatory — it's opt-in per parameter.</dont>
+      <dont>Don't modify the existing borrow checker logic — layer on top.</dont>
+      <dont>Don't change codegen for non-linear parameters.</dont>
+      <dont>Don't try to infer linearity automatically — explicit annotation only.</dont>
+    </donts>
+    <evidence>
+      <item>Test: fn forward(linear x: Tensor) compiles and produces zero-copy forwarding.</item>
+      <item>Test: fn bad(linear x: Tensor) { use(x); use(x); } produces "used 2 times" error.</item>
+      <item>Allocation tracking showing 0 refcount ops for linear params in common patterns.</item>
+    </evidence>
+    <responseFormat>
+      FILES_MODIFIED: [list with line ranges]
+      NEW_TOKENS: [list]
+      LINEARITY_RULES: [list of enforcement rules]
+      TESTS_ADDED: [count]
+      ZERO_COPY_PATTERNS: [list of verified patterns]
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: E12 — MONADIC WITH-BLOCKS
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-E12" epic="E12" workstream="WS7" phase="DELTA">
+    <context>
+      Fold/reduce (E9) complete. Axon has Result and Option types with pattern matching.
+      No monadic syntax exists — users chain operations with explicit match or ? operator.
+      Bend uses with/ask syntax for monadic bind chains. Axon adaptation: with Type { ask pat = expr; body }.
+      Key files: src/token.rs, src/ast.rs, src/parser.rs, src/typeck.rs, src/mir.rs.
+    </context>
+    <role>Programming language designer specializing in effect systems and monadic abstraction syntax.</role>
+    <objective>Add with-block syntax that desugars to monadic bind chains, working with Result, Option, and IO context types.</objective>
+    <instructions>
+      <step>1. Add With and Ask tokens to src/token.rs (check if already present from other work).</step>
+      <step>2. Add WithBlock { context_type, body: Vec&lt;WithStatement&gt; } and AskExpr AST nodes to src/ast.rs.</step>
+      <step>3. Parse: with ResultType { ask x = fallible_call(); ask y = another(x); wrap(x + y) }.</step>
+      <step>4. Desugar to bind chain: ResultType.bind(fallible_call(), |x| ResultType.bind(another(x), |y| ResultType.wrap(x + y))).</step>
+      <step>5. Type-check: verify context type has bind(M&lt;A&gt;, fn(A) -&gt; M&lt;B&gt;) -&gt; M&lt;B&gt; and wrap(A) -&gt; M&lt;A&gt; methods.</step>
+      <step>6. Lower to MIR: emit bind call chain.</step>
+      <step>7. Write 10+ tests: with Result, with Option, nested with-blocks, error propagation.</step>
+    </instructions>
+    <dos>
+      <do>Make with-blocks an expression — they return a value.</do>
+      <do>Support mixing ask statements with regular val bindings inside with-blocks.</do>
+      <do>Provide clear error messages when context type lacks bind/wrap methods.</do>
+    </dos>
+    <donts>
+      <dont>Don't implement a full monad typeclass/trait — just check for bind and wrap methods.</dont>
+      <dont>Don't change how ? operator works — with-blocks are an alternative, not a replacement.</dont>
+      <dont>Don't add IO monad implementation — just support the syntax; IO type comes later.</dont>
+    </donts>
+    <evidence>
+      <item>with Result { ask x = Ok(1); ask y = Ok(2); Ok(x + y) } evaluates to Ok(3).</item>
+      <item>with Result { ask x = Err("fail"); ask y = Ok(2); Ok(x + y) } evaluates to Err("fail").</item>
+      <item>Type error when context type lacks bind method.</item>
+    </evidence>
+    <responseFormat>
+      FILES_MODIFIED: [list with line ranges]
+      NEW_AST_NODES: [list]
+      DESUGAR_EXAMPLE: [before and after]
+      TESTS_ADDED: [count]
+      SUMMARY: [1-2 sentences]
+    </responseFormat>
+  </prompt>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROMPT TEMPLATE: GENERIC EXPLORATION / RESEARCH
+       ═══════════════════════════════════════════════════════════════ -->
+  <prompt id="PROMPT-EXPLORE" epic="any" workstream="any" phase="any">
+    <context>
+      Axon compiler at h:/programing language/axon/. Use subagent with Explore type for codebase exploration.
+      Token budget: max 20K for exploration before reporting back.
+    </context>
+    <role>Compiler codebase archaeologist — find specific patterns, structures, and dependencies without modifying code.</role>
+    <objective>Answer a specific question about the codebase with file paths, line numbers, and code snippets as evidence.</objective>
+    <instructions>
+      <step>1. Use Grep to find relevant patterns.</step>
+      <step>2. Read only the specific files/sections needed.</step>
+      <step>3. Report findings with exact file:line references.</step>
+      <step>4. Identify dependencies and potential conflicts.</step>
+    </instructions>
+    <dos>
+      <do>Report exact file paths and line numbers.</do>
+      <do>Include relevant code snippets (no more than 20 lines each).</do>
+      <do>Identify both direct and transitive dependencies.</do>
+    </dos>
+    <donts>
+      <dont>Don't read entire files — use line ranges.</dont>
+      <dont>Don't modify any code.</dont>
+      <dont>Don't read more than 10 files total.</dont>
+    </donts>
+    <evidence>
+      <item>File:line references for every finding.</item>
+      <item>Dependency list with direction (A depends on B).</item>
+    </evidence>
+    <responseFormat>
+      FINDINGS: [{file, line, description, snippet}]
+      DEPENDENCIES: [{from, to, type}]
+      ANSWER: [direct answer to the question]
+    </responseFormat>
+  </prompt>
+</axonBendPromptLibrary>

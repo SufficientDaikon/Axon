@@ -1,0 +1,62 @@
+name: Plan Quality
+
+on:
+  push:
+    paths:
+      - '.dev/plans/bend-integration/**'
+  pull_request:
+    paths:
+      - '.dev/plans/bend-integration/**'
+  workflow_dispatch:
+
+jobs:
+  validate-xml:
+    name: Validate Plan XML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install lxml
+
+      - name: Validate plans
+        run: python .dev/plans/bend-integration/scripts/validate_plans.py .dev/plans/bend-integration/
+
+  lint-plans:
+    name: Lint Plan Documents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install lxml
+
+      - name: Lint plans
+        run: python .dev/plans/bend-integration/scripts/lint_plans.py .dev/plans/bend-integration/
+
+  cross-reference:
+    name: Cross-Reference Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install lxml
+
+      - name: Strict cross-reference check
+        run: python .dev/plans/bend-integration/scripts/lint_plans.py .dev/plans/bend-integration/ --strict-xref

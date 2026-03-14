@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendCapabilityMatrix>
+  <metadata>
+    <purpose>Bend feature to Axon integration mapping with feasibility, impact, effort scores (1-5 scale)</purpose>
+    <totalRecommendations>16</totalRecommendations>
+  </metadata>
+
+  <recommendation id="R01" name="Implicit Parallelism" pillar="P1" priority="critical">
+    <bendFeature>Automatic parallelism via interaction-net reduction — all independent redexes fire concurrently without programmer annotation.</bendFeature>
+    <axonAdaptation>MIR DAG analysis to detect independent tensor operations and dispatch them to parallel execution lanes automatically.</axonAdaptation>
+    <feasibility>3</feasibility>
+    <impact>5</impact>
+    <effort>5</effort>
+    <risk>high</risk>
+    <targetFiles>
+      <file>src/mir/transform/parallelize.rs</file>
+      <file>src/mir.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R05</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>MIR pass identifies independent tensor subgraphs and marks them for parallel dispatch.</criterion>
+      <criterion>Achieves at least 2x wall-clock scaling on 4 physical cores for embarrassingly parallel tensor workloads.</criterion>
+      <criterion>No correctness regression — sequential and parallel outputs match within floating-point epsilon.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R02" name="Fold/Bend Constructs" pillar="P4" priority="critical">
+    <bendFeature>Built-in fold (bottom-up) and bend (top-down) recursive combinators that the runtime parallelises over tree structures.</bendFeature>
+    <axonAdaptation>Introduce fold/reduce as first-class parallel tensor operations that desugar into optimised MIR reduction nodes.</axonAdaptation>
+    <feasibility>4</feasibility>
+    <impact>5</impact>
+    <effort>3</effort>
+    <risk>medium</risk>
+    <targetFiles>
+      <file>src/token.rs</file>
+      <file>src/parser.rs</file>
+      <file>src/ast.rs</file>
+      <file>src/typeck.rs</file>
+      <file>src/mir.rs</file>
+    </targetFiles>
+    <dependencies/>
+    <acceptanceCriteria>
+      <criterion>fold keyword is tokenised, parsed into FoldExpr AST node, type-checked, and lowered to MIR.</criterion>
+      <criterion>fold desugars to a parallel reduction operation in the MIR pass pipeline.</criterion>
+      <criterion>Associative-operator fold produces identical results to sequential accumulation.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R03" name="Math Notation" pillar="P5" priority="medium">
+    <bendFeature>Bend's concise notation for numeric and recursive definitions inspired by mathematical syntax.</bendFeature>
+    <axonAdaptation>Lightweight @math block enabling subscript/superscript-style indexing and summation notation inside Axon source.</axonAdaptation>
+    <feasibility>2</feasibility>
+    <impact>2</impact>
+    <effort>4</effort>
+    <risk>medium</risk>
+    <targetFiles>
+      <file>src/parser.rs</file>
+      <file>src/ast.rs</file>
+    </targetFiles>
+    <dependencies/>
+    <acceptanceCriteria>
+      <criterion>Design document produced and reviewed — deferred to EPSILON phase; no code changes required.</criterion>
+      <criterion>Document specifies concrete syntax, scoping rules, and desugaring strategy.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R04" name="Accumulative Diagnostics" pillar="P3" priority="critical">
+    <bendFeature>Bend's compiler collects all errors in a single pass rather than aborting on first error.</bendFeature>
+    <axonAdaptation>Configurable severity diagnostics engine with --warn, --deny, and --allow flags that accumulates all errors before reporting.</axonAdaptation>
+    <feasibility>4</feasibility>
+    <impact>5</impact>
+    <effort>3</effort>
+    <risk>low</risk>
+    <targetFiles>
+      <file>src/diagnostics.rs</file>
+      <file>src/lib.rs</file>
+      <file>src/typeck.rs</file>
+      <file>src/parser.rs</file>
+      <file>src/codegen/llvm.rs</file>
+    </targetFiles>
+    <dependencies/>
+    <acceptanceCriteria>
+      <criterion>All compilation errors from parsing, type-checking, and codegen are collected into a unified diagnostics list.</criterion>
+      <criterion>--warn, --deny, and --allow CLI flags control per-diagnostic-category severity.</criterion>
+      <criterion>Compilation no longer aborts on first error — all recoverable errors are reported in a single run.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R05" name="Transform Pass Architecture" pillar="P3" priority="high">
+    <bendFeature>Bend's multi-pass transformation pipeline with ordered rewrite rules over interaction nets.</bendFeature>
+    <axonAdaptation>New src/mir/transform/ module hierarchy with a PassManager that registers, orders, and executes MIR-to-MIR transform passes.</axonAdaptation>
+    <feasibility>4</feasibility>
+    <impact>4</impact>
+    <effort>3</effort>
+    <risk>low</risk>
+    <targetFiles>
+      <file>src/mir/transform/mod.rs</file>
+      <file>src/mir/transform/pass_manager.rs</file>
+      <file>src/mir/transform/parallelize.rs</file>
+      <file>src/mir/transform/float_combinators.rs</file>
+      <file>src/mir/transform/fuse_ops.rs</file>
+      <file>src/mir/transform/inline.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R04</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>src/mir/transform/ directory contains 5 or more pass files with a common Pass trait.</criterion>
+      <criterion>PassManager executes passes in a defined, configurable order.</criterion>
+      <criterion>Each pass is independently testable and can be enabled/disabled via CLI flags.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R06" name="ADT Encoding" pillar="P4" priority="high">
+    <bendFeature>Bend encodes algebraic data types as Scott-encoded lambdas for interaction-net compatibility.</bendFeature>
+    <axonAdaptation>Selectable ADT memory layout via --enum-layout flag (tagged-union, Scott, or flat) for performance tuning.</axonAdaptation>
+    <feasibility>3</feasibility>
+    <impact>4</impact>
+    <effort>3</effort>
+    <risk>medium</risk>
+    <targetFiles>
+      <file>src/codegen/llvm.rs</file>
+      <file>src/mir.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R05</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>--enum-layout flag accepted by CLI with at least two layout strategies implemented.</criterion>
+      <criterion>Generated LLVM IR correctly represents enum variants under each layout.</criterion>
+      <criterion>Round-trip tests verify construct/match correctness for all supported layouts.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R07" name="Linearity" pillar="P4" priority="high">
+    <bendFeature>Bend enforces linearity constraints — each variable is used exactly once — enabling safe parallel reduction.</bendFeature>
+    <axonAdaptation>Optional linear/unique type annotations with a borrow-checker-style pass that enforces single-use semantics for marked bindings.</axonAdaptation>
+    <feasibility>3</feasibility>
+    <impact>5</impact>
+    <effort>4</effort>
+    <risk>high</risk>
+    <targetFiles>
+      <file>src/token.rs</file>
+      <file>src/parser.rs</file>
+      <file>src/ast.rs</file>
+      <file>src/typeck.rs</file>
+      <file>src/borrow.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R04</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>linear and unique annotations are parsed and represented in the AST.</criterion>
+      <criterion>Type checker enforces single-use semantics for linear-annotated bindings.</criterion>
+      <criterion>Violations produce clear diagnostic messages with source spans.</criterion>
+      <criterion>Zero-copy tensor transfer verified on at least 5 distinct patterns.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R08" name="Monadic IO" pillar="P5" priority="medium">
+    <bendFeature>Bend separates pure computation from IO effects using monadic-style sequencing.</bendFeature>
+    <axonAdaptation>with/ask blocks for effect sequencing — desugars to monadic bind chains in the MIR.</axonAdaptation>
+    <feasibility>3</feasibility>
+    <impact>3</impact>
+    <effort>3</effort>
+    <risk>medium</risk>
+    <targetFiles>
+      <file>src/token.rs</file>
+      <file>src/parser.rs</file>
+      <file>src/ast.rs</file>
+      <file>src/typeck.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R02</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>with and ask keywords are tokenised and parsed into WithBlock AST nodes.</criterion>
+      <criterion>Type checker validates monadic bind chains and infers effect types.</criterion>
+      <criterion>Desugaring to explicit bind calls is verified via MIR snapshot tests.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R09" name="Snapshot Testing" pillar="P3" priority="high">
+    <bendFeature>Bend uses golden-file testing to catch regressions in compiled output across compiler changes.</bendFeature>
+    <axonAdaptation>Insta-based snapshot testing infrastructure for AST, MIR, LLVM IR, and diagnostic output golden files.</axonAdaptation>
+    <feasibility>5</feasibility>
+    <impact>4</impact>
+    <effort>2</effort>
+    <risk>low</risk>
+    <targetFiles>
+      <file>Cargo.toml</file>
+      <file>tests/snapshots/</file>
+    </targetFiles>
+    <dependencies/>
+    <acceptanceCriteria>
+      <criterion>insta crate added as dev-dependency in Cargo.toml.</criterion>
+      <criterion>100 or more snapshot files covering AST, MIR, LLVM IR, and diagnostics output.</criterion>
+      <criterion>cargo insta review workflow documented and functional.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R10" name="Combinator Floating" pillar="P2" priority="high">
+    <bendFeature>Bend's pre-reduction pass floats closed combinators to top-level definitions to maximize sharing and parallelism.</bendFeature>
+    <axonAdaptation>MIR pass that extracts closed subexpressions (no free variables) into top-level named combinators for reuse and parallel evaluation.</axonAdaptation>
+    <feasibility>3</feasibility>
+    <impact>5</impact>
+    <effort>4</effort>
+    <risk>medium</risk>
+    <targetFiles>
+      <file>src/mir/transform/float_combinators.rs</file>
+      <file>src/mir/transform/inline.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R05</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>Closed subexpressions are identified and hoisted to module-level MIR definitions.</criterion>
+      <criterion>Floating does not change program semantics — verified by differential testing against unfloated output.</criterion>
+      <criterion>Inline pass can selectively re-inline floated combinators when beneficial for locality.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R11" name="Global Interning" pillar="P3" priority="medium">
+    <bendFeature>Bend interns all names and labels globally for O(1) comparison throughout the compiler pipeline.</bendFeature>
+    <axonAdaptation>Unified NameInterner replacing ad-hoc string handling with interned symbols for O(1) equality and reduced memory usage.</axonAdaptation>
+    <feasibility>4</feasibility>
+    <impact>3</impact>
+    <effort>2</effort>
+    <risk>low</risk>
+    <targetFiles>
+      <file>src/interner.rs</file>
+      <file>src/ast.rs</file>
+      <file>src/parser.rs</file>
+    </targetFiles>
+    <dependencies/>
+    <acceptanceCriteria>
+      <criterion>NameInterner provides insert and lookup with O(1) equality comparison via integer IDs.</criterion>
+      <criterion>All identifier comparisons in parser and AST use interned symbols instead of string equality.</criterion>
+      <criterion>Memory usage for name storage measurably reduced on large input programs.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R12" name="Comprehensions" pillar="P5" priority="medium">
+    <bendFeature>Bend supports list and tree comprehension syntax for declarative collection construction.</bendFeature>
+    <axonAdaptation>Python-style comprehension syntax [expr for x in iter] that desugars to map/filter tensor operations.</axonAdaptation>
+    <feasibility>4</feasibility>
+    <impact>3</impact>
+    <effort>2</effort>
+    <risk>low</risk>
+    <targetFiles>
+      <file>src/token.rs</file>
+      <file>src/parser.rs</file>
+      <file>src/ast.rs</file>
+      <file>src/typeck.rs</file>
+    </targetFiles>
+    <dependencies/>
+    <acceptanceCriteria>
+      <criterion>Comprehension syntax is tokenised, parsed into ComprehensionExpr AST node, and type-checked.</criterion>
+      <criterion>Desugaring to map/filter calls is verified via MIR snapshot tests.</criterion>
+      <criterion>Nested comprehensions and guard clauses are supported.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R13" name="GPU Branching" pillar="P1" priority="low">
+    <bendFeature>Bend's interaction-net model avoids branching, which maps well to GPU SIMT execution.</bendFeature>
+    <axonAdaptation>MIR branchless transforms that convert conditional tensor operations into predicated select instructions for GPU targets.</axonAdaptation>
+    <feasibility>2</feasibility>
+    <impact>3</impact>
+    <effort>4</effort>
+    <risk>high</risk>
+    <targetFiles>
+      <file>src/mir/transform/branchless.rs</file>
+      <file>src/codegen/llvm.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R05</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>Design document produced specifying branchless transform rules and GPU target constraints — deferred; no code changes required.</criterion>
+      <criterion>Document covers select-instruction lowering, divergence analysis, and warp-efficiency metrics.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R14" name="Stack Safety" pillar="P3" priority="low">
+    <bendFeature>Bend's runtime uses trampolining and stack management to handle deep recursion safely.</bendFeature>
+    <axonAdaptation>Integrate stacker crate for segmented-stack overflow protection in deeply recursive compiler phases.</axonAdaptation>
+    <feasibility>5</feasibility>
+    <impact>2</impact>
+    <effort>1</effort>
+    <risk>low</risk>
+    <targetFiles>
+      <file>Cargo.toml</file>
+      <file>src/parser.rs</file>
+      <file>src/typeck.rs</file>
+      <file>src/mir.rs</file>
+    </targetFiles>
+    <dependencies/>
+    <acceptanceCriteria>
+      <criterion>stacker crate added as dependency in Cargo.toml.</criterion>
+      <criterion>Recursive descent in parser, type checker, and MIR builder wrapped with stacker::maybe_grow.</criterion>
+      <criterion>Deeply nested input (1000+ levels) no longer causes stack overflow.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R15" name="Operator Fusion" pillar="P2" priority="critical">
+    <bendFeature>Bend fuses adjacent interaction-net rules to reduce allocation and improve cache locality.</bendFeature>
+    <axonAdaptation>MIR pass that fuses chains of element-wise tensor operations into single kernels, eliminating intermediate allocations.</axonAdaptation>
+    <feasibility>3</feasibility>
+    <impact>5</impact>
+    <effort>5</effort>
+    <risk>high</risk>
+    <targetFiles>
+      <file>src/mir/transform/fuse_ops.rs</file>
+      <file>src/codegen/runtime.rs</file>
+      <file>src/codegen/llvm.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R05</dep>
+      <dep>R10</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>Chains of 2+ element-wise tensor ops are fused into single loop bodies in generated code.</criterion>
+      <criterion>Intermediate tensor allocations are eliminated for fused chains.</criterion>
+      <criterion>Achieves at least 3x throughput improvement on representative fusion benchmarks.</criterion>
+      <criterion>Fused output matches unfused output within floating-point epsilon for all test cases.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+  <recommendation id="R16" name="Granular CLI Flags" pillar="P3" priority="low">
+    <bendFeature>Bend exposes per-pass optimization flags for fine-grained compiler behavior control.</bendFeature>
+    <axonAdaptation>Per-pass -O flags (e.g., -Ofuse, -Ofloat, -Oparallel) to enable/disable individual MIR transform passes.</axonAdaptation>
+    <feasibility>5</feasibility>
+    <impact>2</impact>
+    <effort>1</effort>
+    <risk>low</risk>
+    <targetFiles>
+      <file>src/main.rs</file>
+      <file>src/lib.rs</file>
+    </targetFiles>
+    <dependencies>
+      <dep>R05</dep>
+    </dependencies>
+    <acceptanceCriteria>
+      <criterion>CLI accepts -O{passname} flags to toggle individual transform passes.</criterion>
+      <criterion>--help output documents all available pass flags.</criterion>
+      <criterion>Disabled passes are skipped by the PassManager without side effects.</criterion>
+    </acceptanceCriteria>
+  </recommendation>
+
+</axonBendCapabilityMatrix>

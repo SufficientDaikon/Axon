@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendTraceabilityMatrix>
+  <metadata><purpose>Full traceability from Bend recommendation to transformation pillar to epic to story to test to gate. Ensures every requirement is implemented, tested, and validated.</purpose></metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TRACEABILITY CHAINS
+       Each chain traces: Recommendation → Pillar → Epic → Key Stories → Tests → Gate
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <chain id="TC-01">
+    <recommendation id="R01">Accumulative Diagnostics System</recommendation>
+    <pillar>P3 — Compiler Infrastructure Modernization</pillar>
+    <epic>E1 — Accumulative Diagnostics System</epic>
+    <stories>E1-S1 (Diagnostics struct), E1-S2 (categories), E1-S3 (wire through lib.rs), E1-S4 (CLI flags), E1-S5 (display), E1-S6 (tests)</stories>
+    <tests>
+      <unit>diagnostics::tests::accumulation, diagnostics::tests::fatal_ok, diagnostics::tests::fatal_err, diagnostics::tests::severity_override</unit>
+      <integration>diagnostics_tests::multi_error_accumulation, diagnostics_tests::warning_to_error_promotion</integration>
+      <snapshot>errors__type_mismatch, errors__undefined_variable, errors__borrow_violation</snapshot>
+    </tests>
+    <gates>A-H3, A-H4, A-H8, A-S1</gates>
+  </chain>
+
+  <chain id="TC-02">
+    <recommendation id="R02">Ordered Transform Passes with PassManager</recommendation>
+    <pillar>P3 — Compiler Infrastructure Modernization</pillar>
+    <epic>E2 — MIR Transform Pass Architecture</epic>
+    <stories>E2-S1 (Pass trait + PassManager), E2-S2 (dead_code), E2-S3 (const_fold), E2-S4 (integrate), E2-S5 (CLI flags), E2-S6 (tests)</stories>
+    <tests>
+      <unit>transform::tests::pass_ordering, dead_code::tests::reachability, const_fold::tests::integer_fold</unit>
+      <integration>PassManager integration with pipeline</integration>
+      <snapshot>mir__after_dead_code, mir__after_const_fold</snapshot>
+    </tests>
+    <gates>A-H5, A-H6, A-H7, A-H9</gates>
+  </chain>
+
+  <chain id="TC-03">
+    <recommendation id="R03">Combinator Floating for Tensor Kernels</recommendation>
+    <pillar>P2 — Tensor Operation Fusion</pillar>
+    <epic>E6 — Combinator Floating and Inlining</epic>
+    <stories>E6-S1 (float_combinators), E6-S2 (inline), E6-S3 (free-variable analysis), E6-S4 (tests)</stories>
+    <tests>
+      <unit>float_combinators::tests::extraction, inline::tests::inline_decision</unit>
+      <snapshot>mir__after_float_combinators, mir__after_inline</snapshot>
+    </tests>
+    <gates>B-H1 (all tests pass)</gates>
+  </chain>
+
+  <chain id="TC-04">
+    <recommendation id="R04">Operator Fusion for Tensor Operations</recommendation>
+    <pillar>P2 — Tensor Operation Fusion</pillar>
+    <epic>E7 — Tensor Operation Fusion</epic>
+    <stories>E7-S1 through E7-S11 (5 patterns, runtime, codegen, benchmarks)</stories>
+    <tests>
+      <unit>fuse_ops::tests::linear_relu_pattern, fuse_ops::tests::mse_pattern, fuse_ops::tests::elementwise_chain</unit>
+      <integration>fusion_tests::linear_relu_fusion_e2e, fusion_tests::no_fusion_across_branch</integration>
+      <snapshot>fusion__linear_relu_pattern, fusion__mse_pattern, fusion__elementwise_chain</snapshot>
+      <benchmark>fusion_bench::linear_relu_fused_vs_unfused, fusion_bench::elementwise_chain_fused_vs_unfused</benchmark>
+    </tests>
+    <gates>B-H2, B-H3, B-H4, B-H5, B-H8, B-S1</gates>
+  </chain>
+
+  <chain id="TC-05">
+    <recommendation id="R05">Automatic Data-Level Parallelism</recommendation>
+    <pillar>P1 — Automatic Tensor Parallelism</pillar>
+    <epic>E8 — Automatic Tensor Parallelism</epic>
+    <stories>E8-S1 through E8-S9 (DAG builder, dependency analysis, thread pool, codegen, benchmarks)</stories>
+    <tests>
+      <unit>parallelize::tests::dag_building, parallelize::tests::independence_detection</unit>
+      <integration>parallel_tests::independent_matmuls_parallel, parallel_tests::parallel_equals_sequential</integration>
+      <benchmark>parallel_bench::independent_matmuls_scaling, parallel_bench::thread_pool_overhead</benchmark>
+    </tests>
+    <gates>B-H6, B-H7, B-H9</gates>
+  </chain>
+
+  <chain id="TC-06">
+    <recommendation id="R06">Fold/Reduce as First-Class Parallel Primitives</recommendation>
+    <pillar>P4 — Type System Extensions</pillar>
+    <epic>E9 — Fold/Reduce and Comprehensions</epic>
+    <stories>E9-S1 through E9-S8 (tokens, AST, parsing, typeck, MIR lowering, tests, docs)</stories>
+    <tests>
+      <unit>parser::tests::parse_fold, parser::tests::parse_reduce, typeck::tests::fold_type_inference</unit>
+      <integration>fold_tests::fold_sum, fold_tests::reduce_product, fold_tests::comprehension_map</integration>
+      <snapshot>parse__fold_expression, parse__comprehension</snapshot>
+      <e2e>fold_fibonacci.axon, comprehension_tensor.axon</e2e>
+    </tests>
+    <gates>B-H10</gates>
+  </chain>
+
+  <chain id="TC-07">
+    <recommendation id="R07">Linear/Affine Type Annotations</recommendation>
+    <pillar>P4 — Type System Extensions</pillar>
+    <epic>E10 — Linear/Affine Type Annotations</epic>
+    <stories>E10-S1 through E10-S7 (tokens, AST, parsing, typeck, borrow, codegen, verification)</stories>
+    <tests>
+      <unit>typeck::tests::linear_single_use, typeck::tests::linear_multi_use_error, borrow::tests::linear_enforcement</unit>
+      <integration>linearity_tests::linear_single_use_ok, linearity_tests::linear_zero_copy_verified</integration>
+      <snapshot>typecheck__linearity_enforcement, errors__linear_multi_use</snapshot>
+      <e2e>linear_forward.axon</e2e>
+    </tests>
+    <gates>G-H2, G-H3, G-H4, G-S1</gates>
+  </chain>
+
+  <chain id="TC-08">
+    <recommendation id="R08">GPU-Optimized ADT Layout Strategies</recommendation>
+    <pillar>P4 — Type System Extensions</pillar>
+    <epic>E11 — GPU-Optimized ADT Layouts</epic>
+    <stories>E11-S1 through E11-S4 (CLI flag, tagged layout, packed layout, benchmarks)</stories>
+    <tests>
+      <unit>codegen::tests::tagged_layout, codegen::tests::packed_layout</unit>
+      <integration>Layout comparison tests</integration>
+      <snapshot>llvm__enum_tagged_layout, llvm__enum_packed_layout</snapshot>
+      <benchmark>ADT layout tight-loop benchmark</benchmark>
+    </tests>
+    <gates>G-H5, G-H6, G-S2</gates>
+  </chain>
+
+  <chain id="TC-09">
+    <recommendation id="R09">Monadic With-Blocks</recommendation>
+    <pillar>P5 — Language Ergonomics</pillar>
+    <epic>E12 — Monadic With-Blocks</epic>
+    <stories>E12-S1 through E12-S6 (tokens, AST, parsing, desugaring, typeck, tests)</stories>
+    <tests>
+      <unit>parser::tests::parse_with_block, typeck::tests::with_block_type_checking</unit>
+      <integration>with_tests::with_result_ok, with_tests::with_result_err, with_tests::with_option_some</integration>
+      <snapshot>parse__with_block, typecheck__with_block</snapshot>
+      <e2e>with_block_io.axon</e2e>
+    </tests>
+    <gates>D-H2, D-S1</gates>
+  </chain>
+
+  <chain id="TC-10">
+    <recommendation id="R10">Global Name Interning</recommendation>
+    <pillar>P3 — Compiler Infrastructure Modernization</pillar>
+    <epic>E3 — Global Name Interning</epic>
+    <stories>E3-S1 through E3-S5 (interner, Name type, AST update, parser update, coexistence)</stories>
+    <tests>
+      <unit>interner::tests::intern_dedup, interner::tests::name_equality, interner::tests::coexistence</unit>
+      <integration>All 1,034+ existing tests pass (identifier handling unchanged)</integration>
+    </tests>
+    <gates>A-H1, A-H2</gates>
+  </chain>
+
+  <chain id="TC-11">
+    <recommendation id="R11">Stack-Safe Recursion</recommendation>
+    <pillar>P3 — Compiler Infrastructure Modernization</pillar>
+    <epic>E4 — Stack Safety and CLI Flags</epic>
+    <stories>E4-S1 through E4-S5 (stacker dep, parser wrapping, typeck wrapping, MIR wrapping, depth test)</stories>
+    <tests>
+      <unit>Deep nesting test (200 levels)</unit>
+      <stress>STRESS-01: 200-level nested expression</stress>
+    </tests>
+    <gates>A-H1</gates>
+  </chain>
+
+  <chain id="TC-12">
+    <recommendation id="R12">Snapshot Testing Infrastructure</recommendation>
+    <pillar>P3 — Compiler Infrastructure Modernization</pillar>
+    <epic>E5 — Snapshot Testing Infrastructure</epic>
+    <stories>E5-S1 through E5-S8 (insta setup, harness, directories, 100+ snapshots)</stories>
+    <tests>
+      <snapshot>100+ snapshots across 6 categories (parse, typecheck, mir, llvm_ir, errors, fusion)</snapshot>
+    </tests>
+    <gates>A-S2</gates>
+  </chain>
+
+  <chain id="TC-13">
+    <recommendation id="R13">Linearize Pass for Variable Use-Count Analysis</recommendation>
+    <pillar>P2 — Tensor Operation Fusion (supporting)</pillar>
+    <epic>E6 (included) — linearize.rs pass within combinator floating epic</epic>
+    <stories>Linearize pass within E6</stories>
+    <tests>
+      <unit>linearize::tests::use_counting, linearize::tests::zero_copy_marking</unit>
+    </tests>
+    <gates>B-H1</gates>
+  </chain>
+
+  <chain id="TC-14">
+    <recommendation id="R14">Documentation and Migration</recommendation>
+    <pillar>P5 — Language Ergonomics</pillar>
+    <epic>E13 — Documentation and Migration Guides</epic>
+    <stories>E13-S1 through E13-S6 (tour, tensor guide, CLI ref, optimization docs, migration, rebuild)</stories>
+    <tests>
+      <integration>Documentation build succeeds</integration>
+    </tests>
+    <gates>D-H3, D-H4, D-H5, D-S2</gates>
+  </chain>
+
+  <chain id="TC-15">
+    <recommendation id="R15">Advanced GPU Optimizations (Design Only)</recommendation>
+    <pillar>P1 — Automatic Tensor Parallelism (future)</pillar>
+    <epic>E14 — Advanced GPU Optimization Designs</epic>
+    <stories>E14-S1 through E14-S4 (warp divergence, math blocks, shape specialization, projections)</stories>
+    <tests>
+      <integration>No code changes — design documents only</integration>
+    </tests>
+    <gates>E-H1, E-H2, E-H3</gates>
+  </chain>
+
+  <chain id="TC-16">
+    <recommendation id="R16">Comprehension Syntax</recommendation>
+    <pillar>P5 — Language Ergonomics</pillar>
+    <epic>E9 — Fold/Reduce and Comprehensions (shared)</epic>
+    <stories>E9-S5, E9-S6 (parse comprehension, lower comprehension)</stories>
+    <tests>
+      <integration>fold_tests::comprehension_map, fold_tests::comprehension_filter</integration>
+      <snapshot>parse__comprehension</snapshot>
+    </tests>
+    <gates>B-H10</gates>
+  </chain>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       COVERAGE SUMMARY
+       ═══════════════════════════════════════════════════════════════ -->
+  <coverageSummary>
+    <total>
+      <recommendations traced="16" total="16" coverage="100%"/>
+      <pillars traced="5" total="5" coverage="100%"/>
+      <epics traced="14" total="14" coverage="100%"/>
+      <stories referenced="82" total="82" coverage="100%"/>
+      <gates referenced="34" total="34" coverage="100%"/>
+    </total>
+    <orphanCheck>
+      <orphanRecommendations>None — all 16 recommendations traced to epics.</orphanRecommendations>
+      <orphanEpics>None — all 14 epics traced from recommendations.</orphanEpics>
+      <orphanGates>None — all 34 hard gates traced from test requirements.</orphanGates>
+    </orphanCheck>
+  </coverageSummary>
+</axonBendTraceabilityMatrix>

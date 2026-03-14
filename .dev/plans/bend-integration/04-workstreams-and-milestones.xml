@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendWorkstreams>
+
+  <promptingStandard>
+    <templateName>Hybrid-CO-STAR-RISEN-TIDD-EC</templateName>
+    <requiredPromptFields>context role objective instructions steps do dont evidence response_format</requiredPromptFields>
+    <rule>Every workstream execution prompt must include acceptance criteria, explicit out-of-scope constraints, and file paths.</rule>
+    <rule>Every prompt must pin: test baseline (1,034+), zero-warning compilation, Axon project path (h:/programing language/axon/).</rule>
+  </promptingStandard>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS1: COMPILER INFRASTRUCTURE FOUNDATION
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS1" name="Compiler Infrastructure Foundation" phase="ALPHA">
+    <scope>Accumulative diagnostics, MIR transform pass architecture, global name interning, stacker integration, granular CLI flags.</scope>
+    <recommendations>R04 R05 R11 R14 R16</recommendations>
+    <deliverables>
+      <item>src/diagnostics.rs — accumulative error/warning collector with configurable severity</item>
+      <item>src/mir/transform/mod.rs — PassManager with ordered pass execution</item>
+      <item>src/mir/transform/dead_code.rs — dead code elimination pass</item>
+      <item>src/mir/transform/const_fold.rs — constant folding pass</item>
+      <item>src/interner.rs — global NameInterner for all identifiers</item>
+      <item>stacker integration in parser.rs, typeck.rs, mir.rs</item>
+      <item>CLI flags: --warn, --deny, --allow, -O flags for each pass</item>
+      <item>Diagnostics wired through all compiler phases in lib.rs</item>
+    </deliverables>
+    <executionPrompt>
+      <context>Axon compiler at h:/programing language/axon/. 1,034 tests passing. Current errors are early-exit. MIR is monolithic in src/mir.rs.</context>
+      <role>You are a compiler infrastructure engineer specializing in diagnostic systems and optimization pass frameworks.</role>
+      <objective>Build the foundational infrastructure that all subsequent optimization passes will depend on: accumulative diagnostics, modular MIR passes, and global name interning.</objective>
+      <instructions>
+        <step>Create src/diagnostics.rs with Diagnostics struct (BTreeMap of phase to Vec of Diagnostic), Severity enum (Allow/Warning/Error), DiagnosticConfig with per-category severity, fatal() checkpoint method.</step>
+        <step>Create src/mir/transform/mod.rs with PassManager that takes a list of Pass trait objects and runs them in order on MirProgram.</step>
+        <step>Create src/mir/transform/dead_code.rs and src/mir/transform/const_fold.rs as first two passes.</step>
+        <step>Create src/interner.rs with global NameInterner. Replace String identifiers in AST with interned Name handles.</step>
+        <step>Add stacker = "0.1" to Cargo.toml. Wrap recursive descent calls in parser.rs and typeck.rs with maybe_grow(32*1024, 1024*1024, || { ... }).</step>
+        <step>Add CLI flags to src/main.rs via clap: --warn, --deny, --allow, -Odead-code, -Oconst-fold, -Oall.</step>
+        <step>Wire Diagnostics through lib.rs check_source_full() and all downstream phases.</step>
+      </instructions>
+      <do>Write comprehensive unit tests for every new module (min 10 per module). Ensure zero-warning compilation. Run full cargo test after each major change.</do>
+      <dont>Do not modify existing test assertions. Do not change any existing syntax. Do not break the TypeInterner — NameInterner is separate.</dont>
+      <evidence>cargo test output showing 1,034+ tests pass. New module test counts. Example diagnostic output showing accumulative collection.</evidence>
+      <responseFormat>Files created/modified list. Test count delta. Sample diagnostic output.</responseFormat>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>All 1,034 existing tests pass with zero regressions.</criterion>
+      <criterion>Diagnostics accumulate errors from multiple phases and display all at once.</criterion>
+      <criterion>--warn/--deny/--allow flags modify diagnostic severity correctly.</criterion>
+      <criterion>PassManager runs dead_code and const_fold passes in order.</criterion>
+      <criterion>Each pass is individually toggleable via -O flags.</criterion>
+      <criterion>NameInterner makes identifier comparison O(1).</criterion>
+      <criterion>Deeply nested input (100+ levels) doesn't stack overflow.</criterion>
+      <criterion>At least 50 new tests across all new modules.</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS2: SNAPSHOT TESTING INFRASTRUCTURE
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS2" name="Snapshot Testing Infrastructure" phase="ALPHA">
+    <scope>insta-based snapshot/golden testing for all compiler outputs.</scope>
+    <recommendations>R09</recommendations>
+    <deliverables>
+      <item>insta dev dependency added to Cargo.toml</item>
+      <item>tests/snapshots/ directory with categories: parse/, typecheck/, mir/, llvm_ir/, errors/, fusion/</item>
+      <item>At least 100 .axon test input files with corresponding snapshots</item>
+      <item>Snapshot tests for error messages (highest priority)</item>
+    </deliverables>
+    <executionPrompt>
+      <role>You are a test infrastructure engineer focused on compiler output regression prevention.</role>
+      <objective>Establish snapshot testing that catches any unintended change in parser output, type checker output, MIR dumps, LLVM IR, and error messages.</objective>
+      <do>Start with error message snapshots — they are the most user-facing. Then add MIR and LLVM IR snapshots for codegen stability.</do>
+      <dont>Do not duplicate existing unit tests. Snapshot tests complement, not replace, assertion-based tests.</dont>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>insta dependency builds and snapshot workflow functions.</criterion>
+      <criterion>At least 100 snapshot tests exist across all categories.</criterion>
+      <criterion>Error message snapshots cover all error codes (E0100 through E5009).</criterion>
+      <criterion>cargo insta review workflow documented.</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS3: TENSOR OPERATION FUSION
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS3" name="Tensor Operation Fusion" phase="BETA">
+    <scope>Pattern-matching tensor op chains, fused kernel generation, numerical equivalence verification.</scope>
+    <recommendations>R10 R15</recommendations>
+    <dependsOn>WS1</dependsOn>
+    <deliverables>
+      <item>src/mir/transform/float_combinators.rs — closed subexpression extraction</item>
+      <item>src/mir/transform/fuse_ops.rs — fusion pattern matcher</item>
+      <item>src/mir/transform/inline.rs — trivial function inlining</item>
+      <item>Fused C runtime kernels in src/codegen/runtime.rs</item>
+      <item>Numerical equivalence test suite</item>
+      <item>Fusion benchmark suite</item>
+    </deliverables>
+    <executionPrompt>
+      <context>MIR transform pass architecture from WS1 is operational. PassManager can run ordered passes.</context>
+      <role>You are a tensor compiler optimization engineer specializing in operator fusion and kernel generation.</role>
+      <objective>Implement operator fusion that detects and fuses common tensor operation patterns into single optimized kernels, achieving at least 3x throughput improvement on element-wise chains.</objective>
+      <instructions>
+        <step>Implement float_combinators pass: walk MIR, identify closed tensor subexpressions (no free non-tensor variables), extract to top-level functions.</step>
+        <step>Implement fuse_ops pass: pattern-match known fusion patterns (linear+relu, matmul+bias+activation, element-wise chains, reduction chains).</step>
+        <step>Add fused kernel implementations to runtime.rs: axon_fused_linear_relu, axon_fused_mse, axon_fused_softmax_ce, axon_fused_elementwise_chain.</step>
+        <step>Implement inline pass for trivial single-use combinators.</step>
+        <step>Add numerical equivalence tests: run fused and unfused versions on same inputs, verify results within epsilon.</step>
+        <step>Add criterion benchmarks comparing fused vs unfused throughput.</step>
+      </instructions>
+      <do>Test every fusion pattern with edge cases (empty tensors, 1-element tensors, large tensors). Verify correctness before performance.</do>
+      <dont>Do not fuse across control flow boundaries. Do not fuse operations with side effects. Do not sacrifice numerical accuracy for speed.</dont>
+      <evidence>Benchmark results showing 3x+ throughput. Numerical equivalence test results. cargo test passing.</evidence>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>linear+relu fusion produces correct output for all input shapes.</criterion>
+      <criterion>Element-wise chain fusion achieves &gt;=3x throughput vs unfused.</criterion>
+      <criterion>Numerical equivalence: all fused ops match unfused within epsilon &lt; 1e-6.</criterion>
+      <criterion>Fusion does not cross control flow boundaries.</criterion>
+      <criterion>-Ofuse-ops flag toggles fusion on/off.</criterion>
+      <criterion>At least 30 new tests for fusion correctness.</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS4: AUTO-PARALLELISM
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS4" name="Automatic Tensor Parallelism" phase="BETA">
+    <scope>MIR-level data dependency analysis, parallel region identification, thread pool dispatch for CPU.</scope>
+    <recommendations>R01</recommendations>
+    <dependsOn>WS1 WS3</dependsOn>
+    <deliverables>
+      <item>src/mir/transform/parallelize.rs — DAG analysis and parallel region annotation</item>
+      <item>Runtime thread pool for parallel tensor dispatch</item>
+      <item>Parallel scaling benchmarks</item>
+    </deliverables>
+    <executionPrompt>
+      <context>MIR transform passes and fusion are operational from WS1 and WS3.</context>
+      <role>You are a parallel computing engineer specializing in automatic parallelization of data-parallel workloads.</role>
+      <objective>Implement automatic parallelization of independent tensor operations, achieving linear scaling on multi-core CPUs.</objective>
+      <instructions>
+        <step>Build data dependency graph from MIR: nodes are tensor operations, edges are data dependencies.</step>
+        <step>Identify independent subgraphs (no shared edges) that can execute concurrently.</step>
+        <step>Annotate MIR with parallel region markers.</step>
+        <step>In codegen, emit thread pool dispatch for parallel regions.</step>
+        <step>Add runtime thread pool to runtime.rs (lightweight, work-stealing).</step>
+        <step>Benchmark on standard patterns: parallel matmuls, independent forward passes, data preprocessing.</step>
+      </instructions>
+      <do>Ensure correctness first — parallel execution must not change results. Only parallelize pure operations.</do>
+      <dont>Do not parallelize operations with side effects (print, RNG, file IO). Do not introduce data races.</dont>
+      <evidence>Benchmark results showing &gt;=2x scaling on 4 cores. cargo test passing. No data race warnings.</evidence>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>Independent tensor ops execute concurrently on multi-core CPU.</criterion>
+      <criterion>&gt;=2x scaling demonstrated on 4 cores for independent matmul workloads.</criterion>
+      <criterion>No semantic changes — parallel results identical to sequential.</criterion>
+      <criterion>Side-effecting operations never parallelized.</criterion>
+      <criterion>-Oparallelize flag toggles auto-parallelism on/off.</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS5: FOLD/REDUCE AND LANGUAGE PRIMITIVES
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS5" name="Fold/Reduce and Language Primitives" phase="BETA">
+    <scope>fold/reduce as parallel-aware syntax, tensor comprehensions, list comprehensions.</scope>
+    <recommendations>R02 R12</recommendations>
+    <dependsOn>WS1</dependsOn>
+    <deliverables>
+      <item>fold keyword and syntax: tensor.fold(init, |acc, x| body)</item>
+      <item>reduce syntax: tensor.reduce(|a, b| a + b)</item>
+      <item>Tensor comprehension: [expr for x in range]</item>
+      <item>List comprehension: [expr for x in iter if pred]</item>
+      <item>Fold/reduce desugar to parallel reduction kernels</item>
+    </deliverables>
+    <executionPrompt>
+      <role>You are a language design engineer specializing in functional programming primitives for data-parallel workloads.</role>
+      <objective>Add fold, reduce, and comprehension syntax that is ergonomic for ML workflows and desugars to efficient parallel operations.</objective>
+      <do>Ensure fold/reduce work on all iterable types (Vec, Tensor, Range). Comprehensions should work for both lists and tensors.</do>
+      <dont>Do not add bend keyword (conflicts with Axon's imperative model). Do not require immutability for fold/reduce.</dont>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>fold/reduce parse, type-check, and produce correct results.</criterion>
+      <criterion>Tensor fold desugars to parallel reduction kernel.</criterion>
+      <criterion>List/tensor comprehensions parse, type-check, and codegen correctly.</criterion>
+      <criterion>Syntax is documented in language tour.</criterion>
+      <criterion>At least 20 new tests for fold, reduce, and comprehensions.</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS6: TYPE SYSTEM EXTENSIONS
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS6" name="Type System Extensions" phase="GAMMA">
+    <scope>Linear/affine annotations, GPU-optimized ADT layouts, zero-copy verification.</scope>
+    <recommendations>R06 R07</recommendations>
+    <dependsOn>WS1 WS3</dependsOn>
+    <deliverables>
+      <item>linear keyword for function parameter annotations</item>
+      <item>Linearity enforcement in borrow checker</item>
+      <item>--enum-layout flag for CPU vs GPU ADT representation</item>
+      <item>Zero-copy verification tests for common tensor patterns</item>
+    </deliverables>
+    <executionPrompt>
+      <role>You are a type system engineer specializing in substructural type systems and memory-efficient data representation.</role>
+      <objective>Add linear type annotations that guarantee zero-copy tensor forwarding, and configurable ADT layouts optimized for different execution targets.</objective>
+      <do>Make linearity opt-in (not required). Provide clear error messages when linearity is violated. Benchmark ADT layouts.</do>
+      <dont>Do not break existing ownership semantics. Linear is a refinement on top of existing borrow checker, not a replacement.</dont>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>linear parameter annotation is enforced — multi-use is a compile error.</criterion>
+      <criterion>At least 5 common tensor patterns verified zero-copy via linearity.</criterion>
+      <criterion>--enum-layout tagged|packed produces different codegen.</criterion>
+      <criterion>ADT layout benchmarks show improvement for GPU-targeted patterns.</criterion>
+      <criterion>All 1,034+ existing tests pass (linearity is opt-in, no impact on existing code).</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS7: LANGUAGE ERGONOMICS
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS7" name="Language Ergonomics" phase="DELTA">
+    <scope>Monadic with-blocks, expression-level improvements, documentation updates.</scope>
+    <recommendations>R03 R08</recommendations>
+    <dependsOn>WS5 WS6</dependsOn>
+    <deliverables>
+      <item>with-block syntax for effectful pipelines</item>
+      <item>with/ask desugaring to monadic bind chains</item>
+      <item>Updated language tour, migration guides, and tutorials</item>
+      <item>Math-notation block design document (implementation deferred)</item>
+    </deliverables>
+    <executionPrompt>
+      <role>You are a language UX engineer focused on making ML code expressive and readable.</role>
+      <objective>Add ergonomic syntax features that make Axon feel natural to Python ML developers while maintaining compile-time safety.</objective>
+      <do>Ensure all new syntax has clear documentation with before/after examples. Update migration guides.</do>
+      <dont>Do not add features that conflict with existing syntax. Do not implement math-notation yet (design doc only).</dont>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>with-block parses, type-checks, and desugars correctly.</criterion>
+      <criterion>Documentation updated: language tour, tensors guide, tutorials.</criterion>
+      <criterion>Math-notation design document is complete and reviewed.</criterion>
+      <criterion>All tests pass including new with-block tests.</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       WS8: ADVANCED AND GPU-DEFERRED
+       ═══════════════════════════════════════════════════════════════ -->
+  <workstream id="WS8" name="Advanced and GPU-Deferred Features" phase="EPSILON">
+    <scope>GPU warp divergence optimization, math-notation implementation, shape specialization. Design only until MLIR pipeline exists.</scope>
+    <recommendations>R03 R13</recommendations>
+    <dependsOn>WS3 WS4 WS6</dependsOn>
+    <deliverables>
+      <item>Design document: GPU branchless transform pass</item>
+      <item>Design document: math-notation block syntax and parser</item>
+      <item>Design document: shape-specialized function compilation</item>
+      <item>Prototype implementations (when GPU codegen is available)</item>
+    </deliverables>
+    <executionPrompt>
+      <role>You are a GPU compiler research engineer.</role>
+      <objective>Produce complete design documents for advanced GPU optimizations that can be implemented once the MLIR pipeline is operational.</objective>
+      <do>Reference XLA, Triton, and TVM architectures. Include performance projections and implementation sketches.</do>
+      <dont>Do not implement GPU-specific code without a working MLIR backend. Design documents only.</dont>
+    </executionPrompt>
+    <acceptanceCriteria>
+      <criterion>Design documents are complete with architecture, data flow, and pseudocode.</criterion>
+      <criterion>Performance projections include target benchmarks and comparison points.</criterion>
+      <criterion>Implementation is cleanly deferred — no dead code introduced.</criterion>
+    </acceptanceCriteria>
+  </workstream>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EXECUTION ORDER AND DEPENDENCIES
+       ═══════════════════════════════════════════════════════════════ -->
+  <executionOrder>
+    <phase id="ALPHA" name="Infrastructure Foundation" workstreams="WS1 WS2">
+      <description>Build the foundation: diagnostics, transform passes, snapshot tests, interning, stacker. No new language features yet.</description>
+      <gate>All 1,034 tests pass. Diagnostics accumulate. PassManager operational. 100+ snapshot tests.</gate>
+    </phase>
+    <phase id="BETA" name="Core Tensor Optimizations" workstreams="WS3 WS4 WS5">
+      <description>The big features: operator fusion, auto-parallelism, fold/reduce. This is where Axon becomes SOTA.</description>
+      <gate>Fusion 3x throughput. Parallelism 2x on 4 cores. Fold/reduce/comprehensions functional. 200+ new tests.</gate>
+      <dependsOn>ALPHA</dependsOn>
+    </phase>
+    <phase id="GAMMA" name="Type System Extensions" workstreams="WS6">
+      <description>Linear types and ADT layouts. Refinement on top of working optimizations.</description>
+      <gate>Zero-copy verified on 5+ patterns. ADT benchmarks complete.</gate>
+      <dependsOn>BETA</dependsOn>
+    </phase>
+    <phase id="DELTA" name="Language Ergonomics" workstreams="WS7">
+      <description>Syntax sugar and documentation. Polish the developer experience.</description>
+      <gate>with-blocks work. Docs updated. Math-notation designed.</gate>
+      <dependsOn>GAMMA</dependsOn>
+    </phase>
+    <phase id="EPSILON" name="Advanced GPU" workstreams="WS8">
+      <description>Design documents for GPU-specific optimizations. Implementation deferred to MLIR availability.</description>
+      <gate>Design documents reviewed and approved.</gate>
+      <dependsOn>DELTA</dependsOn>
+    </phase>
+  </executionOrder>
+</axonBendWorkstreams>

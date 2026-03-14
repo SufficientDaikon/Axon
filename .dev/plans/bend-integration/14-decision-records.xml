@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<axonBendDecisionRecords>
+  <metadata><purpose>Architectural decision records (ADRs) for key technical choices made during Bend integration. Each record captures context, options considered, decision rationale, and consequences.</purpose></metadata>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR-001: DIAGNOSTICS ARCHITECTURE
+       ═══════════════════════════════════════════════════════════════ -->
+  <adr id="ADR-001" status="accepted" date="2026-03-14">
+    <title>Accumulative Diagnostics via Vec-based Collector</title>
+    <context>Axon currently uses early-exit error handling (Result + ? operator) throughout the pipeline. Each compiler phase stops at the first error. Users see one error per compilation, requiring multiple compile cycles to fix all issues.</context>
+    <options>
+      <option id="O1" name="Vec-based Diagnostics collector">
+        <description>Simple Vec&lt;Diagnostic&gt; struct threaded through all phases. fatal() checkpoint returns Err only if errors accumulated.</description>
+        <pros>Simple. Matches Bend's approach. Easy to thread through existing phases. No concurrency concerns.</pros>
+        <cons>Linear scan for fatal() check. Not thread-safe if compilation ever becomes parallel.</cons>
+      </option>
+      <option id="O2" name="Channel-based diagnostic streaming">
+        <description>mpsc channel for diagnostics. Each phase sends diagnostics to a collector thread.</description>
+        <pros>Thread-safe by design. Decoupled producers and consumer.</pros>
+        <cons>Over-engineered for single-threaded compiler. Channel overhead. Complex lifecycle.</cons>
+      </option>
+      <option id="O3" name="Global mutable diagnostic store">
+        <description>Static mut or thread-local storage for diagnostics.</description>
+        <pros>No threading parameter needed.</pros>
+        <cons>Unsafe. Hard to test. Global state anti-pattern. Complicates parallel testing.</cons>
+      </option>
+    </options>
+    <decision>Option O1 — Vec-based Diagnostics collector.</decision>
+    <rationale>Axon compilation is single-threaded. The Vec approach is simplest, matches Bend's proven pattern, and is trivially testable. If parallel compilation is ever needed, the struct can be wrapped in Mutex with minimal change.</rationale>
+    <consequences>
+      <positive>Simple implementation. Easy to test. Low overhead.</positive>
+      <negative>Must thread &amp;mut Diagnostics through all phase function signatures — moderate refactor.</negative>
+    </consequences>
+  </adr>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR-002: PASS MANAGER DESIGN
+       ═══════════════════════════════════════════════════════════════ -->
+  <adr id="ADR-002" status="accepted" date="2026-03-14">
+    <title>Fixed-Order PassManager with Trait Objects</title>
+    <context>Axon needs a transformation pass pipeline for MIR optimizations (dead code, const fold, fusion, parallelism). Need to decide on pass registration, ordering, and extensibility approach.</context>
+    <options>
+      <option id="O1" name="Fixed-order Vec of trait objects">
+        <description>PassManager holds Vec&lt;Box&lt;dyn Pass&gt;&gt; in compile-time-determined order. Each pass is individually toggleable.</description>
+        <pros>Simple. Predictable. Easy to debug. Order is explicit and documented.</pros>
+        <cons>Adding new passes requires modifying PassManager constructor. No dynamic reordering.</cons>
+      </option>
+      <option id="O2" name="Dependency graph with topological sort">
+        <description>Passes declare dependencies. PassManager topologically sorts and executes.</description>
+        <pros>Flexible ordering. Passes can be added independently.</pros>
+        <cons>Complex. Dependency cycles possible. Harder to debug ordering issues. Over-engineered for 7 passes.</cons>
+      </option>
+      <option id="O3" name="Plugin system with dynamic loading">
+        <description>Passes as separate crates loaded via dlopen/dylib.</description>
+        <pros>Maximum extensibility. Third-party passes possible.</pros>
+        <cons>Massive over-engineering. Platform-specific. ABI stability nightmare. We have 7 passes.</cons>
+      </option>
+    </options>
+    <decision>Option O1 — Fixed-order Vec of trait objects.</decision>
+    <rationale>7 passes with well-defined order. Bend uses 31 passes in fixed order and it works. Simplicity is critical for correctness. The pass order (dead_code → const_fold → linearize → float_combinators → fuse_ops → inline → parallelize) has semantic dependencies that are clearer when explicit.</rationale>
+    <consequences>
+      <positive>Simple, predictable, debuggable. Each pass can be tested independently.</positive>
+      <negative>New passes require code change in PassManager. Acceptable for a compiler with a small pass count.</negative>
+    </consequences>
+  </adr>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR-003: FUSION STRATEGY
+       ═══════════════════════════════════════════════════════════════ -->
+  <adr id="ADR-003" status="accepted" date="2026-03-14">
+    <title>Pattern-Based Fusion with Hand-Written Kernels</title>
+    <context>Need to fuse tensor operations to eliminate intermediate tensors. Options range from fully automatic fusion (like XLA) to pattern-based fusion with specific hand-written kernels.</context>
+    <options>
+      <option id="O1" name="Pattern-based with hand-written kernels">
+        <description>Define specific fusion patterns (linear+relu, mse, etc). Each pattern maps to a hand-written C kernel in runtime.</description>
+        <pros>Predictable. Numerically verifiable per-pattern. Easier to debug. Incremental — add patterns one at a time.</pros>
+        <cons>Limited to known patterns. New patterns require new kernel code. Doesn't discover novel fusions.</cons>
+      </option>
+      <option id="O2" name="Fully automatic tiling/fusion (XLA-style)">
+        <description>Analyze data flow, automatically determine fusion boundaries, generate fused kernels via code generation.</description>
+        <pros>Discovers novel fusions. Adapts to any operation combination.</pros>
+        <cons>Enormously complex. Requires full cost model. Code generation is hard to verify numerically. XLA took years to build.</cons>
+      </option>
+      <option id="O3" name="Polyhedral model (MLIR-style)">
+        <description>Represent tensor ops as polyhedral iteration spaces, apply affine transformations for fusion.</description>
+        <pros>Theoretically optimal. Handles complex loop nests.</pros>
+        <cons>Requires MLIR integration. Massive infrastructure. Overkill for current tensor op set.</cons>
+      </option>
+    </options>
+    <decision>Option O1 — Pattern-based with hand-written kernels. O2/O3 deferred to EPSILON phase as design documents.</decision>
+    <rationale>5 patterns cover the most impactful ML operation chains. 80/20 rule: these 5 patterns cover ~80% of the fusion benefit in typical ML workloads. Hand-written kernels are verifiable, debuggable, and numerically controllable. XLA-style fusion requires major infrastructure that doesn't exist yet.</rationale>
+    <consequences>
+      <positive>Achievable in BETA phase. Each pattern independently verifiable. Predictable performance.</positive>
+      <negative>Won't discover novel fusions. Manual kernel writing for each new pattern. Acceptable trade-off for current maturity.</negative>
+    </consequences>
+  </adr>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR-004: PARALLELISM MODEL
+       ═══════════════════════════════════════════════════════════════ -->
+  <adr id="ADR-004" status="accepted" date="2026-03-14">
+    <title>CPU Thread Pool for Independent Tensor Operations</title>
+    <context>Need automatic parallelism for independent tensor operations. Bend uses interaction net redex scheduling which is fundamentally different from Axon's imperative model.</context>
+    <options>
+      <option id="O1" name="CPU thread pool with DAG scheduling">
+        <description>Build DAG of tensor ops, identify independent subgraphs, dispatch to thread pool.</description>
+        <pros>Matches Axon's imperative model. Practical. Windows-compatible with #ifdef. Incremental benefit.</pros>
+        <cons>Limited to data-level parallelism. Thread pool overhead for small ops.</cons>
+      </option>
+      <option id="O2" name="Interaction net runtime (Bend-style)">
+        <description>Compile Axon to interaction combinators, use HVM2-style parallel reduction.</description>
+        <pros>Automatic parallelism for everything, not just tensor ops.</pros>
+        <cons>Complete paradigm mismatch. Would require rewriting Axon's runtime. Impractical.</cons>
+      </option>
+      <option id="O3" name="GPU stream scheduling">
+        <description>Map independent tensor ops to different CUDA/Metal streams.</description>
+        <pros>GPU-native parallelism. High throughput for large tensors.</pros>
+        <cons>Requires GPU backend (not yet implemented). Not useful for CPU-only users.</cons>
+      </option>
+    </options>
+    <decision>Option O1 — CPU thread pool. Option O3 deferred to EPSILON.</decision>
+    <rationale>CPU thread pool is practical, incrementally beneficial, and works on Windows (primary dev platform). The DAG approach is a natural fit for tensor operations — each op has clear data dependencies. GPU stream scheduling requires the GPU backend, which is a separate project.</rationale>
+    <consequences>
+      <positive>Works today on Windows. No new runtime dependencies. Sequential fallback always available.</positive>
+      <negative>CPU-only — GPU users won't see parallel benefit until EPSILON. Thread pool overhead may negate benefit for very small tensors (mitigated by size threshold).</negative>
+    </consequences>
+  </adr>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR-005: LINEARITY MODEL
+       ═══════════════════════════════════════════════════════════════ -->
+  <adr id="ADR-005" status="accepted" date="2026-03-14">
+    <title>Opt-In Linear Annotations as Separate Analysis Pass</title>
+    <context>Bend uses automatic affine variable semantics (variables used once are moved, multiple uses trigger auto-dup). Axon has an existing borrow checker. Need to decide how linearity integrates.</context>
+    <options>
+      <option id="O1" name="Opt-in linear keyword, separate pass">
+        <description>Add linear keyword for function parameters. Separate linearity checking pass runs after borrow checking. Non-annotated code unaffected.</description>
+        <pros>Backward compatible. Non-invasive. Clear opt-in semantics. Borrow checker unchanged.</pros>
+        <cons>Users must manually annotate. Won't automatically optimize non-annotated code.</cons>
+      </option>
+      <option id="O2" name="Automatic affine inference (Bend-style)">
+        <description>Automatically determine variable usage count. Single-use = move (zero-copy). Multiple use = auto-clone.</description>
+        <pros>No annotation burden. All code benefits automatically.</pros>
+        <cons>Changes semantics of existing code. May introduce unexpected clones. Hard to integrate with borrow checker.</cons>
+      </option>
+      <option id="O3" name="Integrate linearity into borrow checker">
+        <description>Extend borrow checker to track linearity as part of its core analysis.</description>
+        <pros>Unified analysis. Single pass for all ownership properties.</pros>
+        <cons>High risk — modifying borrow checker could break existing behavior. Complex interaction with borrows, moves, copies.</cons>
+      </option>
+    </options>
+    <decision>Option O1 — Opt-in linear keyword, separate pass.</decision>
+    <rationale>RISK-06 identified high risk of linearity/borrow checker interaction. Separate pass minimizes risk. Opt-in is safe for pre-release language. Users who want zero-copy get it explicitly. Users who don't care are unaffected. Can evolve toward O2 later if desired.</rationale>
+    <consequences>
+      <positive>Zero risk to existing code. Clear documentation path ("add linear for zero-copy"). Testable independently.</positive>
+      <negative>Optimization only when user opts in. Acceptable trade-off — ML-aware users will learn linear quickly.</negative>
+    </consequences>
+  </adr>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR-006: THREADING ON WINDOWS
+       ═══════════════════════════════════════════════════════════════ -->
+  <adr id="ADR-006" status="accepted" date="2026-03-14">
+    <title>Platform-Agnostic Threading with #ifdef</title>
+    <context>Primary development platform is Windows. C runtime needs a thread pool for auto-parallelism. pthreads is not native on Windows.</context>
+    <options>
+      <option id="O1" name="#ifdef for Windows CreateThread, else pthreads">
+        <description>Conditional compilation in C runtime: CreateThread on Windows, pthreads on Unix.</description>
+        <pros>Native on both platforms. No external dependencies. Well-understood pattern.</pros>
+        <cons>Code duplication between platform implementations.</cons>
+      </option>
+      <option id="O2" name="C11 threads (thrd_create)">
+        <description>Use C11 standard threading (thrd_create, mtx_lock, etc).</description>
+        <pros>Standard. Single code path.</pros>
+        <cons>MSVC has incomplete C11 thread support. May not work reliably on Windows.</cons>
+      </option>
+      <option id="O3" name="Rust-side threading (rayon/crossbeam)">
+        <description>Move thread pool from C runtime to Rust side, use rayon or crossbeam.</description>
+        <pros>Platform-agnostic via Rust. High-quality implementations.</pros>
+        <cons>Adds Rust runtime dependency to compiled binary. Complicates C runtime ABI. FFI overhead for each dispatch.</cons>
+      </option>
+    </options>
+    <decision>Option O1 — #ifdef for platform-specific threading.</decision>
+    <rationale>Runtime is already C. Platform #ifdef is standard practice in C codebases. Both CreateThread and pthreads are well-documented. Sequential fallback handles unsupported platforms. MSVC C11 thread support is unreliable, ruling out O2.</rationale>
+    <consequences>
+      <positive>Works on Windows. No new dependencies. Sequential fallback for safety.</positive>
+      <negative>Two code paths to maintain. Acceptable for a thread pool (small API surface).</negative>
+    </consequences>
+  </adr>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR-007: WHAT NOT TO ADOPT FROM BEND
+       ═══════════════════════════════════════════════════════════════ -->
+  <adr id="ADR-007" status="accepted" date="2026-03-14">
+    <title>Features Explicitly NOT Adopted from Bend</title>
+    <context>Bend has many features, not all of which are appropriate for Axon. This ADR documents what was deliberately excluded and why.</context>
+    <excluded>
+      <feature name="Interaction Combinator Runtime (HVM2)">
+        <reason>Axon compiles to LLVM IR → native code. Replacing this with an interaction net runtime would require rewriting the entire backend. The performance characteristics are fundamentally different — IC is for massive parallelism of fine-grained operations, while Axon targets tensor-level parallelism.</reason>
+      </feature>
+      <feature name="24-bit Number Limitation">
+        <reason>Bend uses u24/i24/f24 due to HVM2's 60-bit node format. Axon uses standard f32/f64/i32/i64. This is a fundamental limitation of Bend, not a feature.</reason>
+      </feature>
+      <feature name="Dual Syntax (Imp/Fun)">
+        <reason>Axon has one established syntax. Adding a second syntax multiplies maintenance and documentation burden without clear benefit. Bend's dual syntax exists because it targets both Python and Haskell audiences.</reason>
+      </feature>
+      <feature name="Automatic Duplication (auto-dup)">
+        <reason>Axon has explicit ownership and borrowing. Automatic duplication would conflict with the borrow checker and change semantics of existing programs. Opt-in linear annotations are safer.</reason>
+      </feature>
+      <feature name="Scott/NumScott ADT Encoding">
+        <reason>These are encoding strategies for interaction combinators. Axon's ADTs are already efficiently compiled to tagged unions via LLVM. Scott encoding would add overhead, not remove it.</reason>
+      </feature>
+      <feature name="Bend/Fold Loop Replacements">
+        <reason>Axon already has for/while loops. Bend's bend/fold replace loops entirely because interaction combinators have no mutable state. Axon has mutation, so standard loops are more appropriate. However, fold/reduce are adopted as additional functional primitives alongside existing loops.</reason>
+      </feature>
+      <feature name="Optional HM Type System">
+        <reason>Axon has a strong, non-optional type system. Making type-checking optional would undermine Axon's safety guarantees.</reason>
+      </feature>
+    </excluded>
+    <rationale>Bend and Axon have fundamentally different execution models. Features that make sense for interaction combinators don't necessarily make sense for a compiled, imperative language with LLVM codegen. We adopt the ideas and patterns, not the specific implementations.</rationale>
+  </adr>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADR TEMPLATE FOR FUTURE DECISIONS
+       ═══════════════════════════════════════════════════════════════ -->
+  <adrTemplate>
+    <fields>
+      <field name="id">ADR-NNN</field>
+      <field name="status">proposed | accepted | deprecated | superseded</field>
+      <field name="date">YYYY-MM-DD</field>
+      <field name="title">Short descriptive title</field>
+      <field name="context">Why is this decision needed? What's the problem?</field>
+      <field name="options">At least 2 options with pros/cons</field>
+      <field name="decision">Which option was chosen</field>
+      <field name="rationale">Why this option was chosen</field>
+      <field name="consequences">Positive and negative consequences</field>
+    </fields>
+  </adrTemplate>
+</axonBendDecisionRecords>
