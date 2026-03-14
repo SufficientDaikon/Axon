@@ -78,10 +78,10 @@
     <!-- Likelihood x Impact = Priority -->
     <cell likelihood="high" impact="critical">RISK-01</cell>
     <cell likelihood="medium" impact="critical">RISK-02</cell>
-    <cell likelihood="medium" impact="high">RISK-03 RISK-06</cell>
+    <cell likelihood="medium" impact="high">RISK-03</cell>
     <cell likelihood="high" impact="medium">RISK-05</cell>
     <cell likelihood="low" impact="high">RISK-04 RISK-07</cell>
-    <cell likelihood="medium" impact="medium">RISK-09</cell>
+    <cell likelihood="medium" impact="medium">RISK-06 RISK-09</cell>
     <cell likelihood="medium" impact="low">RISK-10</cell>
     <cell likelihood="low" impact="low">RISK-08</cell>
   </riskMatrix>

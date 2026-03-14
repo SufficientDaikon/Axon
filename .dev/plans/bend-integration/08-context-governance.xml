@@ -32,7 +32,7 @@
   <compressionRules>
     <rule>Before starting any new phase, run /compact to reset context.</rule>
     <rule>Load ONLY the handoff packet from previous phase, not the full transcript.</rule>
-    <rule>Load ONLY the plan documents relevant to the current workstream (not all 15).</rule>
+    <rule>Load ONLY the plan documents relevant to the current workstream (not all 16).</rule>
     <rule>Use Grep/Glob for targeted file access. Never read entire source files unless necessary.</rule>
     <rule>Subagents handle exploration. Main context handles decisions and writes.</rule>
     <rule>If context exceeds 60K tokens mid-phase, create intermediate handoff and restart.</rule>
@@ -42,6 +42,7 @@
     <pin>Project path: h:/programing language/axon/</pin>
     <pin>Test baseline: 1,034+ (must never decrease)</pin>
     <pin>Zero-warning compilation required</pin>
+    <pin>Binary: axonc | Build: cargo build | Test: cargo test</pin>
     <pin>Key files: src/lib.rs (orchestration), src/mir.rs (MIR), src/typeck.rs (type checker)</pin>
     <pin>Pipeline: Lexer -> Parser -> AST -> TypeChecker -> TAST -> MIR -> Passes -> LLVM IR -> clang</pin>
     <pin>Syntax: val/var, model, extend, : (return type), . (path separator), |> (pipe)</pin>
@@ -69,6 +70,17 @@
       <maxTokens>5000</maxTokens>
     </stage>
   </contextLifecyclePolicy>
+
+  <modelSpecificGuidance model="claude-opus-4-6">
+    <capability name="Parallel tool calls">Opus 4.6 can issue multiple tool calls in a single message. Maximize this for independent Grep/Read/Write operations.</capability>
+    <capability name="Agent delegation">Use Agent tool with subagent_type="Explore" for codebase exploration, subagent_type="general-purpose" for multi-step tasks. Agents run in separate context windows, keeping main context clean.</capability>
+    <capability name="Long-horizon planning">Opus 4.6 excels at maintaining coherence across long tasks. Use TodoWrite to make progress visible and avoid losing track of multi-file changes.</capability>
+    <capability name="Code generation quality">Opus 4.6 produces high-quality Rust code. Lean into generating complete modules with tests rather than incremental patches.</capability>
+    <guidance>When starting a new epic, first launch an Explore agent to map the relevant code paths, then create a TodoWrite plan, then execute with parallel Write calls for independent files.</guidance>
+    <guidance>Prefer Edit over Write for modifying existing files — smaller diffs are easier to review and less error-prone.</guidance>
+    <guidance>Use Bash("cargo test 2>&amp;1 | tail -5") for quick validation after changes. Only read full output on failure.</guidance>
+    <guidance>When creating new modules, write the module and its tests in the same message using parallel Write calls.</guidance>
+  </modelSpecificGuidance>
 
   <antiPatterns>
     <antiPattern name="FullFileLoading">

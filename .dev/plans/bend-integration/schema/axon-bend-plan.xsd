@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
+  <!-- ═══════════════════════════════════════════════════════════════════
+       Axon-Bend Integration Plan — Comprehensive XSD Schema
+       Validates all 16 plan documents (00 through 15).
+
+       Types defined:  riskType, epicType, storyType, hardGateType,
+                       softGateType, adrType, benchmarkType,
+                       traceabilityChainType, promptType
+       Enums:          phaseType, priorityType, likelihoodType,
+                       impactType, statusType, adrStatusType
+       Constraints:    xs:key / xs:keyref for intra-document ID validation
+       ═══════════════════════════════════════════════════════════════════ -->
+
+
   <!-- ═══════════════════════════════════════════════════════════════
-       COMMON TYPES
+       SECTION 1 — SIMPLE TYPES: ENUMERATIONS
        ═══════════════════════════════════════════════════════════════ -->
 
   <xs:simpleType name="phaseType">
@@ -59,6 +72,20 @@
     </xs:restriction>
   </xs:simpleType>
 
+  <xs:simpleType name="overallReadinessType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NOT STARTED"/>
+      <xs:enumeration value="IN PROGRESS"/>
+      <xs:enumeration value="READY"/>
+      <xs:enumeration value="BLOCKED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 2 — SIMPLE TYPES: ID PATTERNS
+       ═══════════════════════════════════════════════════════════════ -->
+
   <xs:simpleType name="epicIdType">
     <xs:restriction base="xs:string">
       <xs:pattern value="E\d+"/>
@@ -77,14 +104,70 @@
     </xs:restriction>
   </xs:simpleType>
 
-  <xs:simpleType name="workstreamType">
+  <xs:simpleType name="workstreamIdType">
     <xs:restriction base="xs:string">
       <xs:pattern value="WS\d+"/>
     </xs:restriction>
   </xs:simpleType>
 
+  <xs:simpleType name="adrIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="ADR-\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="benchmarkSuiteIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="BS-\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="benchmarkIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="BM-\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="traceChainIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="TC-\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="promptIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="PROMPT-.+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="recommendationIdType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="R\d+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Space-separated list of phase values (used in workstream recommendations, etc.) -->
+  <xs:simpleType name="spaceDelimitedIds">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\S+(\s+\S+)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+
   <!-- ═══════════════════════════════════════════════════════════════
-       RISK REGISTER SCHEMA
+       SECTION 3 — REUSABLE COMPLEX TYPES: METADATA
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Open metadata: allows any child elements for varied document headers -->
+  <xs:complexType name="metadataType">
+    <xs:sequence>
+      <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 4 — RISK REGISTER TYPES
        ═══════════════════════════════════════════════════════════════ -->
 
   <xs:complexType name="riskType">
@@ -98,11 +181,21 @@
     <xs:attribute name="category" type="xs:string" use="required"/>
     <xs:attribute name="likelihood" type="likelihoodType" use="required"/>
     <xs:attribute name="impact" type="impactType" use="required"/>
-    <xs:attribute name="phase" type="xs:string" use="required"/>
+    <xs:attribute name="phase" type="phaseType" use="required"/>
   </xs:complexType>
 
+  <xs:complexType name="riskMatrixCellType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="likelihood" type="likelihoodType" use="required"/>
+        <xs:attribute name="impact" type="impactType" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+
   <!-- ═══════════════════════════════════════════════════════════════
-       EPIC / STORY SCHEMA
+       SECTION 5 — EPIC / STORY TYPES
        ═══════════════════════════════════════════════════════════════ -->
 
   <xs:complexType name="storyType">
@@ -111,6 +204,12 @@
         <xs:attribute name="id" type="storyIdType" use="required"/>
       </xs:extension>
     </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="definitionOfDoneType">
+    <xs:sequence>
+      <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
   </xs:complexType>
 
   <xs:complexType name="epicType">
@@ -123,23 +222,31 @@
           </xs:sequence>
         </xs:complexType>
       </xs:element>
-      <xs:element name="definitionOfDone">
-        <xs:complexType>
-          <xs:sequence>
-            <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
-          </xs:sequence>
-        </xs:complexType>
-      </xs:element>
+      <xs:element name="definitionOfDone" type="definitionOfDoneType"/>
     </xs:sequence>
     <xs:attribute name="id" type="epicIdType" use="required"/>
     <xs:attribute name="name" type="xs:string" use="required"/>
     <xs:attribute name="priority" type="priorityType" use="required"/>
     <xs:attribute name="phase" type="phaseType" use="required"/>
-    <xs:attribute name="workstream" type="workstreamType" use="required"/>
+    <xs:attribute name="workstream" type="workstreamIdType" use="required"/>
   </xs:complexType>
 
+  <!-- Dependency graph edge for backlog -->
+  <xs:complexType name="dependencyEdgeType">
+    <xs:attribute name="from" type="epicIdType" use="required"/>
+    <xs:attribute name="to" type="epicIdType" use="required"/>
+  </xs:complexType>
+
+  <!-- Backlog summary phase line -->
+  <xs:complexType name="phaseSummaryType">
+    <xs:attribute name="name" type="phaseType" use="required"/>
+    <xs:attribute name="epics" type="xs:string" use="required"/>
+    <xs:attribute name="stories" type="xs:string" use="required"/>
+  </xs:complexType>
+
+
   <!-- ═══════════════════════════════════════════════════════════════
-       GATE SCHEMA
+       SECTION 6 — GATE TYPES
        ═══════════════════════════════════════════════════════════════ -->
 
   <xs:complexType name="hardGateType">
@@ -157,8 +264,50 @@
     <xs:attribute name="status" type="statusType" use="required"/>
   </xs:complexType>
 
+  <xs:complexType name="exitCriteriaType">
+    <xs:sequence>
+      <xs:element name="hardPassed" type="xs:string"/>
+      <xs:element name="softAverage" type="xs:string"/>
+      <xs:element name="decision" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- A full phase gate: hard gates + soft gates + exit criteria -->
+  <xs:complexType name="phaseGateType">
+    <xs:sequence>
+      <xs:element name="hardGates">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="gate" type="hardGateType" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="softGates">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="gate" type="softGateType" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="exitCriteria" type="exitCriteriaType"/>
+    </xs:sequence>
+    <xs:attribute name="phase" type="phaseType" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- Cumulative scorecard metric -->
+  <xs:complexType name="scorecardMetricType">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="count" type="xs:string"/>
+    <xs:attribute name="passed" type="xs:string"/>
+    <xs:attribute name="avgScore" type="xs:string"/>
+    <xs:attribute name="current" type="xs:string"/>
+    <xs:attribute name="target" type="xs:string"/>
+  </xs:complexType>
+
+
   <!-- ═══════════════════════════════════════════════════════════════
-       ADR SCHEMA
+       SECTION 7 — ADR TYPES (standard + variant ADR-007 format)
        ═══════════════════════════════════════════════════════════════ -->
 
   <xs:complexType name="adrOptionType">
@@ -171,56 +320,908 @@
     <xs:attribute name="name" type="xs:string" use="required"/>
   </xs:complexType>
 
+  <xs:complexType name="adrConsequencesType">
+    <xs:sequence>
+      <xs:element name="positive" type="xs:string"/>
+      <xs:element name="negative" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ADR-007 variant: excluded features instead of options/decision -->
+  <xs:complexType name="excludedFeatureType">
+    <xs:sequence>
+      <xs:element name="reason" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!--
+    adrType supports two structural variants:
+      Standard (ADR-001..006): title, context, options, decision, rationale, consequences
+      Variant  (ADR-007):      title, context, excluded, rationale
+    All optional sub-elements allow both forms to validate.
+  -->
   <xs:complexType name="adrType">
     <xs:sequence>
       <xs:element name="title" type="xs:string"/>
       <xs:element name="context" type="xs:string"/>
-      <xs:element name="options">
+      <!-- Standard ADR elements -->
+      <xs:element name="options" minOccurs="0">
         <xs:complexType>
           <xs:sequence>
             <xs:element name="option" type="adrOptionType" minOccurs="2" maxOccurs="unbounded"/>
           </xs:sequence>
         </xs:complexType>
       </xs:element>
-      <xs:element name="decision" type="xs:string"/>
-      <xs:element name="rationale" type="xs:string"/>
-      <xs:element name="consequences">
+      <xs:element name="decision" type="xs:string" minOccurs="0"/>
+      <!-- Variant ADR-007: excluded features list -->
+      <xs:element name="excluded" minOccurs="0">
         <xs:complexType>
           <xs:sequence>
-            <xs:element name="positive" type="xs:string"/>
-            <xs:element name="negative" type="xs:string"/>
+            <xs:element name="feature" type="excludedFeatureType" maxOccurs="unbounded"/>
           </xs:sequence>
         </xs:complexType>
       </xs:element>
+      <xs:element name="rationale" type="xs:string"/>
+      <xs:element name="consequences" type="adrConsequencesType" minOccurs="0"/>
     </xs:sequence>
-    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="id" type="adrIdType" use="required"/>
     <xs:attribute name="status" type="adrStatusType" use="required"/>
     <xs:attribute name="date" type="xs:date" use="required"/>
   </xs:complexType>
 
+  <!-- ADR template field (for the template section in decision records) -->
+  <xs:complexType name="adrTemplateFieldType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+
   <!-- ═══════════════════════════════════════════════════════════════
-       BENCHMARK SCHEMA
+       SECTION 8 — BENCHMARK TYPES
        ═══════════════════════════════════════════════════════════════ -->
 
-  <xs:complexType name="benchmarkType">
+  <!-- A single benchmark variant (e.g. "fused" vs "unfused") -->
+  <xs:complexType name="benchmarkVariantType" mixed="true">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- Target scaling entry: threads + expected speedup -->
+  <xs:complexType name="targetScalingEntryType">
+    <xs:attribute name="threads" type="xs:string" use="required"/>
+    <xs:attribute name="speedup" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- Programs list: may contain text only OR <program> children (mixed) -->
+  <xs:complexType name="benchmarkProgramsType" mixed="true">
     <xs:sequence>
+      <xs:element name="program" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!--
+    benchmarkType — flexible enough for all benchmark variants:
+      Fusion benchmarks:    description, setup, variants, targetSpeedup, metrics
+      Parallel benchmarks:  description, setup, threadCounts, targetScaling, expected, metrics
+      Compile benchmarks:   description, programs, passes, expected, target, metrics
+      Memory benchmarks:    description, programs, expected, target, metrics
+    Uses xs:all to allow any child order.
+  -->
+  <xs:complexType name="benchmarkType">
+    <xs:all>
       <xs:element name="description" type="xs:string"/>
       <xs:element name="setup" type="xs:string" minOccurs="0"/>
       <xs:element name="variants" minOccurs="0">
         <xs:complexType>
           <xs:sequence>
-            <xs:element name="variant" maxOccurs="unbounded">
-              <xs:complexType mixed="true">
-                <xs:attribute name="name" type="xs:string" use="required"/>
-              </xs:complexType>
-            </xs:element>
+            <xs:element name="variant" type="benchmarkVariantType" maxOccurs="unbounded"/>
           </xs:sequence>
         </xs:complexType>
       </xs:element>
+      <xs:element name="targetSpeedup" type="xs:string" minOccurs="0"/>
+      <xs:element name="programs" type="benchmarkProgramsType" minOccurs="0"/>
+      <xs:element name="passes" type="xs:string" minOccurs="0"/>
+      <xs:element name="threadCounts" type="xs:string" minOccurs="0"/>
+      <xs:element name="threadCount" type="xs:string" minOccurs="0"/>
+      <xs:element name="targetScaling" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="target" type="targetScalingEntryType" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="expected" type="xs:string" minOccurs="0"/>
+      <xs:element name="target" type="xs:string" minOccurs="0"/>
       <xs:element name="metrics" type="xs:string"/>
-    </xs:sequence>
-    <xs:attribute name="id" type="xs:string" use="required"/>
+    </xs:all>
+    <xs:attribute name="id" type="benchmarkIdType" use="required"/>
     <xs:attribute name="name" type="xs:string" use="required"/>
   </xs:complexType>
+
+  <!-- A benchmark suite groups related benchmarks under a test file -->
+  <xs:complexType name="benchmarkSuiteType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="benchmark" type="benchmarkType" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="benchmarkSuiteIdType" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="file" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- Benchmark infrastructure tool -->
+  <xs:complexType name="benchmarkToolType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="setup" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="crate" type="xs:string"/>
+    <xs:attribute name="version" type="xs:string"/>
+  </xs:complexType>
+
+  <!-- Numerical equivalence test entry -->
+  <xs:complexType name="numEquivTestType">
+    <xs:attribute name="pattern" type="xs:string" use="required"/>
+    <xs:attribute name="inputs" type="xs:string" use="required"/>
+    <xs:attribute name="runs" type="xs:positiveInteger" use="required"/>
+  </xs:complexType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 9 — TRACEABILITY CHAIN TYPES
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Test references within a traceability chain -->
+  <xs:complexType name="traceTestsType">
+    <xs:all>
+      <xs:element name="unit" type="xs:string" minOccurs="0"/>
+      <xs:element name="integration" type="xs:string" minOccurs="0"/>
+      <xs:element name="snapshot" type="xs:string" minOccurs="0"/>
+      <xs:element name="e2e" type="xs:string" minOccurs="0"/>
+      <xs:element name="benchmark" type="xs:string" minOccurs="0"/>
+      <xs:element name="stress" type="xs:string" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+
+  <!-- Recommendation reference with ID attribute and text name -->
+  <xs:complexType name="recommendationRefType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="recommendationIdType" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!--
+    traceabilityChainType — one chain per recommendation:
+      recommendation -> pillar -> epic -> stories -> tests -> gates
+    Optional note for deferred/special-case chains.
+  -->
+  <xs:complexType name="traceabilityChainType">
+    <xs:sequence>
+      <xs:element name="recommendation" type="recommendationRefType"/>
+      <xs:element name="pillar" type="xs:string"/>
+      <xs:element name="epic" type="xs:string"/>
+      <xs:element name="stories" type="xs:string"/>
+      <xs:element name="tests" type="traceTestsType"/>
+      <xs:element name="gates" type="xs:string"/>
+      <xs:element name="note" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="traceChainIdType" use="required"/>
+  </xs:complexType>
+
+  <!-- Phase gate summary within traceability matrix -->
+  <xs:complexType name="tracePhaseGateType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- Coverage summary statistics -->
+  <xs:complexType name="coverageStatType">
+    <xs:attribute name="traced" type="xs:string"/>
+    <xs:attribute name="total" type="xs:string"/>
+    <xs:attribute name="coverage" type="xs:string"/>
+    <xs:attribute name="referenced" type="xs:string"/>
+  </xs:complexType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 10 — PROMPT TYPES
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Step within prompt instructions -->
+  <xs:complexType name="promptInstructionsType">
+    <xs:sequence>
+      <xs:element name="step" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Do/Don't lists -->
+  <xs:complexType name="dosType">
+    <xs:sequence>
+      <xs:element name="do" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="dontsType">
+    <xs:sequence>
+      <xs:element name="dont" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Evidence items -->
+  <xs:complexType name="evidenceType">
+    <xs:sequence>
+      <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!--
+    promptType — Hybrid-CO-STAR-RISEN-TIDD-EC format with 9 fields:
+      context, role, objective, instructions, dos, donts, evidence, responseFormat
+    All fields are required per the prompting standard.
+  -->
+  <xs:complexType name="promptType">
+    <xs:sequence>
+      <xs:element name="context" type="xs:string"/>
+      <xs:element name="role" type="xs:string"/>
+      <xs:element name="objective" type="xs:string"/>
+      <xs:element name="instructions" type="promptInstructionsType"/>
+      <xs:element name="dos" type="dosType"/>
+      <xs:element name="donts" type="dontsType"/>
+      <xs:element name="evidence" type="evidenceType"/>
+      <xs:element name="responseFormat" type="xs:string"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="promptIdType" use="required"/>
+    <xs:attribute name="epic" type="xs:string" use="required"/>
+    <xs:attribute name="workstream" type="xs:string" use="required"/>
+    <xs:attribute name="phase" type="xs:string" use="required"/>
+  </xs:complexType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 11 — WORKSTREAM TYPES
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <!-- Workstream execution prompt (embedded, more flexible than library prompts) -->
+  <xs:complexType name="workstreamExecutionPromptType">
+    <xs:sequence>
+      <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="workstreamType">
+    <xs:sequence>
+      <xs:element name="scope" type="xs:string"/>
+      <xs:element name="recommendations" type="xs:string"/>
+      <xs:element name="dependsOn" type="xs:string" minOccurs="0"/>
+      <xs:element name="deliverables">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="item" type="xs:string" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="executionPrompt" type="workstreamExecutionPromptType"/>
+      <xs:element name="acceptanceCriteria">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="criterion" type="xs:string" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="id" type="workstreamIdType" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="phase" type="phaseType" use="required"/>
+  </xs:complexType>
+
+  <!-- Execution phase in workstreams document -->
+  <xs:complexType name="executionPhaseType">
+    <xs:sequence>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="gate" type="xs:string"/>
+      <xs:element name="dependsOn" type="phaseType" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="phaseType" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="workstreams" type="xs:string" use="required"/>
+  </xs:complexType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 12 — PLAN INDEX TYPES
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="documentRefType">
+    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="file" type="xs:string" use="required"/>
+    <xs:attribute name="purpose" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="nonNegotiableRuleType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 13 — PLAN SCHEMA & CI TYPES
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="validationRuleType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="lintRuleType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="severity" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="documentInventoryItemType">
+    <xs:attribute name="id" type="xs:string" use="required"/>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="required" type="xs:boolean" use="required"/>
+    <xs:attribute name="status" type="xs:string" use="required"/>
+  </xs:complexType>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       ═══════════════════════════════════════════════════════════════════
+       ROOT ELEMENT DECLARATIONS — ALL 16 PLAN DOCUMENTS
+       ═══════════════════════════════════════════════════════════════════
+       ═══════════════════════════════════════════════════════════════════ -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 00 — PLAN INDEX
+       Root: axonBendPlanIndex
+       Note: actual file 00-plan-index.xml currently uses
+             axonBendIntegrationIndex as root element name.
+             Both are declared here for compatibility.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="planIndexContentType">
+    <xs:sequence>
+      <xs:element name="metadata" type="metadataType"/>
+      <xs:element name="documents">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="document" type="documentRefType" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="recommendedReadOrder" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="step" type="xs:string" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="executionDirectives" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="directive" type="xs:string" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="nonNegotiables" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="rule" type="nonNegotiableRuleType" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="axonBendPlanIndex" type="planIndexContentType"/>
+  <!-- Compatibility alias for current file -->
+  <xs:element name="axonBendIntegrationIndex" type="planIndexContentType"/>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 01 — MASTER STRATEGY
+       Varied internal structure: use open content with metadata.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendMasterStrategy">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 02 — CAPABILITY MATRIX
+       Varied internal structure: use open content with metadata.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendCapabilityMatrix">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 03 — ARCHITECTURE BLUEPRINT
+       Varied internal structure: use open content with metadata.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendArchitectureBlueprint">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 04 — WORKSTREAMS AND MILESTONES
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendWorkstreams">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="promptingStandard" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="workstream" type="workstreamType" maxOccurs="unbounded"/>
+        <xs:element name="executionOrder" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="phase" type="executionPhaseType" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- Workstream IDs must be unique -->
+    <xs:key name="workstreamIdKey">
+      <xs:selector xpath="workstream"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 05 — IMPLEMENTATION BACKLOG
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendImplementationBacklog">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="epic" type="epicType" maxOccurs="unbounded"/>
+        <xs:element name="dependencyGraph" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="edge" type="dependencyEdgeType" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="summary" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="totalEpics" type="xs:string"/>
+              <xs:element name="totalStories" type="xs:string"/>
+              <xs:element name="phase" type="phaseSummaryType" maxOccurs="unbounded"/>
+              <xs:element name="estimatedNewTests" type="xs:string"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- Epic IDs must be unique -->
+    <xs:key name="epicIdKey">
+      <xs:selector xpath="epic"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+
+    <!-- Story IDs must be unique across all epics -->
+    <xs:key name="storyIdKey">
+      <xs:selector xpath="epic/stories/story"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+
+    <!-- Dependency graph "from" must reference a declared epic -->
+    <xs:keyref name="depEdgeFromRef" refer="epicIdKey">
+      <xs:selector xpath="dependencyGraph/edge"/>
+      <xs:field xpath="@from"/>
+    </xs:keyref>
+
+    <!-- Dependency graph "to" must reference a declared epic -->
+    <xs:keyref name="depEdgeToRef" refer="epicIdKey">
+      <xs:selector xpath="dependencyGraph/edge"/>
+      <xs:field xpath="@to"/>
+    </xs:keyref>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 06 — EXECUTION PLAYBOOK
+       Varied internal structure: use open content.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendExecutionPlaybook">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 07 — PROMPT LIBRARY
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendPromptLibrary">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="metadataType" minOccurs="0"/>
+        <xs:element name="prompt" type="promptType" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- Prompt IDs must be unique -->
+    <xs:key name="promptIdKey">
+      <xs:selector xpath="prompt"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 08 — CONTEXT GOVERNANCE
+       Varied internal structure: use open content.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendContextGovernance">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 09 — VALIDATION AND TESTING
+       Varied internal structure: use open content.
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendValidationAndTesting">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 10 — GATES SCORECARD
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendGatesScorecard">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="metadataType" minOccurs="0"/>
+        <xs:element name="scoringRules" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="rule" type="xs:string" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="gate" type="phaseGateType" maxOccurs="unbounded"/>
+        <xs:element name="cumulativeScorecard" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="metric" type="scorecardMetricType" maxOccurs="unbounded"/>
+              <xs:element name="overallReadiness" type="overallReadinessType"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- Hard gate IDs must be unique across all phases -->
+    <xs:key name="hardGateIdKey">
+      <xs:selector xpath="gate/hardGates/gate"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+
+    <!-- Soft gate IDs must be unique across all phases -->
+    <xs:key name="softGateIdKey">
+      <xs:selector xpath="gate/softGates/gate"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 11 — TRACEABILITY MATRIX
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendTraceabilityMatrix">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="metadataType" minOccurs="0"/>
+        <xs:element name="chain" type="traceabilityChainType" maxOccurs="unbounded"/>
+        <xs:element name="phaseGates" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="gate" type="tracePhaseGateType" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="coverageSummary" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="total">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="recommendations" type="coverageStatType"/>
+                    <xs:element name="pillars" type="coverageStatType"/>
+                    <xs:element name="epics" type="coverageStatType"/>
+                    <xs:element name="stories" type="coverageStatType"/>
+                    <xs:element name="hardGates" type="coverageStatType"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="orphanCheck" minOccurs="0">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="orphanRecommendations" type="xs:string"/>
+                    <xs:element name="orphanEpics" type="xs:string"/>
+                    <xs:element name="orphanGates" type="xs:string"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- Traceability chain IDs must be unique -->
+    <xs:key name="traceChainIdKey">
+      <xs:selector xpath="chain"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+
+    <!-- Recommendation IDs within chains must be unique -->
+    <xs:key name="traceRecIdKey">
+      <xs:selector xpath="chain/recommendation"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 12 — RISK REGISTER
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendRiskRegister">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="metadataType" minOccurs="0"/>
+        <xs:element name="risks">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="risk" type="riskType" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="riskMatrix" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="cell" type="riskMatrixCellType" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- Risk IDs must be unique -->
+    <xs:key name="riskIdKey">
+      <xs:selector xpath="risks/risk"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 13 — BENCHMARK HARNESS
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendBenchmarkHarness">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="metadataType" minOccurs="0"/>
+        <xs:element name="infrastructure" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="tool" type="benchmarkToolType" minOccurs="0" maxOccurs="unbounded"/>
+              <xs:element name="directory" type="xs:string" minOccurs="0"/>
+              <xs:element name="reportOutput" type="xs:string" minOccurs="0"/>
+              <xs:element name="ciIntegration" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="benchmarkSuite" type="benchmarkSuiteType" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element name="numericalEquivalence" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="description" type="xs:string"/>
+              <xs:element name="epsilon" type="xs:string"/>
+              <xs:element name="testMatrix">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="test" type="numEquivTestType" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="edgeCases">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="case" type="xs:string" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="reporting" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- Benchmark suite IDs must be unique -->
+    <xs:key name="benchmarkSuiteIdKey">
+      <xs:selector xpath="benchmarkSuite"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+
+    <!-- Benchmark IDs must be unique across all suites -->
+    <xs:key name="benchmarkIdKey">
+      <xs:selector xpath="benchmarkSuite/benchmark"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 14 — DECISION RECORDS
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendDecisionRecords">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="metadataType" minOccurs="0"/>
+        <xs:element name="adr" type="adrType" maxOccurs="unbounded"/>
+        <xs:element name="adrTemplate" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="fields">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="field" type="adrTemplateFieldType" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- ADR IDs must be unique -->
+    <xs:key name="adrIdKey">
+      <xs:selector xpath="adr"/>
+      <xs:field xpath="@id"/>
+    </xs:key>
+  </xs:element>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DOC 15 — PLAN SCHEMA AND CI
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="axonBendPlanSchemaAndCI">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="metadataType" minOccurs="0"/>
+        <xs:element name="schemaDefinition" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="location" type="xs:string"/>
+              <xs:element name="description" type="xs:string"/>
+              <xs:element name="validationRules">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="rule" type="validationRuleType" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="lintingRules" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="rule" type="lintRuleType" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="scripts" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="script" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                  <xs:attribute name="name" type="xs:string" use="required"/>
+                  <xs:attribute name="location" type="xs:string" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ciWorkflow" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:any processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="documentInventory" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="document" type="documentInventoryItemType" maxOccurs="unbounded"/>
+              <xs:element name="completeness" type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
 
 </xs:schema>

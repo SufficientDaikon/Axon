@@ -115,7 +115,7 @@
 
   <recommendation id="R06" name="ADT Encoding" pillar="P4" priority="high">
     <bendFeature>Bend encodes algebraic data types as Scott-encoded lambdas for interaction-net compatibility.</bendFeature>
-    <axonAdaptation>Selectable ADT memory layout via --enum-layout flag (tagged-union, Scott, or flat) for performance tuning.</axonAdaptation>
+    <axonAdaptation>Selectable ADT memory layout via --enum-layout flag (tagged, packed, or scattered) for performance tuning.</axonAdaptation>
     <feasibility>3</feasibility>
     <impact>4</impact>
     <effort>3</effort>

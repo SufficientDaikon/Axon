@@ -11,6 +11,10 @@ except ImportError:
     import xml.etree.ElementTree as etree
 
 
+# Tag used to identify xref-related warnings for --strict-xref filtering
+XREF_WARNING_PREFIX = "[xref] "
+
+
 def lint_backlog(plan_dir: Path) -> tuple[list, list, list]:
     """Lint the implementation backlog for completeness."""
     errors, warnings, infos = [], [], []
@@ -45,10 +49,16 @@ def lint_backlog(plan_dir: Path) -> tuple[list, list, list]:
     if summary is not None:
         total_el = summary.find("totalStories")
         if total_el is not None:
-            declared = int(total_el.text)
-            actual = len(stories)
-            if declared != actual:
-                warnings.append(f"Backlog declares {declared} stories but has {actual}")
+            try:
+                declared = int(total_el.text) if total_el.text else None
+            except (ValueError, TypeError):
+                declared = None
+            if declared is None:
+                warnings.append("Backlog summary totalStories is missing or not a valid integer")
+            else:
+                actual = len(stories)
+                if declared != actual:
+                    warnings.append(f"Backlog declares {declared} stories but has {actual}")
 
     infos.append(f"Backlog: {len(epics)} epics, {len(stories)} stories")
     return errors, warnings, infos
@@ -105,9 +115,14 @@ def lint_gates(plan_dir: Path) -> tuple[list, list, list]:
         for p in missing:
             errors.append(f"Phase {p} has no hard gates in scorecard")
 
-    hard_count = sum(1 for _ in root.iter("hardGates"))
-    soft_count = sum(1 for _ in root.iter("softGates"))
-    infos.append(f"Gates: {hard_count} hard gate groups, {soft_count} soft gate groups")
+    # Count individual gate children, not container elements
+    hard_count = 0
+    for container in root.iter("hardGates"):
+        hard_count += len(list(container))
+    soft_count = 0
+    for container in root.iter("softGates"):
+        soft_count += len(list(container))
+    infos.append(f"Gates: {hard_count} hard gates, {soft_count} soft gates")
     return errors, warnings, infos
 
 
@@ -148,7 +163,7 @@ def lint_dependency_cycles(plan_dir: Path) -> tuple[list, list, list]:
 
     for epic_id in graph:
         if has_cycle(epic_id):
-            warnings.append(f"Dependency cycle detected involving {epic_id}")
+            warnings.append(f"{XREF_WARNING_PREFIX}Dependency cycle detected involving {epic_id}")
             break
 
     if not warnings:
@@ -162,7 +177,7 @@ def lint_traceability(plan_dir: Path) -> tuple[list, list, list]:
     errors, warnings, infos = [], [], []
     path = plan_dir / "11-traceability-matrix.xml"
     if not path.exists():
-        warnings.append("Traceability matrix (11) missing — cannot check coverage")
+        warnings.append(f"{XREF_WARNING_PREFIX}Traceability matrix (11) missing — cannot check coverage")
         return errors, warnings, infos
 
     tree = etree.parse(str(path))
@@ -175,7 +190,7 @@ def lint_traceability(plan_dir: Path) -> tuple[list, list, list]:
         if recs is not None:
             cov = recs.get("coverage", "")
             if cov != "100%":
-                warnings.append(f"Traceability coverage is {cov}, target is 100%")
+                warnings.append(f"{XREF_WARNING_PREFIX}Traceability coverage is {cov}, target is 100%")
 
     infos.append(f"Traceability: {len(chains)} chains defined")
     return errors, warnings, infos
@@ -218,12 +233,14 @@ def main():
     if all_errors:
         print("\nLINT FAILED")
         return 1
-    elif all_warnings and strict_xref:
-        print("\nLINT FAILED (strict mode)")
-        return 1
-    else:
-        print("\nLINT PASSED")
-        return 0
+    elif strict_xref:
+        # In --strict-xref mode, only fail on xref-related warnings (tagged with prefix)
+        xref_warnings = [w for w in all_warnings if w.startswith(XREF_WARNING_PREFIX)]
+        if xref_warnings:
+            print(f"\nLINT FAILED (--strict-xref: {len(xref_warnings)} xref warning(s))")
+            return 1
+    print("\nLINT PASSED")
+    return 0
 
 
 if __name__ == "__main__":

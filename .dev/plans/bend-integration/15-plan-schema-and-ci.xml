@@ -13,7 +13,7 @@
       <rule id="XSD-02">Every epic must have id, name, priority, phase, workstream attributes.</rule>
       <rule id="XSD-03">Every story must have an id matching pattern E{N}-S{N}.</rule>
       <rule id="XSD-04">Every gate must have id, criterion, evidence, status attributes.</rule>
-      <rule id="XSD-05">Every prompt must have all 9 fields: context, role, objective, instructions, dos, donts, evidence, responseFormat and one of: steps or instructions.</rule>
+      <rule id="XSD-05">Every prompt must have all 9 fields: context, role, objective, instructions (containing steps), do, dont, evidence, responseFormat.</rule>
       <rule id="XSD-06">Every ADR must have id, status, date, title, context, options (2+), decision, rationale, consequences.</rule>
       <rule id="XSD-07">Every benchmark must have id, name, description, and at least one metric.</rule>
       <rule id="XSD-08">Traceability chains must reference valid recommendation, pillar, epic, and gate IDs.</rule>
@@ -24,7 +24,7 @@
        LINTING RULES
        ═══════════════════════════════════════════════════════════════ -->
   <lintingRules>
-    <rule id="LINT-01" severity="error">All 15 plan documents must exist.</rule>
+    <rule id="LINT-01" severity="error">All 16 plan documents (00 through 15) must exist.</rule>
     <rule id="LINT-02" severity="error">All XML documents must be well-formed (parseable by any XML parser).</rule>
     <rule id="LINT-03" severity="error">No orphan references: every epic, story, risk, gate ID referenced must be defined.</rule>
     <rule id="LINT-04" severity="warning">Dependency graph must be acyclic.</rule>
@@ -128,6 +128,6 @@
     <document id="13" name="benchmark-harness.xml" required="true" status="complete"/>
     <document id="14" name="decision-records.xml" required="true" status="complete"/>
     <document id="15" name="plan-schema-and-ci.xml" required="true" status="complete"/>
-    <completeness>15/15 (100%)</completeness>
+    <completeness>16/16 (100%)</completeness>
   </documentInventory>
 </axonBendPlanSchemaAndCI>

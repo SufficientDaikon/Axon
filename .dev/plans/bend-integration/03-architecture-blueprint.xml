@@ -170,7 +170,7 @@
       <changes>Add fused kernels: axon_fused_linear_relu, axon_fused_mse, axon_fused_softmax_ce, axon_fused_elementwise. Add thread pool: axon_parallel_dispatch, axon_parallel_join.</changes>
     </module>
     <module path="src/codegen/llvm.rs">
-      <changes>Emit fused kernel calls. Handle ParallelRegion → thread pool dispatch. Support --enum-layout tagged|packed.</changes>
+      <changes>Emit fused kernel calls. Handle ParallelRegion → thread pool dispatch. Support --enum-layout tagged|packed|scattered.</changes>
     </module>
     <module path="src/main.rs">
       <changes>Add CLI flags: --warn, --deny, --allow, -Ofuse-ops, -Oparallelize, -Odead-code, -Oconst-fold, -Oinline, -Olinearize, -Oall, --enum-layout.</changes>
@@ -212,7 +212,7 @@
       <description>Auto-parallelization must never change program semantics.</description>
       <invariant>Only pure tensor ops with no shared mutable state may be parallelized.</invariant>
       <invariant>Side-effecting ops (print, file IO, RNG) are NEVER parallelized.</invariant>
-      <invariant>Parallel results must be bit-identical to sequential results.</invariant>
+      <invariant>Parallel results must match sequential results within floating-point epsilon (&lt; 1e-6). Bit-identical results are not required because parallel reduction changes floating-point evaluation order.</invariant>
     </contract>
     <contract name="InternerConsistency">
       <description>NameInterner and TypeInterner coexist without interference.</description>

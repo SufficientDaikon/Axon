@@ -362,7 +362,7 @@
     <instructions>
       <step>1. Add With and Ask tokens to src/token.rs (check if already present from other work).</step>
       <step>2. Add WithBlock { context_type, body: Vec&lt;WithStatement&gt; } and AskExpr AST nodes to src/ast.rs.</step>
-      <step>3. Parse: with ResultType { ask x = fallible_call(); ask y = another(x); wrap(x + y) }.</step>
+      <step>3. Parse: with ResultType: ask x = fallible_call(); ask y = another(x); wrap(x + y).</step>
       <step>4. Desugar to bind chain: ResultType.bind(fallible_call(), |x| ResultType.bind(another(x), |y| ResultType.wrap(x + y))).</step>
       <step>5. Type-check: verify context type has bind(M&lt;A&gt;, fn(A) -&gt; M&lt;B&gt;) -&gt; M&lt;B&gt; and wrap(A) -&gt; M&lt;A&gt; methods.</step>
       <step>6. Lower to MIR: emit bind call chain.</step>

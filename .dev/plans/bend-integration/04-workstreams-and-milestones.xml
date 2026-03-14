@@ -49,7 +49,7 @@
       <criterion>PassManager runs dead_code and const_fold passes in order.</criterion>
       <criterion>Each pass is individually toggleable via -O flags.</criterion>
       <criterion>NameInterner makes identifier comparison O(1).</criterion>
-      <criterion>Deeply nested input (100+ levels) doesn't stack overflow.</criterion>
+      <criterion>Deeply nested input (200+ levels) doesn't stack overflow.</criterion>
       <criterion>At least 50 new tests across all new modules.</criterion>
     </acceptanceCriteria>
   </workstream>
@@ -67,10 +67,23 @@
       <item>Snapshot tests for error messages (highest priority)</item>
     </deliverables>
     <executionPrompt>
+      <context>Axon compiler at h:/programing language/axon/. 1,034 tests passing via cargo test. All compiler outputs (AST, type errors, MIR, LLVM IR) are currently tested only through assertion-based unit tests. No snapshot/golden-file infrastructure exists. Error messages are the most user-visible output and must be regression-tested first. Target executor: Claude Opus 4.6.</context>
       <role>You are a test infrastructure engineer focused on compiler output regression prevention.</role>
       <objective>Establish snapshot testing that catches any unintended change in parser output, type checker output, MIR dumps, LLVM IR, and error messages.</objective>
+      <instructions>
+        <step>Add insta = "1.39" as a dev-dependency in Cargo.toml. Verify cargo test still compiles cleanly.</step>
+        <step>Create the snapshot directory hierarchy: tests/snapshots/{parse, typecheck, mir, llvm_ir, errors, fusion}/. Add a .gitkeep in each.</step>
+        <step>Write error message snapshot tests first: for each error code (E0100–E5009), create a minimal .axon input that triggers the error, capture the diagnostic output with insta::assert_snapshot!.</step>
+        <step>Write parser snapshot tests: create .axon inputs exercising every major grammar production (functions, models, extends, pipes, closures, match, for, while). Snapshot the Debug-printed AST.</step>
+        <step>Write type checker snapshot tests: inputs that exercise generics, trait bounds, tensor shapes, inference. Snapshot the typed AST or type error output.</step>
+        <step>Write MIR snapshot tests: compile representative programs through MIR lowering, snapshot the MIR text dump.</step>
+        <step>Write LLVM IR snapshot tests: compile small programs end-to-end, snapshot the generated .ll text.</step>
+        <step>Document the cargo insta review workflow in tests/snapshots/README.md: how to run, review, accept, and reject snapshot updates.</step>
+      </instructions>
       <do>Start with error message snapshots — they are the most user-facing. Then add MIR and LLVM IR snapshots for codegen stability.</do>
       <dont>Do not duplicate existing unit tests. Snapshot tests complement, not replace, assertion-based tests.</dont>
+      <evidence>cargo test output showing 1,034+ existing tests still pass. cargo insta test output showing all snapshots match. Snapshot file count per category totaling 100+.</evidence>
+      <responseFormat>Files created/modified list with line counts. Snapshot count by category (errors, parse, typecheck, mir, llvm_ir, fusion). Sample snapshot output for one error message and one MIR dump.</responseFormat>
     </executionPrompt>
     <acceptanceCriteria>
       <criterion>insta dependency builds and snapshot workflow functions.</criterion>
@@ -110,6 +123,7 @@
       <do>Test every fusion pattern with edge cases (empty tensors, 1-element tensors, large tensors). Verify correctness before performance.</do>
       <dont>Do not fuse across control flow boundaries. Do not fuse operations with side effects. Do not sacrifice numerical accuracy for speed.</dont>
       <evidence>Benchmark results showing 3x+ throughput. Numerical equivalence test results. cargo test passing.</evidence>
+      <responseFormat>Files created/modified list. Fusion patterns implemented with before/after MIR examples. Benchmark table (pattern, unfused time, fused time, speedup). Numerical equivalence report (pattern, max abs error, epsilon threshold).</responseFormat>
     </executionPrompt>
     <acceptanceCriteria>
       <criterion>linear+relu fusion produces correct output for all input shapes.</criterion>
@@ -148,6 +162,7 @@
       <do>Ensure correctness first — parallel execution must not change results. Only parallelize pure operations.</do>
       <dont>Do not parallelize operations with side effects (print, RNG, file IO). Do not introduce data races.</dont>
       <evidence>Benchmark results showing &gt;=2x scaling on 4 cores. cargo test passing. No data race warnings.</evidence>
+      <responseFormat>Files created/modified list. Dependency graph visualization for sample programs. Benchmark table (workload, 1-core time, 4-core time, scaling factor). Thread pool configuration summary.</responseFormat>
     </executionPrompt>
     <acceptanceCriteria>
       <criterion>Independent tensor ops execute concurrently on multi-core CPU.</criterion>
@@ -173,10 +188,23 @@
       <item>Fold/reduce desugar to parallel reduction kernels</item>
     </deliverables>
     <executionPrompt>
+      <context>Axon compiler at h:/programing language/axon/. 1,034+ tests passing. WS1 infrastructure (diagnostics, PassManager, interning) is operational. Axon currently has no fold, reduce, or comprehension syntax. These must be added end-to-end: token.rs keywords, parser.rs grammar, ast.rs nodes, typeck.rs checking, mir.rs lowering, codegen. fold/reduce should desugar to parallel-aware reduction kernels. Target executor: Claude Opus 4.6.</context>
       <role>You are a language design engineer specializing in functional programming primitives for data-parallel workloads.</role>
       <objective>Add fold, reduce, and comprehension syntax that is ergonomic for ML workflows and desugars to efficient parallel operations.</objective>
+      <instructions>
+        <step>Add fold and reduce as keywords in src/token.rs lookup_keyword(). Add comprehension-related tokens if needed (e.g., for-in within brackets).</step>
+        <step>Extend src/parser.rs to parse fold expressions: tensor.fold(init, |acc, x| body), reduce expressions: tensor.reduce(|a, b| a + b), tensor comprehensions: [expr for x in range], and list comprehensions: [expr for x in iter if pred].</step>
+        <step>Add FoldExpr, ReduceExpr, TensorComprehension, and ListComprehension nodes to src/ast.rs with appropriate fields.</step>
+        <step>Implement type checking for fold/reduce in src/typeck.rs: verify accumulator type matches init, closure argument types match iterable element type, and return type is consistent.</step>
+        <step>Implement MIR lowering in src/mir.rs: desugar fold into a loop with accumulator, desugar reduce into parallel reduction tree when the operation is associative and commutative.</step>
+        <step>Add codegen support in src/codegen/llvm.rs: emit reduction loops, call into runtime reduction kernels for tensor operands.</step>
+        <step>Add parallel reduction kernel to src/codegen/runtime.rs: axon_parallel_reduce for tensors.</step>
+        <step>Write at least 20 tests covering: fold on Vec/Tensor/Range, reduce on all iterables, tensor comprehensions, list comprehensions with predicates, nested comprehensions, edge cases (empty collections, single element).</step>
+      </instructions>
       <do>Ensure fold/reduce work on all iterable types (Vec, Tensor, Range). Comprehensions should work for both lists and tensors.</do>
       <dont>Do not add bend keyword (conflicts with Axon's imperative model). Do not require immutability for fold/reduce.</dont>
+      <evidence>cargo test output showing 1,034+ existing tests pass plus 20+ new tests. Sample fold/reduce program output demonstrating correct computation. MIR dump showing parallel reduction desugaring for tensor.reduce.</evidence>
+      <responseFormat>Files modified list with change summary. New syntax examples (fold, reduce, tensor comprehension, list comprehension). Test count delta. Sample MIR output for a parallel reduction.</responseFormat>
     </executionPrompt>
     <acceptanceCriteria>
       <criterion>fold/reduce parse, type-check, and produce correct results.</criterion>
@@ -201,10 +229,23 @@
       <item>Zero-copy verification tests for common tensor patterns</item>
     </deliverables>
     <executionPrompt>
+      <context>Axon compiler at h:/programing language/axon/. 1,034+ tests passing. WS1 infrastructure and WS3 tensor fusion are operational. Axon currently uses a standard borrow checker with no substructural type annotations. Tensors are heap-allocated and reference-counted. Adding opt-in linear annotations would enable the compiler to verify zero-copy forwarding at compile time. ADT layouts are currently uniform; GPU targets need packed/tagged variants. Target executor: Claude Opus 4.6.</context>
       <role>You are a type system engineer specializing in substructural type systems and memory-efficient data representation.</role>
       <objective>Add linear type annotations that guarantee zero-copy tensor forwarding, and configurable ADT layouts optimized for different execution targets.</objective>
+      <instructions>
+        <step>Add linear as a keyword in src/token.rs lookup_keyword(). Define syntax: fn forward(linear x: Tensor) : Tensor for parameter annotations.</step>
+        <step>Extend src/parser.rs to parse the linear modifier on function parameters. Store linearity flag in the parameter AST node in src/ast.rs.</step>
+        <step>Implement linearity enforcement in src/typeck.rs: a linear parameter must be used exactly once. Emit clear error messages for zero-use ("linear parameter unused") and multi-use ("linear parameter used more than once — consider removing linear or cloning").</step>
+        <step>Add zero-copy verification: when a linear tensor flows through a function without aliasing, mark it as zero-copy-eligible in MIR annotations.</step>
+        <step>Implement --enum-layout CLI flag in src/main.rs with options: tagged (default, CPU-friendly) and packed (GPU-friendly, no tag word, discriminant in low bits).</step>
+        <step>Modify ADT codegen in src/codegen/llvm.rs to emit different layouts based on --enum-layout flag.</step>
+        <step>Write zero-copy verification tests: 5+ common tensor patterns (forward pass, residual connection, skip connection, in-place activation, gradient accumulation) verified as zero-copy via linear annotations.</step>
+        <step>Write ADT layout benchmarks: compare tagged vs packed layout for pattern matching throughput and memory footprint.</step>
+      </instructions>
       <do>Make linearity opt-in (not required). Provide clear error messages when linearity is violated. Benchmark ADT layouts.</do>
       <dont>Do not break existing ownership semantics. Linear is a refinement on top of existing borrow checker, not a replacement.</dont>
+      <evidence>cargo test output showing 1,034+ existing tests pass (linearity is opt-in). Linearity violation error message samples. Zero-copy verification results for 5+ patterns. ADT layout benchmark comparison table.</evidence>
+      <responseFormat>Files modified list with change summary. Sample linear annotation syntax and error messages. Zero-copy verification matrix (pattern, linear-annotated, verified zero-copy). ADT layout benchmark table (layout, pattern-match throughput, memory per variant).</responseFormat>
     </executionPrompt>
     <acceptanceCriteria>
       <criterion>linear parameter annotation is enforced — multi-use is a compile error.</criterion>
@@ -220,19 +261,31 @@
        ═══════════════════════════════════════════════════════════════ -->
   <workstream id="WS7" name="Language Ergonomics" phase="DELTA">
     <scope>Monadic with-blocks, expression-level improvements, documentation updates.</scope>
-    <recommendations>R03 R08</recommendations>
+    <recommendations>R08</recommendations>
     <dependsOn>WS5 WS6</dependsOn>
     <deliverables>
       <item>with-block syntax for effectful pipelines</item>
       <item>with/ask desugaring to monadic bind chains</item>
       <item>Updated language tour, migration guides, and tutorials</item>
-      <item>Math-notation block design document (implementation deferred)</item>
     </deliverables>
     <executionPrompt>
+      <context>Axon compiler at h:/programing language/axon/. 1,034+ tests passing. WS5 (fold/reduce/comprehensions) and WS6 (linear types, ADT layouts) are complete. Axon targets Python ML developers transitioning to a compiled language. Current syntax is functional but lacks monadic composition for effectful pipelines (data loading, logging, error handling). Documentation exists at docs/ but needs updating for all new features. Target executor: Claude Opus 4.6.</context>
       <role>You are a language UX engineer focused on making ML code expressive and readable.</role>
       <objective>Add ergonomic syntax features that make Axon feel natural to Python ML developers while maintaining compile-time safety.</objective>
+      <instructions>
+        <step>Add with as a keyword in src/token.rs lookup_keyword(). Define with-block syntax: with ctx = acquire_resource() { ... } where ctx is available in the block and cleanup runs on block exit.</step>
+        <step>Extend src/parser.rs to parse with-blocks. Allow chaining: with a = x() { with b = y() { ... } } and flat syntax: with a = x(), b = y() { ... }.</step>
+        <step>Add WithBlock AST node to src/ast.rs with bindings list, body expression, and optional else clause.</step>
+        <step>Implement type checking in src/typeck.rs: verify bound expressions return types that implement a Contextual trait (or equivalent), infer body type as with-block type.</step>
+        <step>Implement desugaring in src/mir.rs: lower with-blocks to monadic bind chains (flat_map/and_then), insert cleanup calls in all exit paths (normal return, early return, error).</step>
+        <step>Add codegen support in src/codegen/llvm.rs for the desugared bind chains.</step>
+        <step>Update documentation: revise docs/language-tour.md with with-block examples, update docs/tensors.md with data-loading-pipeline examples using with, add migration guide section for Python context managers vs Axon with-blocks.</step>
+        <step>Write a math-notation design document at .dev/designs/math-notation.md: proposed syntax for subscript/superscript indexing, summation notation, matrix literals. Include parser grammar sketch, AST node designs, and comparison with Julia/Mathematica. Do not implement.</step>
+      </instructions>
       <do>Ensure all new syntax has clear documentation with before/after examples. Update migration guides.</do>
       <dont>Do not add features that conflict with existing syntax. Do not implement math-notation yet (design doc only).</dont>
+      <evidence>cargo test output showing all existing tests pass plus new with-block tests. Documentation build (cd docs &amp;&amp; python build_docs.py) succeeds. with-block sample programs compile and run correctly. Math-notation design doc is complete.</evidence>
+      <responseFormat>Files modified list with change summary. with-block syntax examples (simple, chained, flat). Before/after comparison for a data-loading pipeline. Documentation pages updated list. Math-notation design doc table of contents.</responseFormat>
     </executionPrompt>
     <acceptanceCriteria>
       <criterion>with-block parses, type-checks, and desugars correctly.</criterion>
@@ -256,10 +309,21 @@
       <item>Prototype implementations (when GPU codegen is available)</item>
     </deliverables>
     <executionPrompt>
+      <context>Axon compiler at h:/programing language/axon/. All prior workstreams (WS1-WS7) are complete: diagnostics, fusion, parallelism, fold/reduce, linear types, ADT layouts, with-blocks. Axon currently targets CPU only via LLVM IR and clang. GPU codegen requires an MLIR backend that does not yet exist. This workstream produces design documents only — no GPU-specific code is implemented until the MLIR pipeline is available. Target executor: Claude Opus 4.6.</context>
       <role>You are a GPU compiler research engineer.</role>
       <objective>Produce complete design documents for advanced GPU optimizations that can be implemented once the MLIR pipeline is operational.</objective>
+      <instructions>
+        <step>Research state-of-the-art GPU compiler techniques from XLA, Triton, TVM, and MLIR GPU dialect. Document key patterns: warp divergence elimination, kernel fusion strategies, memory coalescing, shared memory tiling.</step>
+        <step>Write .dev/designs/gpu-branchless-transform.md: design a MIR transform pass that rewrites branch-heavy enum dispatches into branchless select/predicate operations suitable for GPU warp execution. Include: motivation, MIR before/after examples, transformation rules, correctness argument, estimated performance gain.</step>
+        <step>Write .dev/designs/math-notation-implementation.md: extend the WS7 math-notation design doc into an implementation plan. Include: detailed parser grammar (PEG or EBNF), AST node specifications, type checking rules for subscript/superscript operations, MIR lowering strategy, codegen approach. Reference Julia and Mathematica implementations.</step>
+        <step>Write .dev/designs/shape-specialization.md: design a compilation strategy that generates specialized function variants for known tensor shapes (e.g., matmul_2x2, matmul_4x4, matmul_dynamic). Include: shape inference algorithm, specialization trigger heuristics, code size vs performance tradeoff analysis, monomorphization limits.</step>
+        <step>For each design document, include a performance projections section with: target benchmarks (specific operations and sizes), comparison points (PyTorch, JAX/XLA, raw CUDA), projected speedup ranges with justification, and prerequisites (MLIR passes, runtime support) needed before implementation.</step>
+        <step>For each design document, include an implementation sketch section with: pseudocode for the core algorithm, estimated implementation effort (lines of code, developer-weeks), dependencies on other workstreams, and a phased rollout plan.</step>
+      </instructions>
       <do>Reference XLA, Triton, and TVM architectures. Include performance projections and implementation sketches.</do>
       <dont>Do not implement GPU-specific code without a working MLIR backend. Design documents only.</dont>
+      <evidence>Three complete design documents at .dev/designs/. Each document includes: architecture section, data flow diagrams (described textually), pseudocode, performance projection tables, and implementation effort estimates. Documents cross-reference each other and prior workstream outputs.</evidence>
+      <responseFormat>Design document list with section-by-section table of contents for each. Performance projection summary table across all three designs. Key architectural decisions and their rationale. Prerequisites list for eventual implementation.</responseFormat>
     </executionPrompt>
     <acceptanceCriteria>
       <criterion>Design documents are complete with architecture, data flow, and pseudocode.</criterion>

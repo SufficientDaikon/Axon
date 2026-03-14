@@ -1,18 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <axonBendExecutionPlaybook>
   <metadata>
-    <purpose>Claude-optimized execution protocol for Bend integration phases</purpose>
+    <purpose>Claude Opus 4.6-optimized execution protocol for Bend integration phases. Tailored for Claude Code agentic environment with tool-aware patterns.</purpose>
+    <targetModel>claude-opus-4-6</targetModel>
+    <environment>Claude Code (VS Code / CLI) with Bash, Read, Edit, Write, Grep, Glob, Agent tools</environment>
   </metadata>
 
   <executionPrinciples>
     <principle id="EP1">Work in phases. Never attempt more than one workstream in a single context window.</principle>
     <principle id="EP2">Compact context before starting each new phase. Use /compact or summarize to handoff packet.</principle>
     <principle id="EP3">Run cargo test after every file modification. Never proceed with failing tests.</principle>
-    <principle id="EP4">Use subagents for exploration and heavy file reading. Keep main context for decisions and code changes.</principle>
+    <principle id="EP4">Use Agent tool (subagent_type="Explore") for codebase discovery and Agent tool (subagent_type="general-purpose") for parallel file creation. Keep main context for decisions, sequencing, and code integration.</principle>
     <principle id="EP5">Create each new module with tests immediately. Never defer tests to "later".</principle>
     <principle id="EP6">Pin non-negotiables in every prompt: test baseline 1034+, zero warnings, project path h:/programing language/axon/.</principle>
     <principle id="EP7">If context approaches 80K tokens, stop, create handoff packet, and start new session.</principle>
+    <principle id="EP8">Maximize parallel tool calls: when creating multiple independent files, use multiple Write/Edit calls in a single message. When searching for multiple patterns, launch parallel Grep calls.</principle>
+    <principle id="EP9">Use TodoWrite to track epic/story progress. Mark tasks in_progress before starting and completed immediately after finishing. Only one task should be in_progress at a time.</principle>
   </executionPrinciples>
+
+  <toolUsagePatterns>
+    <pattern name="CodebaseDiscovery">
+      <when>Starting a new epic or needing to understand existing code structure</when>
+      <how>Launch Agent(subagent_type="Explore") with a targeted question. The Explore agent uses Grep/Glob/Read internally and returns a summary, keeping main context clean.</how>
+      <example>Agent(prompt="Find all places in src/typeck.rs where errors are returned early (Result::Err, ? operator). Report line numbers and the error types.")</example>
+    </pattern>
+    <pattern name="ParallelFileCreation">
+      <when>An epic requires creating 2+ independent new files</when>
+      <how>Use multiple Write tool calls in a single message. All writes execute in parallel.</how>
+      <example>Write src/diagnostics.rs + Write tests/diagnostics_tests.rs + Write src/mir/transform/mod.rs in one message</example>
+    </pattern>
+    <pattern name="TargetedSearch">
+      <when>Looking for specific patterns in the codebase</when>
+      <how>Use Grep directly with specific regex patterns. Use Glob for file discovery. Only read files you need to modify.</how>
+      <avoid>Never Read entire large files (parser.rs is 2100+ lines). Use Read with offset/limit for specific sections.</avoid>
+    </pattern>
+    <pattern name="TestAfterChange">
+      <when>After every Edit or Write to a source file</when>
+      <how>Run Bash("cargo test 2>&amp;1 | tail -5") for quick pass/fail. Only read full output on failure.</how>
+    </pattern>
+    <pattern name="IncrementalBuilds">
+      <when>Verifying compilation during development</when>
+      <how>Run Bash("cargo build 2>&amp;1 | head -20") first for rapid feedback. Full cargo test only after build succeeds.</how>
+    </pattern>
+  </toolUsagePatterns>
 
   <phaseProtocol>
     <phase id="ALPHA">
@@ -82,7 +112,7 @@
     <phase id="EPSILON">
       <contextBudget>40K tokens</contextBudget>
       <sessionEstimate>1 session</sessionEstimate>
-      <entryCondition>DELTA complete.</entryCondition>
+      <entryCondition>DELTA handoff packet loaded. All DELTA gates passed — with-blocks, docs, and math-notation design document are complete.</entryCondition>
       <exitCondition>Design documents written and reviewed. No code changes.</exitCondition>
       <handoffPacket>
         <field>designDocsCreated (list of design documents with summaries)</field>

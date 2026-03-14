@@ -58,7 +58,7 @@
     </definitionOfDone>
   </epic>
 
-  <epic id="E4" name="Stack Safety and CLI Flags" priority="P2" phase="ALPHA" workstream="WS1">
+  <epic id="E4" name="Stack Safety" priority="P2" phase="ALPHA" workstream="WS1">
     <stories>
       <story id="E4-S1">Add stacker = "0.1" to Cargo.toml.</story>
       <story id="E4-S2">Wrap recursive descent calls in parser.rs with maybe_grow(32KB, 1MB).</story>
@@ -304,11 +304,11 @@
        ═══════════════════════════════════════════════════════════════ -->
   <summary>
     <totalEpics>14</totalEpics>
-    <totalStories>82</totalStories>
-    <phase name="ALPHA" epics="5" stories="28"/>
-    <phase name="BETA" epics="4" stories="30"/>
+    <totalStories>89</totalStories>
+    <phase name="ALPHA" epics="5" stories="30"/>
+    <phase name="BETA" epics="4" stories="32"/>
     <phase name="GAMMA" epics="2" stories="11"/>
-    <phase name="DELTA" epics="2" stories="9"/>
+    <phase name="DELTA" epics="2" stories="12"/>
     <phase name="EPSILON" epics="1" stories="4"/>
     <estimatedNewTests>200+</estimatedNewTests>
   </summary>
