@@ -1,0 +1,8 @@
+---
+source: tests/snapshot_tests.rs
+expression: parse_snap(src)
+---
+[E0001] unexpected character '|' (did you mean '||'?)
+[E0001] unexpected character 'x'
+[E0001] unexpected character '|' (did you mean '||'?)
+[E0001] unexpected character ' '

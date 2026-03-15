@@ -4,7 +4,7 @@
 
 ```
 Source → Lexer → Parser → AST → Name Resolution → Type Checking
-      → Shape Checking → Borrow Checking → TAST → MIR → LLVM IR → Native Binary
+      → Shape Checking → Borrow Checking → TAST → MIR → MIR Passes → LLVM IR → Native Binary
 ```
 
 ## Overview
@@ -28,7 +28,10 @@ diagnostics in a single compilation pass.
 | **Shape Checker**   | `src/shapes.rs` | Tensor dimension verification. Ensures tensor operations have compatible shapes at compile time. Axon's key differentiator for ML/AI safety.                                                                                |
 | **Borrow Checker**  | `src/borrow.rs` | Ownership, move, and borrow analysis. Tracks value lifetimes, prevents use-after-move, and enforces mutable borrow exclusivity.                                                                                             |
 | **TAST**            | `src/tast.rs`   | Typed Abstract Syntax Tree. Annotates each AST node with its resolved type. Serves as the bridge between type checking and code generation.                                                                                 |
-| **MIR**             | `src/mir.rs`    | Mid-level Intermediate Representation. Flattened, SSA-like form suitable for optimization passes and lowering to LLVM IR.                                                                                                   |
+| **MIR**             | `src/mir/`      | Mid-level Intermediate Representation. Flattened, SSA-like form suitable for optimization passes and lowering to LLVM IR.                                                                                                   |
+| **MIR Passes**      | `src/mir/transform/` | MIR optimization passes: dead code elimination and constant folding. Managed by a `PassManager` that runs passes based on optimization level.                                                                         |
+| **Name Interner**   | `src/interner.rs` | Global string interning for O(1) name comparisons. Deduplicates identifier strings via `NameInterner` and lightweight `Name` handles.                                                                                    |
+| **Diagnostics**     | `src/error.rs`  | Accumulative diagnostic system with categories, severity configuration (--deny/--allow/--warn), error limits, and grouped display.                                                                                          |
 | **Codegen**         | `src/codegen/`  | LLVM IR generation and native compilation.                                                                                                                                                                                  |
 
 ### Code Generation Submodules
@@ -75,14 +78,19 @@ Errors are categorized by compiler phase using numeric codes:
 | **E2xxx** | Type errors            | `E2001` type mismatch, `E2002` cannot infer type               |
 | **E3xxx** | Shape errors           | `E3001` dimension mismatch, `E3002` incompatible tensor shapes |
 | **E4xxx** | Borrow errors          | `E4001` use after move, `E4002` mutable borrow conflict        |
+| **E5xxx** | MIR/Codegen errors     | `E5009` no main function, `E5010` codegen failure               |
 | **W5xxx** | Lint warnings          | `W5001` unused variable, `W5002` naming convention             |
 
 All errors carry:
 
 - A source `Span` (file, line, column, offset)
 - A human-readable message
-- A severity level (Error, Warning, Info)
+- A severity level (Error, Warning, Note)
 - Optional suggestions for fixes
+- An optional diagnostic category for filtering (parse-error, type-error, borrow-error, etc.)
+
+Diagnostics support severity overrides via CLI flags (`--deny`, `--allow`, `--warn`)
+and an error limit (`--error-limit N`) that stops compilation after N errors.
 
 ## Data Flow
 
@@ -120,6 +128,10 @@ All errors carry:
                     └──────────┘
                          │
                     ┌──────────┐
+                    │ MIR Pass │───► Optimized MirProgram
+                    └──────────┘
+                         │
+                    ┌──────────┐
                     │  LLVM IR │───► .ll file
                     └──────────┘
                          │
@@ -141,3 +153,8 @@ All errors carry:
    keeping the compiler dependency-free and simplifying builds.
 6. **External `clang`** — Uses `clang` as a subprocess for final compilation,
    avoiding LLVM library linking.
+7. **Stack safety** — Recursive descent functions are wrapped with `stacker::maybe_grow`
+   to dynamically grow the stack for deeply nested input, preventing stack overflows.
+8. **MIR optimization passes** — Pluggable pass architecture (`MirPass` trait + `PassManager`)
+   enables incremental addition of optimization passes. Dead code elimination and constant
+   folding are built-in at `-O1` and above.

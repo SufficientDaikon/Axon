@@ -88,6 +88,13 @@ axonc check <FILE> [OPTIONS]
 |------|-------------|
 | `--error-format <FORMAT>` | Output format: `human` (default) or `json` |
 | `--emit-tast` | Emit the typed AST as JSON |
+| `--deny <CATEGORIES>` | Promote diagnostic categories to errors (comma-separated) |
+| `--allow <CATEGORIES>` | Suppress diagnostic categories (comma-separated) |
+| `--warn <CATEGORIES>` | Override diagnostic categories to warnings (comma-separated) |
+| `--error-limit <N>` | Stop compilation after N errors |
+
+**Diagnostic categories:** `parse-error`, `type-error`, `borrow-error`, `shape-error`,
+`lint-warning`, `unused-variable`, `unused-import`, `unreachable-code`, `deprecated-syntax`
 
 **Example:**
 
@@ -95,6 +102,8 @@ axonc check <FILE> [OPTIONS]
 axonc check model.axon
 axonc check model.axon --emit-tast
 axonc check model.axon --error-format=json
+axonc check model.axon --deny unused-variable
+axonc check model.axon --error-limit 5
 ```
 
 **Exit codes:**
@@ -126,6 +135,10 @@ axonc build <FILE> [OPTIONS]
 | `--emit-obj` | Emit object file (`.o`) instead of binary | — |
 | `--gpu <TARGET>` | GPU target: `none`, `cuda`, `rocm`, `vulkan` | `none` |
 | `--error-format <FORMAT>` | Output format: `human` or `json` | `human` |
+| `--deny <CATEGORIES>` | Promote diagnostic categories to errors (comma-separated) | — |
+| `--allow <CATEGORIES>` | Suppress diagnostic categories (comma-separated) | — |
+| `--warn <CATEGORIES>` | Override diagnostic categories to warnings (comma-separated) | — |
+| `--error-limit <N>` | Stop compilation after N errors | — |
 
 **Examples:**
 
@@ -153,9 +166,9 @@ axonc build model.axon --emit-obj -o model.o
 | Level | Description |
 |-------|-------------|
 | `-O 0` | No optimization — fastest compile, easiest to debug |
-| `-O 1` | Basic optimizations (constant folding, dead code elimination) |
-| `-O 2` | Standard optimizations (inlining, loop unrolling, vectorization) |
-| `-O 3` | Aggressive optimizations (LTO, auto-vectorization, FMA) |
+| `-O 1` | Basic MIR optimizations: dead code elimination, constant folding |
+| `-O 2` | Standard optimizations (includes O1 + inlining, loop unrolling, vectorization) |
+| `-O 3` | Aggressive optimizations (includes O2 + LTO, auto-vectorization, FMA) |
 
 ---
 

@@ -1,0 +1,164 @@
+---
+source: tests/snapshot_tests.rs
+expression: check_snap(src)
+---
+{
+  "items": [
+    {
+      "kind": {
+        "Function": {
+          "name": "is_positive",
+          "params": [
+            {
+              "name": "x",
+              "ty": 5,
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 16
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 25
+                }
+              }
+            }
+          ],
+          "return_type": 3,
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Return": {
+                    "kind": {
+                      "BinaryOp": {
+                        "left": {
+                          "kind": {
+                            "Identifier": "x"
+                          },
+                          "ty": 5,
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 5
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 8
+                            }
+                          }
+                        },
+                        "op": "Gt",
+                        "right": {
+                          "kind": {
+                            "Literal": {
+                              "Int": 0
+                            }
+                          },
+                          "ty": 5,
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 9
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 4,
+                              "column": 2
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "ty": 3,
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 5
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 4,
+                        "column": 2
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 3,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 4,
+                    "column": 2
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "ty": 3,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 32
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 5,
+                "column": 1
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 5,
+              "column": 1
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 5,
+          "column": 1
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    }
+  ],
+  "span": {
+    "start": {
+      "file": "test.axon",
+      "line": 2,
+      "column": 1
+    },
+    "end": {
+      "file": "test.axon",
+      "line": 5,
+      "column": 1
+    }
+  }
+}

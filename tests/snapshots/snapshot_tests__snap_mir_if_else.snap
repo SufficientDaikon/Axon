@@ -1,0 +1,5 @@
+---
+source: tests/snapshot_tests.rs
+expression: mir_snap(src)
+---
+[E1002] duplicate definition of `abs` in the same scope

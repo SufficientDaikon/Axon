@@ -627,6 +627,7 @@ impl TypeChecker {
     // ═══════════════════════════════════════════════════════════
 
     fn check_expr(&mut self, expr: &Expr) -> TypeId {
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
         match &expr.kind {
             ExprKind::Literal(lit) => match lit {
                 Literal::Int(_) => TypeId::INT64,
@@ -713,6 +714,7 @@ impl TypeChecker {
                 self.check_closure(params, return_type, body, &expr.span)
             }
         }
+        })
     }
 
     fn check_binary_op(&mut self, left: &Expr, op: &BinOp, right: &Expr, span: &Span) -> TypeId {

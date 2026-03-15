@@ -1,0 +1,7 @@
+---
+source: tests/snapshot_tests.rs
+expression: fmt_snap(src)
+---
+fn add(a: Int64, b: Int64): Int64 {
+    return a + b;
+}

@@ -1,0 +1,5 @@
+---
+source: tests/snapshot_tests.rs
+expression: error_snap(src)
+---
+[E2001] expected `i64`, found `string`

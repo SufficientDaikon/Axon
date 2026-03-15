@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use std::fs;
 use std::process;
 
-use axonc::error::ErrorReporter;
+use axonc::error::{DiagnosticConfig, ErrorReporter};
 
 #[derive(Parser)]
 #[command(name = "axonc")]
@@ -49,6 +49,22 @@ enum Commands {
         /// Emit the typed AST as JSON
         #[arg(long = "emit-tast")]
         emit_tast: bool,
+
+        /// Promote diagnostic categories to errors (comma-separated)
+        #[arg(long = "deny", value_delimiter = ',')]
+        deny: Vec<String>,
+
+        /// Suppress diagnostic categories (comma-separated)
+        #[arg(long = "allow", value_delimiter = ',')]
+        allow: Vec<String>,
+
+        /// Override diagnostic categories to warnings (comma-separated)
+        #[arg(long = "warn", value_delimiter = ',')]
+        warn: Vec<String>,
+
+        /// Stop compilation after N errors
+        #[arg(long = "error-limit")]
+        error_limit: Option<usize>,
     },
 
     /// Format an Axon source file
@@ -127,6 +143,22 @@ enum Commands {
         /// Output error messages in JSON format
         #[arg(long = "error-format", value_parser = ["json", "human"])]
         error_format: Option<String>,
+
+        /// Promote diagnostic categories to errors (comma-separated)
+        #[arg(long = "deny", value_delimiter = ',')]
+        deny: Vec<String>,
+
+        /// Suppress diagnostic categories (comma-separated)
+        #[arg(long = "allow", value_delimiter = ',')]
+        allow: Vec<String>,
+
+        /// Override diagnostic categories to warnings (comma-separated)
+        #[arg(long = "warn", value_delimiter = ',')]
+        warn: Vec<String>,
+
+        /// Stop compilation after N errors
+        #[arg(long = "error-limit")]
+        error_limit: Option<usize>,
     },
 }
 
@@ -181,9 +213,10 @@ fn main() {
         Commands::Lex { file } => {
             run_lex(&file);
         }
-        Commands::Check { file, error_format, emit_tast } => {
+        Commands::Check { file, error_format, emit_tast, deny, allow, warn, error_limit } => {
             let json_mode = error_format.as_deref() == Some("json");
-            run_check(&file, json_mode, emit_tast);
+            let config = parse_diagnostic_config(&deny, &allow, &warn, error_limit);
+            run_check(&file, json_mode, emit_tast, config);
         }
         Commands::Fmt { file } => {
             run_fmt(&file);
@@ -206,9 +239,10 @@ fn main() {
         Commands::Pkg { action } => {
             run_pkg(action);
         }
-        Commands::Build { file, output, opt_level, emit_llvm, emit_mir, emit_obj, gpu, keep_temps, error_format } => {
+        Commands::Build { file, output, opt_level, emit_llvm, emit_mir, emit_obj, gpu, keep_temps, error_format, deny, allow, warn, error_limit } => {
             let json_mode = error_format.as_deref() == Some("json");
-            run_build(&file, output.as_deref(), &opt_level, emit_llvm, emit_mir, emit_obj, &gpu, json_mode, keep_temps);
+            let config = parse_diagnostic_config(&deny, &allow, &warn, error_limit);
+            run_build(&file, output.as_deref(), &opt_level, emit_llvm, emit_mir, emit_obj, &gpu, json_mode, keep_temps, config);
         }
     }
 }
@@ -236,6 +270,16 @@ fn run_pkg(action: PkgAction) {
     if let Err(e) = result {
         eprintln!("error: {}", e);
         process::exit(1);
+    }
+}
+
+fn parse_diagnostic_config(deny: &[String], allow: &[String], warn: &[String], error_limit: Option<usize>) -> DiagnosticConfig {
+    match DiagnosticConfig::from_cli(warn, deny, allow, error_limit) {
+        Ok(config) => config,
+        Err(msg) => {
+            eprintln!("error: {}", msg);
+            process::exit(1);
+        }
     }
 }
 
@@ -291,7 +335,7 @@ fn run_lex(file: &str) {
     }
 }
 
-fn run_check(file: &str, json_errors: bool, emit_tast: bool) {
+fn run_check(file: &str, json_errors: bool, emit_tast: bool, config: DiagnosticConfig) {
     let source = match fs::read_to_string(file) {
         Ok(s) => s,
         Err(e) => {
@@ -301,7 +345,7 @@ fn run_check(file: &str, json_errors: bool, emit_tast: bool) {
     };
 
     let (typed_program, errors) = axonc::check_source(&source, file);
-    let mut reporter = ErrorReporter::new(json_errors);
+    let mut reporter = ErrorReporter::new_with_config(json_errors, config);
     for e in errors {
         reporter.report(e);
     }
@@ -318,7 +362,7 @@ fn run_check(file: &str, json_errors: bool, emit_tast: bool) {
     }
 }
 
-fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: bool, emit_mir: bool, emit_obj: bool, gpu: &str, json_errors: bool, keep_temps: bool) {
+fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: bool, emit_mir: bool, emit_obj: bool, gpu: &str, json_errors: bool, keep_temps: bool, config: DiagnosticConfig) {
     let source = match fs::read_to_string(file) {
         Ok(s) => s,
         Err(e) => {
@@ -339,7 +383,7 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
     // Type check
     let (typed_program, check_errors, checker) = axonc::check_source_full(&source, file);
 
-    let mut reporter = ErrorReporter::new(json_errors);
+    let mut reporter = ErrorReporter::new_with_config(json_errors, config);
     for e in &check_errors {
         reporter.report(e.clone());
     }
@@ -351,7 +395,12 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
 
     // Build MIR
     let mut mir_builder = axonc::mir::MirBuilder::new(&checker.interner);
-    let mir_program = mir_builder.build(&typed_program);
+    let mut mir_program = mir_builder.build(&typed_program);
+
+    // Run MIR optimization passes
+    let opt_num: u8 = opt_level_str.parse().unwrap_or(0);
+    let pass_manager = axonc::mir::transform::PassManager::with_default_passes(opt_num);
+    pass_manager.run_all(&mut mir_program, &checker.interner);
 
     // If --emit-mir, print MIR and exit
     if emit_mir {

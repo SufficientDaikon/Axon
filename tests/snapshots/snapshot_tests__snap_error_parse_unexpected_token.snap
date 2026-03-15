@@ -1,0 +1,5 @@
+---
+source: tests/snapshot_tests.rs
+expression: parse_snap(src)
+---
+[E0103] expected expression, found ';'

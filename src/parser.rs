@@ -980,7 +980,9 @@ impl Parser {
     // ═══════════════════════════════════════════════════════════
 
     fn parse_expression(&mut self) -> Result<Expr, CompileError> {
-        self.parse_pipe_expr()
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
+            self.parse_pipe_expr()
+        })
     }
 
     // Precedence (low → high):

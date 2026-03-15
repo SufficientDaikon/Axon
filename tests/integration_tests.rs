@@ -869,3 +869,39 @@ fn test_string_with_format_args() {
     "#);
     assert_eq!(prog.items.len(), 1);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Stack Safety Tests (E4)
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn test_deeply_nested_expression_50() {
+    let mut src = String::from("fn main() { val x: Int64 = ");
+    for _ in 0..50 {
+        src.push('(');
+    }
+    src.push('1');
+    for _ in 0..50 {
+        src.push(')');
+    }
+    src.push_str("; }");
+    let (prog, errors) = axonc::parse_source(&src, "test.axon");
+    assert!(errors.is_empty(), "Nested parens should parse: {:?}", errors);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_deeply_nested_binary_ops_50() {
+    let mut src = String::from("fn main() { val x: Int64 = ");
+    for _ in 0..50 {
+        src.push_str("1 + (");
+    }
+    src.push('1');
+    for _ in 0..50 {
+        src.push(')');
+    }
+    src.push_str("; }");
+    let (prog, errors) = axonc::parse_source(&src, "test.axon");
+    assert!(errors.is_empty(), "Nested binary ops should parse: {:?}", errors);
+    assert_eq!(prog.items.len(), 1);
+}

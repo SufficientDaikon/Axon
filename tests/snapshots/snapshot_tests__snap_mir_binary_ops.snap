@@ -1,0 +1,46 @@
+---
+source: tests/snapshot_tests.rs
+expression: mir_snap(src)
+---
+fn math(): #5 {
+  val _0: #5
+  val _1: #5 // a
+  val _2: #5 // b
+  val _3: #5 // sum
+  val _4: #5
+  val _5: #5 // prod
+  val _6: #5
+  val _7: #5
+
+  bb0: {
+    StorageLive(_3)
+    _4 = Add(_1, _2)
+    _3 = _4
+    StorageLive(_5)
+    _6 = Mul(_1, _2)
+    _5 = _6
+    _7 = Add(_3, _5)
+    _0 = _7
+    return
+  }
+  bb1: {
+    _0 = const ()
+    return
+  }
+}
+
+fn main(): #0 {
+  val _0: #0
+  val _1: #5 // r
+  val _2: #5
+
+  bb0: {
+    StorageLive(_1)
+    _2 = call const "math"(const 3_i64, const 4_i64): bb1
+  }
+  bb1: {
+    _1 = _2
+    _0 = const ()
+    return
+  }
+}

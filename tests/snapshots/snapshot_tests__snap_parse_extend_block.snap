@@ -1,0 +1,367 @@
+---
+source: tests/snapshot_tests.rs
+expression: parse_snap(src)
+---
+{
+  "items": [
+    {
+      "kind": {
+        "Struct": {
+          "name": "Rect",
+          "generics": [],
+          "fields": [
+            {
+              "name": "width",
+              "ty": {
+                "kind": {
+                  "Named": "Float64"
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 2,
+                    "column": 21
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 2,
+                    "column": 29
+                  }
+                }
+              },
+              "visibility": "Private",
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 14
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 29
+                }
+              }
+            },
+            {
+              "name": "height",
+              "ty": {
+                "kind": {
+                  "Named": "Float64"
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 2,
+                    "column": 38
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 2,
+                    "column": 47
+                  }
+                }
+              },
+              "visibility": "Private",
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 30
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 47
+                }
+              }
+            }
+          ],
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 4,
+              "column": 7
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 4,
+          "column": 7
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    },
+    {
+      "kind": {
+        "Impl": {
+          "type_name": {
+            "kind": {
+              "Named": "Rect"
+            },
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 4,
+                "column": 8
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 4,
+                "column": 14
+              }
+            }
+          },
+          "trait_name": null,
+          "generics": [],
+          "items": [
+            {
+              "kind": {
+                "Function": {
+                  "name": "area",
+                  "generics": [],
+                  "params": [
+                    {
+                      "kind": "SelfOwned",
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 5,
+                          "column": 13
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 5,
+                          "column": 18
+                        }
+                      }
+                    }
+                  ],
+                  "return_type": {
+                    "kind": {
+                      "Named": "Float64"
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 5,
+                        "column": 20
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 5,
+                        "column": 29
+                      }
+                    }
+                  },
+                  "body": {
+                    "stmts": [
+                      {
+                        "kind": {
+                          "Return": {
+                            "kind": {
+                              "BinaryOp": {
+                                "left": {
+                                  "kind": {
+                                    "FieldAccess": {
+                                      "object": {
+                                        "kind": {
+                                          "Identifier": "self"
+                                        },
+                                        "span": {
+                                          "start": {
+                                            "file": "test.axon",
+                                            "line": 6,
+                                            "column": 9
+                                          },
+                                          "end": {
+                                            "file": "test.axon",
+                                            "line": 6,
+                                            "column": 14
+                                          }
+                                        }
+                                      },
+                                      "field": "width"
+                                    }
+                                  },
+                                  "span": {
+                                    "start": {
+                                      "file": "test.axon",
+                                      "line": 6,
+                                      "column": 9
+                                    },
+                                    "end": {
+                                      "file": "test.axon",
+                                      "line": 6,
+                                      "column": 21
+                                    }
+                                  }
+                                },
+                                "op": "Mul",
+                                "right": {
+                                  "kind": {
+                                    "FieldAccess": {
+                                      "object": {
+                                        "kind": {
+                                          "Identifier": "self"
+                                        },
+                                        "span": {
+                                          "start": {
+                                            "file": "test.axon",
+                                            "line": 6,
+                                            "column": 22
+                                          },
+                                          "end": {
+                                            "file": "test.axon",
+                                            "line": 6,
+                                            "column": 27
+                                          }
+                                        }
+                                      },
+                                      "field": "height"
+                                    }
+                                  },
+                                  "span": {
+                                    "start": {
+                                      "file": "test.axon",
+                                      "line": 6,
+                                      "column": 22
+                                    },
+                                    "end": {
+                                      "file": "test.axon",
+                                      "line": 7,
+                                      "column": 6
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "span": {
+                              "start": {
+                                "file": "test.axon",
+                                "line": 6,
+                                "column": 9
+                              },
+                              "end": {
+                                "file": "test.axon",
+                                "line": 7,
+                                "column": 6
+                              }
+                            }
+                          }
+                        },
+                        "span": {
+                          "start": {
+                            "file": "test.axon",
+                            "line": 6,
+                            "column": 9
+                          },
+                          "end": {
+                            "file": "test.axon",
+                            "line": 7,
+                            "column": 6
+                          }
+                        }
+                      }
+                    ],
+                    "tail_expr": null,
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 5,
+                        "column": 28
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 8,
+                        "column": 2
+                      }
+                    }
+                  },
+                  "span": {
+                    "start": {
+                      "file": "test.axon",
+                      "line": 5,
+                      "column": 5
+                    },
+                    "end": {
+                      "file": "test.axon",
+                      "line": 8,
+                      "column": 2
+                    }
+                  }
+                }
+              },
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 5,
+                  "column": 5
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 8,
+                  "column": 2
+                }
+              },
+              "visibility": "Private",
+              "attributes": []
+            }
+          ],
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 4,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 9,
+              "column": 1
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 4,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 9,
+          "column": 1
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    }
+  ],
+  "span": {
+    "start": {
+      "file": "test.axon",
+      "line": 2,
+      "column": 1
+    },
+    "end": {
+      "file": "test.axon",
+      "line": 9,
+      "column": 1
+    }
+  }
+}

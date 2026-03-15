@@ -1,0 +1,6 @@
+---
+source: tests/snapshot_tests.rs
+expression: lint_snap(src)
+---
+[W5008] magic number literal: 42
+[W5001] unused variable: `unused_var`

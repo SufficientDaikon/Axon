@@ -1,0 +1,155 @@
+---
+source: tests/snapshot_tests.rs
+expression: check_snap(src)
+---
+{
+  "items": [
+    {
+      "kind": {
+        "Function": {
+          "name": "main",
+          "params": [],
+          "return_type": 0,
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Let": {
+                    "name": "x",
+                    "mutable": false,
+                    "ty": 5,
+                    "initializer": {
+                      "kind": {
+                        "Literal": {
+                          "Int": 42
+                        }
+                      },
+                      "ty": 5,
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 20
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 23
+                        }
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 3,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 4,
+                    "column": 8
+                  }
+                }
+              },
+              {
+                "kind": {
+                  "Let": {
+                    "name": "y",
+                    "mutable": false,
+                    "ty": 7,
+                    "initializer": {
+                      "kind": {
+                        "Literal": {
+                          "Float": 3.14
+                        }
+                      },
+                      "ty": 7,
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 4,
+                          "column": 22
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 4,
+                          "column": 27
+                        }
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 4,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 5,
+                    "column": 2
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "ty": 0,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 11
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 6,
+                "column": 1
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 6,
+              "column": 1
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 6,
+          "column": 1
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    }
+  ],
+  "span": {
+    "start": {
+      "file": "test.axon",
+      "line": 2,
+      "column": 1
+    },
+    "end": {
+      "file": "test.axon",
+      "line": 6,
+      "column": 1
+    }
+  }
+}

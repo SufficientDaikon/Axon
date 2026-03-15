@@ -1,0 +1,9 @@
+---
+source: tests/snapshot_tests.rs
+expression: fmt_snap(src)
+---
+fn main() {
+    val x: Int64 = 10;
+    var y: Int64 = 20;
+    y = y + x;
+}

@@ -1,0 +1,353 @@
+---
+source: tests/snapshot_tests.rs
+expression: parse_snap(src)
+---
+{
+  "items": [
+    {
+      "kind": {
+        "Function": {
+          "name": "max",
+          "generics": [],
+          "params": [
+            {
+              "kind": {
+                "Typed": {
+                  "name": "a",
+                  "ty": {
+                    "kind": {
+                      "Named": "Int64"
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 11
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 17
+                      }
+                    }
+                  },
+                  "default": null
+                }
+              },
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 8
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 17
+                }
+              }
+            },
+            {
+              "kind": {
+                "Typed": {
+                  "name": "b",
+                  "ty": {
+                    "kind": {
+                      "Named": "Int64"
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 21
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 27
+                      }
+                    }
+                  },
+                  "default": null
+                }
+              },
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 18
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 27
+                }
+              }
+            }
+          ],
+          "return_type": {
+            "kind": {
+              "Named": "Int64"
+            },
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 29
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 36
+              }
+            }
+          },
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Expr": {
+                    "kind": {
+                      "IfElse": {
+                        "condition": {
+                          "kind": {
+                            "BinaryOp": {
+                              "left": {
+                                "kind": {
+                                  "Identifier": "a"
+                                },
+                                "span": {
+                                  "start": {
+                                    "file": "test.axon",
+                                    "line": 3,
+                                    "column": 8
+                                  },
+                                  "end": {
+                                    "file": "test.axon",
+                                    "line": 3,
+                                    "column": 11
+                                  }
+                                }
+                              },
+                              "op": "Gt",
+                              "right": {
+                                "kind": {
+                                  "Identifier": "b"
+                                },
+                                "span": {
+                                  "start": {
+                                    "file": "test.axon",
+                                    "line": 3,
+                                    "column": 12
+                                  },
+                                  "end": {
+                                    "file": "test.axon",
+                                    "line": 3,
+                                    "column": 15
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 8
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 15
+                            }
+                          }
+                        },
+                        "then_block": {
+                          "stmts": [
+                            {
+                              "kind": {
+                                "Expr": {
+                                  "kind": {
+                                    "Identifier": "a"
+                                  },
+                                  "span": {
+                                    "start": {
+                                      "file": "test.axon",
+                                      "line": 3,
+                                      "column": 16
+                                    },
+                                    "end": {
+                                      "file": "test.axon",
+                                      "line": 3,
+                                      "column": 19
+                                    }
+                                  }
+                                }
+                              },
+                              "span": {
+                                "start": {
+                                  "file": "test.axon",
+                                  "line": 3,
+                                  "column": 16
+                                },
+                                "end": {
+                                  "file": "test.axon",
+                                  "line": 3,
+                                  "column": 19
+                                }
+                              }
+                            }
+                          ],
+                          "tail_expr": null,
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 14
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 24
+                            }
+                          }
+                        },
+                        "else_block": {
+                          "ElseBlock": {
+                            "stmts": [
+                              {
+                                "kind": {
+                                  "Expr": {
+                                    "kind": {
+                                      "Identifier": "b"
+                                    },
+                                    "span": {
+                                      "start": {
+                                        "file": "test.axon",
+                                        "line": 3,
+                                        "column": 27
+                                      },
+                                      "end": {
+                                        "file": "test.axon",
+                                        "line": 3,
+                                        "column": 30
+                                      }
+                                    }
+                                  }
+                                },
+                                "span": {
+                                  "start": {
+                                    "file": "test.axon",
+                                    "line": 3,
+                                    "column": 27
+                                  },
+                                  "end": {
+                                    "file": "test.axon",
+                                    "line": 3,
+                                    "column": 30
+                                  }
+                                }
+                              }
+                            ],
+                            "tail_expr": null,
+                            "span": {
+                              "start": {
+                                "file": "test.axon",
+                                "line": 3,
+                                "column": 25
+                              },
+                              "end": {
+                                "file": "test.axon",
+                                "line": 4,
+                                "column": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 5
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 4,
+                        "column": 2
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 3,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 4,
+                    "column": 2
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 35
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 5,
+                "column": 1
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 5,
+              "column": 1
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 5,
+          "column": 1
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    }
+  ],
+  "span": {
+    "start": {
+      "file": "test.axon",
+      "line": 2,
+      "column": 1
+    },
+    "end": {
+      "file": "test.axon",
+      "line": 5,
+      "column": 1
+    }
+  }
+}

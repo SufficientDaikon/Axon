@@ -1,0 +1,8 @@
+---
+source: tests/snapshot_tests.rs
+expression: fmt_snap(src)
+---
+model Point {
+    x: Float64,
+    y: Float64,
+}

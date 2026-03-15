@@ -1,0 +1,559 @@
+---
+source: tests/snapshot_tests.rs
+expression: parse_snap(src)
+---
+{
+  "items": [
+    {
+      "kind": {
+        "Function": {
+          "name": "double",
+          "generics": [],
+          "params": [
+            {
+              "kind": {
+                "Typed": {
+                  "name": "x",
+                  "ty": {
+                    "kind": {
+                      "Named": "Int64"
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 14
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 20
+                      }
+                    }
+                  },
+                  "default": null
+                }
+              },
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 11
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 2,
+                  "column": 20
+                }
+              }
+            }
+          ],
+          "return_type": {
+            "kind": {
+              "Named": "Int64"
+            },
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 22
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 29
+              }
+            }
+          },
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Return": {
+                    "kind": {
+                      "BinaryOp": {
+                        "left": {
+                          "kind": {
+                            "Identifier": "x"
+                          },
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 2,
+                              "column": 30
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 2,
+                              "column": 33
+                            }
+                          }
+                        },
+                        "op": "Mul",
+                        "right": {
+                          "kind": {
+                            "Literal": {
+                              "Int": 2
+                            }
+                          },
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 2,
+                              "column": 34
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 2,
+                              "column": 37
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 30
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 2,
+                        "column": 37
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 2,
+                    "column": 30
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 2,
+                    "column": 37
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 28
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 3,
+                "column": 3
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 3,
+              "column": 3
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 3,
+          "column": 3
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    },
+    {
+      "kind": {
+        "Function": {
+          "name": "inc",
+          "generics": [],
+          "params": [
+            {
+              "kind": {
+                "Typed": {
+                  "name": "x",
+                  "ty": {
+                    "kind": {
+                      "Named": "Int64"
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 11
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 17
+                      }
+                    }
+                  },
+                  "default": null
+                }
+              },
+              "span": {
+                "start": {
+                  "file": "test.axon",
+                  "line": 3,
+                  "column": 8
+                },
+                "end": {
+                  "file": "test.axon",
+                  "line": 3,
+                  "column": 17
+                }
+              }
+            }
+          ],
+          "return_type": {
+            "kind": {
+              "Named": "Int64"
+            },
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 3,
+                "column": 19
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 3,
+                "column": 26
+              }
+            }
+          },
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Return": {
+                    "kind": {
+                      "BinaryOp": {
+                        "left": {
+                          "kind": {
+                            "Identifier": "x"
+                          },
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 27
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 30
+                            }
+                          }
+                        },
+                        "op": "Add",
+                        "right": {
+                          "kind": {
+                            "Literal": {
+                              "Int": 1
+                            }
+                          },
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 31
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 34
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 27
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 34
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 3,
+                    "column": 27
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 3,
+                    "column": 34
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 3,
+                "column": 25
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 5,
+                "column": 3
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 3,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 5,
+              "column": 3
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 3,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 5,
+          "column": 3
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    },
+    {
+      "kind": {
+        "Function": {
+          "name": "main",
+          "generics": [],
+          "params": [],
+          "return_type": null,
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Let": {
+                    "name": {
+                      "kind": {
+                        "Identifier": "result"
+                      },
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 6,
+                          "column": 9
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 6,
+                          "column": 17
+                        }
+                      }
+                    },
+                    "mutable": false,
+                    "ty": null,
+                    "initializer": {
+                      "kind": {
+                        "FnCall": {
+                          "function": {
+                            "kind": {
+                              "Identifier": "inc"
+                            },
+                            "span": {
+                              "start": {
+                                "file": "test.axon",
+                                "line": 6,
+                                "column": 35
+                              },
+                              "end": {
+                                "file": "test.axon",
+                                "line": 6,
+                                "column": 39
+                              }
+                            }
+                          },
+                          "args": [
+                            {
+                              "kind": {
+                                "FnCall": {
+                                  "function": {
+                                    "kind": {
+                                      "Identifier": "double"
+                                    },
+                                    "span": {
+                                      "start": {
+                                        "file": "test.axon",
+                                        "line": 6,
+                                        "column": 23
+                                      },
+                                      "end": {
+                                        "file": "test.axon",
+                                        "line": 6,
+                                        "column": 30
+                                      }
+                                    }
+                                  },
+                                  "args": [
+                                    {
+                                      "kind": {
+                                        "Literal": {
+                                          "Int": 5
+                                        }
+                                      },
+                                      "span": {
+                                        "start": {
+                                          "file": "test.axon",
+                                          "line": 6,
+                                          "column": 18
+                                        },
+                                        "end": {
+                                          "file": "test.axon",
+                                          "line": 6,
+                                          "column": 22
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "span": {
+                                "start": {
+                                  "file": "test.axon",
+                                  "line": 6,
+                                  "column": 18
+                                },
+                                "end": {
+                                  "file": "test.axon",
+                                  "line": 6,
+                                  "column": 34
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 6,
+                          "column": 18
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 6,
+                          "column": 41
+                        }
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 6,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 7,
+                    "column": 2
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 5,
+                "column": 11
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 8,
+                "column": 1
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 5,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 8,
+              "column": 1
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 5,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 8,
+          "column": 1
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    }
+  ],
+  "span": {
+    "start": {
+      "file": "test.axon",
+      "line": 2,
+      "column": 1
+    },
+    "end": {
+      "file": "test.axon",
+      "line": 8,
+      "column": 1
+    }
+  }
+}

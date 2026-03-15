@@ -3,6 +3,7 @@
 pub mod span;
 pub mod token;
 pub mod error;
+pub mod interner;
 pub mod ast;
 pub mod lexer;
 pub mod parser;

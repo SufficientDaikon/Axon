@@ -1,0 +1,35 @@
+---
+source: tests/snapshot_tests.rs
+expression: mir_snap(src)
+---
+fn square(): #5 {
+  val _0: #5
+  val _1: #5 // x
+  val _2: #5
+
+  bb0: {
+    _2 = Mul(_1, _1)
+    _0 = _2
+    return
+  }
+  bb1: {
+    _0 = const ()
+    return
+  }
+}
+
+fn main(): #0 {
+  val _0: #0
+  val _1: #5 // y
+  val _2: #5
+
+  bb0: {
+    StorageLive(_1)
+    _2 = call const "square"(const 5_i64): bb1
+  }
+  bb1: {
+    _1 = _2
+    _0 = const ()
+    return
+  }
+}

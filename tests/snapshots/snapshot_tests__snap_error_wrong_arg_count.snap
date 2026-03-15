@@ -1,0 +1,5 @@
+---
+source: tests/snapshot_tests.rs
+expression: error_snap(src)
+---
+[E2003] expected 2 arguments, found 1

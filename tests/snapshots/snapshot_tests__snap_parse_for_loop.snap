@@ -1,0 +1,358 @@
+---
+source: tests/snapshot_tests.rs
+expression: parse_snap(src)
+---
+{
+  "items": [
+    {
+      "kind": {
+        "Function": {
+          "name": "sum_range",
+          "generics": [],
+          "params": [],
+          "return_type": null,
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Let": {
+                    "name": {
+                      "kind": {
+                        "Identifier": "total"
+                      },
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 9
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 15
+                        }
+                      }
+                    },
+                    "mutable": true,
+                    "ty": {
+                      "kind": {
+                        "Named": "Int64"
+                      },
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 16
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 23
+                        }
+                      }
+                    },
+                    "initializer": {
+                      "kind": {
+                        "Literal": {
+                          "Int": 0
+                        }
+                      },
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 24
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 3,
+                          "column": 26
+                        }
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 3,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 4,
+                    "column": 8
+                  }
+                }
+              },
+              {
+                "kind": {
+                  "For": {
+                    "pattern": {
+                      "kind": {
+                        "Identifier": "i"
+                      },
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 4,
+                          "column": 9
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 4,
+                          "column": 13
+                        }
+                      }
+                    },
+                    "iterator": {
+                      "kind": {
+                        "Range": {
+                          "start": {
+                            "kind": {
+                              "Literal": {
+                                "Int": 0
+                              }
+                            },
+                            "span": {
+                              "start": {
+                                "file": "test.axon",
+                                "line": 4,
+                                "column": 14
+                              },
+                              "end": {
+                                "file": "test.axon",
+                                "line": 4,
+                                "column": 17
+                              }
+                            }
+                          },
+                          "end": {
+                            "kind": {
+                              "Literal": {
+                                "Int": 10
+                              }
+                            },
+                            "span": {
+                              "start": {
+                                "file": "test.axon",
+                                "line": 4,
+                                "column": 17
+                              },
+                              "end": {
+                                "file": "test.axon",
+                                "line": 4,
+                                "column": 21
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 4,
+                          "column": 14
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 4,
+                          "column": 21
+                        }
+                      }
+                    },
+                    "body": {
+                      "stmts": [
+                        {
+                          "kind": {
+                            "Expr": {
+                              "kind": {
+                                "Assignment": {
+                                  "target": {
+                                    "kind": {
+                                      "Identifier": "total"
+                                    },
+                                    "span": {
+                                      "start": {
+                                        "file": "test.axon",
+                                        "line": 5,
+                                        "column": 9
+                                      },
+                                      "end": {
+                                        "file": "test.axon",
+                                        "line": 5,
+                                        "column": 16
+                                      }
+                                    }
+                                  },
+                                  "op": "Assign",
+                                  "value": {
+                                    "kind": {
+                                      "BinaryOp": {
+                                        "left": {
+                                          "kind": {
+                                            "Identifier": "total"
+                                          },
+                                          "span": {
+                                            "start": {
+                                              "file": "test.axon",
+                                              "line": 5,
+                                              "column": 17
+                                            },
+                                            "end": {
+                                              "file": "test.axon",
+                                              "line": 5,
+                                              "column": 24
+                                            }
+                                          }
+                                        },
+                                        "op": "Add",
+                                        "right": {
+                                          "kind": {
+                                            "Identifier": "i"
+                                          },
+                                          "span": {
+                                            "start": {
+                                              "file": "test.axon",
+                                              "line": 5,
+                                              "column": 25
+                                            },
+                                            "end": {
+                                              "file": "test.axon",
+                                              "line": 5,
+                                              "column": 27
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "span": {
+                                      "start": {
+                                        "file": "test.axon",
+                                        "line": 5,
+                                        "column": 17
+                                      },
+                                      "end": {
+                                        "file": "test.axon",
+                                        "line": 5,
+                                        "column": 27
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "span": {
+                                "start": {
+                                  "file": "test.axon",
+                                  "line": 5,
+                                  "column": 9
+                                },
+                                "end": {
+                                  "file": "test.axon",
+                                  "line": 5,
+                                  "column": 27
+                                }
+                              }
+                            }
+                          },
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 5,
+                              "column": 9
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 6,
+                              "column": 6
+                            }
+                          }
+                        }
+                      ],
+                      "tail_expr": null,
+                      "span": {
+                        "start": {
+                          "file": "test.axon",
+                          "line": 4,
+                          "column": 20
+                        },
+                        "end": {
+                          "file": "test.axon",
+                          "line": 7,
+                          "column": 2
+                        }
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 4,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 7,
+                    "column": 2
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 16
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 8,
+                "column": 1
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 8,
+              "column": 1
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 8,
+          "column": 1
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    }
+  ],
+  "span": {
+    "start": {
+      "file": "test.axon",
+      "line": 2,
+      "column": 1
+    },
+    "end": {
+      "file": "test.axon",
+      "line": 8,
+      "column": 1
+    }
+  }
+}

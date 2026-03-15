@@ -1,8 +1,10 @@
-// mir.rs — Mid-level Intermediate Representation (Phase 4a)
+// mir — Mid-level Intermediate Representation (Phase 4a)
 //
 // Lowers the Typed AST (TAST) into a control-flow-graph-based IR
 // where each function is a collection of basic blocks connected by
 // explicit terminators (goto, switch, return, call).
+
+pub mod transform;
 
 use serde::Serialize;
 use std::collections::HashMap;
@@ -549,6 +551,7 @@ impl<'a> MirBuilder<'a> {
     // ── Expression lowering ────────────────────────────────────
 
     fn lower_expr(&mut self, expr: &TypedExpr) -> Operand {
+        stacker::maybe_grow(32 * 1024, 1024 * 1024, || {
         match &expr.kind {
             TypedExprKind::Literal(lit) => match lit {
                 Literal::Int(v) => Operand::Constant(MirConstant::Int(*v)),
@@ -751,6 +754,7 @@ impl<'a> MirBuilder<'a> {
                 })
             }
         }
+        })
     }
 
     fn lower_expr_to_place(&mut self, expr: &TypedExpr) -> Place {

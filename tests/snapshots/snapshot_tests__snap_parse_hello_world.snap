@@ -1,0 +1,145 @@
+---
+source: tests/snapshot_tests.rs
+expression: parse_snap(src)
+---
+{
+  "items": [
+    {
+      "kind": {
+        "Function": {
+          "name": "main",
+          "generics": [],
+          "params": [],
+          "return_type": null,
+          "body": {
+            "stmts": [
+              {
+                "kind": {
+                  "Expr": {
+                    "kind": {
+                      "FnCall": {
+                        "function": {
+                          "kind": {
+                            "Identifier": "println"
+                          },
+                          "span": {
+                            "start": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 5
+                            },
+                            "end": {
+                              "file": "test.axon",
+                              "line": 3,
+                              "column": 13
+                            }
+                          }
+                        },
+                        "args": [
+                          {
+                            "kind": {
+                              "Literal": {
+                                "String": "Hello, world!"
+                              }
+                            },
+                            "span": {
+                              "start": {
+                                "file": "test.axon",
+                                "line": 3,
+                                "column": 13
+                              },
+                              "end": {
+                                "file": "test.axon",
+                                "line": 3,
+                                "column": 29
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "span": {
+                      "start": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 5
+                      },
+                      "end": {
+                        "file": "test.axon",
+                        "line": 3,
+                        "column": 30
+                      }
+                    }
+                  }
+                },
+                "span": {
+                  "start": {
+                    "file": "test.axon",
+                    "line": 3,
+                    "column": 5
+                  },
+                  "end": {
+                    "file": "test.axon",
+                    "line": 4,
+                    "column": 2
+                  }
+                }
+              }
+            ],
+            "tail_expr": null,
+            "span": {
+              "start": {
+                "file": "test.axon",
+                "line": 2,
+                "column": 11
+              },
+              "end": {
+                "file": "test.axon",
+                "line": 5,
+                "column": 1
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "file": "test.axon",
+              "line": 2,
+              "column": 1
+            },
+            "end": {
+              "file": "test.axon",
+              "line": 5,
+              "column": 1
+            }
+          }
+        }
+      },
+      "span": {
+        "start": {
+          "file": "test.axon",
+          "line": 2,
+          "column": 1
+        },
+        "end": {
+          "file": "test.axon",
+          "line": 5,
+          "column": 1
+        }
+      },
+      "visibility": "Private",
+      "attributes": []
+    }
+  ],
+  "span": {
+    "start": {
+      "file": "test.axon",
+      "line": 2,
+      "column": 1
+    },
+    "end": {
+      "file": "test.axon",
+      "line": 5,
+      "column": 1
+    }
+  }
+}

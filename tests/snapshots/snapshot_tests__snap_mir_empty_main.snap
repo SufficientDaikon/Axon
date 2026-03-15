@@ -1,0 +1,12 @@
+---
+source: tests/snapshot_tests.rs
+expression: mir_snap(src)
+---
+fn main(): #0 {
+  val _0: #0
+
+  bb0: {
+    _0 = const ()
+    return
+  }
+}

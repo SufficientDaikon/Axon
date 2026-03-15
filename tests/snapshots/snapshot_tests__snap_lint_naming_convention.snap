@@ -1,0 +1,6 @@
+---
+source: tests/snapshot_tests.rs
+expression: lint_snap(src)
+---
+[W5004] function `BadName` should use snake_case naming
+[W5003] function `BadName` has an empty body
