@@ -4,6 +4,7 @@ pub mod span;
 pub mod token;
 pub mod error;
 pub mod interner;
+pub mod cache;
 pub mod ast;
 pub mod lexer;
 pub mod parser;
@@ -52,14 +53,16 @@ pub fn check_source(source: &str, filename: &str) -> (tast::TypedProgram, Vec<er
 /// TypeChecker (needed by MIR/codegen to share the same TypeInterner).
 pub fn check_source_full(source: &str, filename: &str) -> (tast::TypedProgram, Vec<error::CompileError>, typeck::TypeChecker) {
     let (program, parse_errors) = parse_source(source, filename);
+
+    // If there were parse errors, we can't safely build a TAST from Error nodes,
+    // so return early with an empty program.
     if !parse_errors.is_empty() {
+        let (checker, _) = typeck::check_with_program(&program, parse_errors.clone());
         let empty = tast::TypedProgram { items: vec![], span: crate::span::Span::dummy() };
-        // Return a dummy checker so the signature is uniform
-        let (checker, _) = typeck::check(source, filename);
         return (empty, parse_errors, checker);
     }
 
-    let (checker, check_errors) = typeck::check(source, filename);
+    let (checker, check_errors) = typeck::check_with_program(&program, parse_errors);
 
     // Build TAST from AST + type info
     let builder = tast::TastBuilder::new(&checker);

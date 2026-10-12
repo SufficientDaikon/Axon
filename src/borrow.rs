@@ -17,7 +17,7 @@
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::error::CompileError;
+use crate::error::{CompileError, DiagnosticCategory};
 use crate::span::Span;
 use crate::symbol::*;
 use crate::types::*;
@@ -277,6 +277,7 @@ impl<'a> BorrowChecker<'a> {
             StmtKind::Item(item) => {
                 self.check_item(item);
             }
+            StmtKind::Error => {}
         }
     }
 
@@ -408,6 +409,14 @@ impl<'a> BorrowChecker<'a> {
                 self.check_expr(body);
             }
 
+            ExprKind::Comprehension { body, iterable, condition, .. } => {
+                self.check_expr(iterable);
+                if let Some(ref cond) = condition {
+                    self.check_expr(cond);
+                }
+                self.check_expr(body);
+            }
+
             ExprKind::TypeCast { expr: inner, .. } => {
                 self.check_expr(inner);
             }
@@ -422,6 +431,7 @@ impl<'a> BorrowChecker<'a> {
                     self.check_expr(e);
                 }
             }
+            ExprKind::Error => {}
         }
     }
 
@@ -456,6 +466,7 @@ impl<'a> BorrowChecker<'a> {
                         format!("use of moved value `{}`", name),
                         span.clone(),
                     )
+                    .with_category(DiagnosticCategory::BorrowError)
                     .with_note(format!(
                         "value moved here: {}:{}:{}",
                         moved_span.start.file, moved_span.start.line, moved_span.start.column,
@@ -495,6 +506,7 @@ impl<'a> BorrowChecker<'a> {
                         ),
                         span.clone(),
                     )
+                    .with_category(DiagnosticCategory::BorrowError)
                     .with_note(format!(
                         "immutable borrow created here: {}:{}:{}",
                         borrow.span.start.file,
@@ -515,6 +527,7 @@ impl<'a> BorrowChecker<'a> {
                         ),
                         span.clone(),
                     )
+                    .with_category(DiagnosticCategory::BorrowError)
                     .with_note(format!(
                         "first mutable borrow here: {}:{}:{}",
                         borrow.span.start.file,
@@ -535,6 +548,7 @@ impl<'a> BorrowChecker<'a> {
                         ),
                         span.clone(),
                     )
+                    .with_category(DiagnosticCategory::BorrowError)
                     .with_note(format!(
                         "mutable borrow created here: {}:{}:{}",
                         borrow.span.start.file,
@@ -560,6 +574,7 @@ impl<'a> BorrowChecker<'a> {
                         format!("cannot assign to immutable variable `{}`", name),
                         span.clone(),
                     )
+                    .with_category(DiagnosticCategory::BorrowError)
                     .with_suggestion(format!(
                         "consider making this variable mutable: `let mut {}`",
                         name
@@ -640,6 +655,7 @@ impl<'a> BorrowChecker<'a> {
                     ),
                     span.clone(),
                 )
+                .with_category(DiagnosticCategory::BorrowError)
                 .with_suggestion(format!(
                     "use `.to_{}()` for explicit copy",
                     if *to == DeviceContext::Cpu { "cpu" } else { "gpu" }
@@ -667,7 +683,7 @@ impl<'a> BorrowChecker<'a> {
                     name
                 ),
                 span.clone(),
-            ));
+            ).with_category(DiagnosticCategory::BorrowError));
         }
     }
 
@@ -688,7 +704,7 @@ impl<'a> BorrowChecker<'a> {
                 "E4005",
                 format!("reference to `{}` escapes its scope", name),
                 span.clone(),
-            ));
+            ).with_category(DiagnosticCategory::BorrowError));
         }
     }
 

@@ -15,7 +15,7 @@ impl MirPass for ConstantFolding {
         "const_fold"
     }
 
-    fn run(&self, program: &mut MirProgram, _interner: &TypeInterner) {
+    fn run(&self, program: &mut MirProgram, _interner: &TypeInterner) -> bool {
         for func in &mut program.functions {
             for block in &mut func.basic_blocks {
                 for stmt in &mut block.stmts {
@@ -23,6 +23,7 @@ impl MirPass for ConstantFolding {
                 }
             }
         }
+        true
     }
 }
 

@@ -136,6 +136,37 @@ for i in 0..10 {
 }
 ```
 
+### Comprehensions
+
+List comprehensions create arrays from iteration patterns:
+
+```axon
+// Basic comprehension
+val squares = [x * x for x in 0..10];
+
+// With filter
+val evens = [x for x in 0..100 if x % 2 == 0];
+
+// Complex body expression
+val normalized = [v / max_val for v in values if v > 0.0];
+```
+
+### Closures
+
+Anonymous functions with `|params| body` syntax:
+
+```axon
+val double = |x: Int| x * 2;
+val add = |a: Int, b: Int| a + b;
+
+// Zero-parameter closure
+val greet = || println("Hello!");
+
+// Used with higher-order functions
+val result = items.fold(0, |acc, x| acc + x);
+val filtered = items.filter(|x| x > 0);
+```
+
 ### Match Expressions
 
 Pattern matching with exhaustiveness checking:
@@ -344,6 +375,20 @@ fn main() {
 ```
 
 See [Modules & Packages](modules-packages.md) for the full module system.
+
+---
+
+## Runtime Features
+
+Axon includes a high-performance runtime for ML workloads:
+
+- **Automatic parallelism** — Independent tensor operations are detected at compile time and dispatched to a thread pool at runtime. The thread pool is lazily initialized with one thread per CPU core.
+- **Memory pool** — A slab-based allocator caches freed tensor buffers by size, reducing malloc overhead in training loops where tensors of the same shape are repeatedly allocated and freed.
+- **GPU support** — Compile with `--gpu cuda` or `--gpu rocm` for GPU acceleration. Tensors can be transferred between CPU and GPU with `device_transfer()`.
+- **Quantization** — At `-O2`, matrix multiplications are automatically quantized to int8 for faster inference. The compiler inserts quantize/dequantize wrappers around eligible MatMul operations. BFloat16 (`BFloat16` / `bf16`) is supported for mixed-precision training.
+- **Autograd** — Full reverse-mode automatic differentiation with 23 differentiable operations including sigmoid, tanh, GELU, and SiLU. Adam optimizer is built in.
+
+No configuration is needed — the runtime auto-detects hardware and initializes on demand.
 
 ---
 

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::error::CompileError;
+use crate::error::{CompileError, DiagnosticCategory};
 use crate::span::Span;
 use crate::types::{ShapeDimResolved, TensorType, Type, TypeId, TypeInterner};
 

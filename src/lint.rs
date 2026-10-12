@@ -339,6 +339,7 @@ impl Linter {
                 self.nesting_depth -= 1;
             }
             StmtKind::Item(item) => self.lint_item(item),
+            StmtKind::Error => {}
         }
     }
 

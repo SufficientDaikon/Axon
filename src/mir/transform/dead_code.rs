@@ -16,11 +16,12 @@ impl MirPass for DeadCodeElimination {
         "dead_code"
     }
 
-    fn run(&self, program: &mut MirProgram, _interner: &TypeInterner) {
+    fn run(&self, program: &mut MirProgram, _interner: &TypeInterner) -> bool {
         eliminate_unreachable_functions(program);
         for func in &mut program.functions {
             eliminate_unreachable_blocks(func);
         }
+        true
     }
 }
 

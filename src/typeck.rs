@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::*;
-use crate::error::CompileError;
+use crate::error::{CompileError, DiagnosticCategory};
 use crate::span::Span;
 use crate::symbol::*;
 use crate::types::*;
@@ -107,7 +107,7 @@ impl TypeChecker {
                         "E2001",
                         "infinite type detected during unification",
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                 }
                 self.substitutions.insert(var, b);
                 Ok(b)
@@ -120,7 +120,7 @@ impl TypeChecker {
                         "E2001",
                         "infinite type detected during unification",
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                 }
                 self.substitutions.insert(var, a);
                 Ok(a)
@@ -137,6 +137,7 @@ impl TypeChecker {
                         ),
                         span.clone(),
                     )
+                    .with_category(DiagnosticCategory::TypeError)
                     .with_suggestion(format!(
                         "tuple has {} elements, but expected {}",
                         bs.len(),
@@ -163,6 +164,7 @@ impl TypeChecker {
                         ),
                         span.clone(),
                     )
+                    .with_category(DiagnosticCategory::TypeError)
                     .with_suggestion(format!(
                         "array sizes differ: expected {}, found {}",
                         s1, s2
@@ -206,7 +208,7 @@ impl TypeChecker {
                             self.type_name(b)
                         ),
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                 }
                 let p1 = p1.clone();
                 let p2 = p2.clone();
@@ -241,6 +243,7 @@ impl TypeChecker {
                 ),
                 span.clone(),
             )
+            .with_category(DiagnosticCategory::TypeError)
             .with_suggestion(format!(
                 "expected `{}`, found `{}`; consider adding an explicit type annotation or cast",
                 self.type_name(a),
@@ -360,6 +363,7 @@ impl TypeChecker {
             ItemKind::Impl(block) => self.check_impl(block),
             ItemKind::Trait(decl) => self.check_trait(decl),
             ItemKind::TypeAlias(_) | ItemKind::Module(_) | ItemKind::Use(_) => {}
+            ItemKind::Error => {}
         }
     }
 
@@ -564,7 +568,7 @@ impl TypeChecker {
                             "E2014",
                             "type annotations needed: cannot infer type",
                             stmt.span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                         TypeId::ERROR
                     }
                 };
@@ -619,6 +623,7 @@ impl TypeChecker {
             StmtKind::Item(item) => {
                 self.check_item(item);
             }
+            StmtKind::Error => {}
         }
     }
 
@@ -713,6 +718,10 @@ impl TypeChecker {
             ExprKind::Closure { params, return_type, body } => {
                 self.check_closure(params, return_type, body, &expr.span)
             }
+            ExprKind::Comprehension { body, pattern, iterable, condition } => {
+                self.check_comprehension(body, pattern, iterable, condition.as_deref(), &expr.span)
+            }
+            ExprKind::Error => TypeId::ERROR,
         }
         })
     }
@@ -735,7 +744,7 @@ impl TypeChecker {
                         "E2002",
                         format!("cannot apply `{:?}` to `{}`", op, self.type_name(left_ty)),
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                     return TypeId::ERROR;
                 }
                 match self.unify(left_ty, right_ty, span) {
@@ -755,7 +764,7 @@ impl TypeChecker {
                         "E2002",
                         format!("cannot apply `@` to `{}`", self.type_name(left_ty)),
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                     return TypeId::ERROR;
                 }
                 // Return a tensor with fresh shape (shape inference deferred to shapes.rs)
@@ -799,7 +808,7 @@ impl TypeChecker {
                         "E2002",
                         format!("cannot apply `-` to `{}`", self.type_name(operand_ty)),
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                     return TypeId::ERROR;
                 }
                 operand_ty
@@ -835,7 +844,7 @@ impl TypeChecker {
                         "E2003",
                         format!("{} expects 1 argument, found {}", name, args.len()),
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                     return TypeId::ERROR;
                 }
                 // Type-check the argument (to catch errors in the arg expression)
@@ -909,7 +918,7 @@ impl TypeChecker {
                         "E2003",
                         format!("expected {} arguments, found {}", params.len(), args.len()),
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                     return TypeId::ERROR;
                 }
                 for (param_ty, arg_expr) in params.iter().zip(args.iter()) {
@@ -938,7 +947,7 @@ impl TypeChecker {
                     "E2004",
                     format!("`{}` is not callable", self.type_name(func_ty)),
                     span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 TypeId::ERROR
             }
         }
@@ -974,7 +983,7 @@ impl TypeChecker {
                                 "E2003",
                                 format!("expected {} arguments, found {}", non_self_params.len(), args.len()),
                                 span.clone(),
-                            ));
+                            ).with_category(DiagnosticCategory::TypeError));
                             return TypeId::ERROR;
                         }
                         for (param_ty, arg_expr) in non_self_params.iter().zip(args.iter()) {
@@ -1023,7 +1032,7 @@ impl TypeChecker {
                             "E2008",
                             "if and else branches have incompatible types",
                             span.clone(),
-                        ).with_note(format!(
+                        ).with_category(DiagnosticCategory::TypeError).with_note(format!(
                             "then branch has type `{}`, else branch has type `{}`",
                             self.type_name(then_ty),
                             self.type_name(else_ty),
@@ -1041,7 +1050,7 @@ impl TypeChecker {
                             "E2008",
                             "if and else branches have incompatible types",
                             span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                         TypeId::ERROR
                     }
                 }
@@ -1086,7 +1095,7 @@ impl TypeChecker {
                                 "E2009",
                                 "match arms have incompatible types",
                                 span.clone(),
-                            ).with_note(format!(
+                            ).with_category(DiagnosticCategory::TypeError).with_note(format!(
                                 "first arm has type `{}`, but this arm has type `{}`",
                                 self.type_name(prev),
                                 self.type_name(arm_ty),
@@ -1194,6 +1203,7 @@ impl TypeChecker {
             "non-exhaustive match — add a wildcard `_` arm",
             span.clone(),
         )
+        .with_category(DiagnosticCategory::TypeError)
         .with_severity(crate::error::Severity::Warning)
         .with_suggestion("add a `_ => ...` arm to handle remaining cases");
 
@@ -1225,7 +1235,7 @@ impl TypeChecker {
                     "E2006",
                     format!("no field `{}` on type `{}`", field, name),
                     span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 TypeId::ERROR
             }
             Type::Tuple(ref elems) => {
@@ -1239,7 +1249,7 @@ impl TypeChecker {
                     "E2006",
                     format!("no field `{}` on type `{}`", field, self.type_name(obj_ty)),
                     span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 TypeId::ERROR
             }
             _ => {
@@ -1251,7 +1261,7 @@ impl TypeChecker {
                     "E2006",
                     format!("no field `{}` on type `{}`", field, self.type_name(obj_ty)),
                     span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 TypeId::ERROR
             }
         }
@@ -1276,7 +1286,7 @@ impl TypeChecker {
                             "E2007",
                             format!("cannot index with `{}`", self.type_name(idx_ty)),
                             span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                     }
                 }
                 elem
@@ -1293,7 +1303,7 @@ impl TypeChecker {
                     "E2007",
                     format!("cannot index into `{}`", self.type_name(obj_ty)),
                     span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 TypeId::ERROR
             }
         }
@@ -1328,7 +1338,7 @@ impl TypeChecker {
                             "E2006",
                             format!("no field `{}` on type `{}`", field.name, name),
                             field.span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                     }
                 }
 
@@ -1340,7 +1350,7 @@ impl TypeChecker {
                             "E2005",
                             format!("missing field `{}` in model `{}`", fname, name),
                             span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                     }
                 }
 
@@ -1385,7 +1395,7 @@ impl TypeChecker {
                 self.type_name(to_ty)
             ),
             span.clone(),
-        ));
+        ).with_category(DiagnosticCategory::TypeError));
         TypeId::ERROR
     }
 
@@ -1412,7 +1422,7 @@ impl TypeChecker {
                     "E2013",
                     "`?` can only be applied to Result or Option types",
                     span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 TypeId::ERROR
             }
         }
@@ -1466,6 +1476,79 @@ impl TypeChecker {
         })
     }
 
+    fn check_comprehension(
+        &mut self,
+        body: &Expr,
+        pattern: &Pattern,
+        iterable: &Expr,
+        condition: Option<&Expr>,
+        _span: &Span,
+    ) -> TypeId {
+        // Check iterable expression
+        let iter_ty = self.check_expr(iterable);
+
+        // Determine element type from iterable
+        let elem_ty = self.comprehension_element_type(iter_ty);
+
+        // Open scope for the loop variable
+        self.symbols.push_scope(ScopeKind::Block);
+
+        // Bind the pattern variable
+        let var_name = match &pattern.kind {
+            PatternKind::Identifier(name) => name.clone(),
+            _ => "_".to_string(),
+        };
+        let info = SymbolInfo {
+            name: var_name.clone(),
+            ty: elem_ty,
+            kind: SymbolKind::Variable,
+            mutable: false,
+            span: pattern.span.clone(),
+            scope: self.symbols.current_scope(),
+            visible: false,
+        };
+        let _ = self.symbols.define(var_name, info);
+
+        // Check condition if present
+        if let Some(cond) = condition {
+            let cond_ty = self.check_expr(cond);
+            if let Err(e) = self.unify(cond_ty, TypeId::BOOL, &cond.span) {
+                self.errors.push(e);
+            }
+        }
+
+        // Check body expression — its type is the element type of the result
+        let body_ty = self.check_expr(body);
+
+        self.symbols.pop_scope();
+
+        // Result is Vec<body_ty> — use a fresh type var for now (lenient)
+        let _ = body_ty;
+        self.fresh_type_var()
+    }
+
+    fn comprehension_element_type(&mut self, iter_ty: TypeId) -> TypeId {
+        if iter_ty == TypeId::ERROR {
+            return TypeId::ERROR;
+        }
+        let resolved = self.interner.resolve(self.resolve_type(iter_ty)).clone();
+        match resolved {
+            Type::Array { elem, .. } => elem,
+            Type::Named { ref path, ref args } => {
+                let name = path.last().map(|s| s.as_str()).unwrap_or("");
+                if name == "Vec" || name == "HashSet" {
+                    return args.first().copied().unwrap_or_else(|| self.fresh_type_var());
+                }
+                if name == "Range" {
+                    return TypeId::INT64;
+                }
+                // For other named types, return first arg or fresh var
+                args.first().copied().unwrap_or_else(|| self.fresh_type_var())
+            }
+            _ => self.fresh_type_var(),
+        }
+    }
+
     fn check_assignment(
         &mut self,
         target: &Expr,
@@ -1488,7 +1571,7 @@ impl TypeChecker {
                         "E2015",
                         format!("cannot assign to `{}`", name),
                         span.clone(),
-                    ).with_note("variable is not declared as mutable".to_string()));
+                    ).with_category(DiagnosticCategory::TypeError).with_note("variable is not declared as mutable".to_string()));
                 }
             }
         }
@@ -1506,7 +1589,7 @@ impl TypeChecker {
                         "E2002",
                         format!("cannot apply compound assignment to `{}`", self.type_name(target_ty)),
                         span.clone(),
-                    ));
+                    ).with_category(DiagnosticCategory::TypeError));
                 } else if let Err(e) = self.unify(target_ty, value_ty, span) {
                     self.errors.push(e);
                 }
@@ -1561,7 +1644,7 @@ impl TypeChecker {
                                 pats.len()
                             ),
                             pattern.span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                     } else {
                         let elems = elems.clone();
                         for (pat, elem_ty) in pats.iter().zip(elems.iter()) {
@@ -1697,6 +1780,12 @@ impl TypeChecker {
 /// Parse, resolve names, and type-check an Axon source string.
 pub fn check(source: &str, filename: &str) -> (TypeChecker, Vec<CompileError>) {
     let (program, parse_errors) = crate::parse_source(source, filename);
+    check_with_program(&program, parse_errors)
+}
+
+/// Type-check an already-parsed AST. Avoids double-parsing when the caller
+/// already has a Program from `parse_source`.
+pub fn check_with_program(program: &crate::ast::Program, parse_errors: Vec<CompileError>) -> (TypeChecker, Vec<CompileError>) {
     let mut checker = TypeChecker::new();
     checker.errors.extend(parse_errors);
 
@@ -1706,13 +1795,13 @@ pub fn check(source: &str, filename: &str) -> (TypeChecker, Vec<CompileError>) {
     // Run name resolution first
     {
         let mut resolver = NameResolver::new(&mut checker.symbols, &mut checker.interner);
-        let resolve_errors = resolver.resolve(&program);
+        let resolve_errors = resolver.resolve(program);
         checker.errors.extend(resolve_errors);
     }
 
     // Then type check (only if no hard errors so far)
     if !checker.has_errors() {
-        checker.check_program(&program);
+        checker.check_program(program);
     }
 
     let errors = checker.errors.clone();

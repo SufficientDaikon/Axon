@@ -2,6 +2,12 @@
 
 pub mod dead_code;
 pub mod const_fold;
+pub mod float_combinators;
+pub mod fuse_ops;
+pub mod graph_rewrite;
+pub mod inline;
+pub mod parallelize;
+pub mod quantize;
 
 use crate::mir::MirProgram;
 use crate::types::TypeInterner;
@@ -12,7 +18,8 @@ pub trait MirPass {
     fn name(&self) -> &'static str;
 
     /// Run the pass, mutating the MIR program in place.
-    fn run(&self, program: &mut MirProgram, interner: &TypeInterner);
+    /// Returns `true` if the pass made any changes.
+    fn run(&self, program: &mut MirProgram, interner: &TypeInterner) -> bool;
 }
 
 /// Manages and runs a sequence of MIR passes.
@@ -30,10 +37,13 @@ impl PassManager {
     }
 
     /// Run all registered passes in order.
-    pub fn run_all(&self, program: &mut MirProgram, interner: &TypeInterner) {
+    /// Returns `true` if any pass made changes.
+    pub fn run_all(&self, program: &mut MirProgram, interner: &TypeInterner) -> bool {
+        let mut changed = false;
         for pass in &self.passes {
-            pass.run(program, interner);
+            changed |= pass.run(program, interner);
         }
+        changed
     }
 
     /// Create a PassManager with default passes for a given optimization level.
@@ -42,6 +52,14 @@ impl PassManager {
         if opt_level >= 1 {
             pm.add_pass(Box::new(dead_code::DeadCodeElimination));
             pm.add_pass(Box::new(const_fold::ConstantFolding));
+        }
+        if opt_level >= 2 {
+            pm.add_pass(Box::new(float_combinators::CombinatorFloating));
+            pm.add_pass(Box::new(fuse_ops::TensorFusion));
+            pm.add_pass(Box::new(graph_rewrite::GraphRewrite));
+            pm.add_pass(Box::new(quantize::QuantizePass));
+            pm.add_pass(Box::new(inline::InlineTrivial));
+            pm.add_pass(Box::new(parallelize::AutoParallelize));
         }
         pm
     }
@@ -82,6 +100,6 @@ mod tests {
     #[test]
     fn test_pass_manager_default_o2() {
         let pm = PassManager::with_default_passes(2);
-        assert_eq!(pm.pass_count(), 2);
+        assert_eq!(pm.pass_count(), 8); // dead_code + const_fold + float_combinators + fuse_ops + graph_rewrite + quantize + inline + parallelize
     }
 }

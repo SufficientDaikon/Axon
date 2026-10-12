@@ -46,6 +46,8 @@ pub enum ItemKind {
     TypeAlias(TypeAliasDecl),
     Module(ModuleDecl),
     Use(UseDecl),
+    /// Placeholder for an item that failed to parse.
+    Error,
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -218,9 +220,9 @@ pub enum StmtKind {
     },
     /// An item declared inside a block (e.g., a nested function)
     Item(Item),
+    /// Placeholder for a statement that failed to parse.
+    Error,
 }
-
-/// A block: `{ stmts... [tail_expr] }`
 #[derive(Debug, Clone, Serialize)]
 pub struct Block {
     pub stmts: Vec<Stmt>,
@@ -354,6 +356,17 @@ pub enum ExprKind {
         return_type: Option<TypeExpr>,
         body: Box<Expr>,
     },
+
+    /// Comprehension: `[expr for pattern in iterable]` or `[expr for pattern in iterable if predicate]`
+    Comprehension {
+        body: Box<Expr>,
+        pattern: Pattern,
+        iterable: Box<Expr>,
+        condition: Option<Box<Expr>>,
+    },
+
+    /// Placeholder for an expression that failed to parse.
+    Error,
 }
 
 #[derive(Debug, Clone, Serialize)]

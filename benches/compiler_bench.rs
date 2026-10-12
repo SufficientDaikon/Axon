@@ -8,11 +8,11 @@ fn generate_source(num_functions: usize) -> String {
     let mut source = String::new();
     for i in 0..num_functions {
         source.push_str(&format!(
-            "fn func_{}(x: Int32, y: Int32) -> Int32 {{\n    let result = x + y * {};\n    return result;\n}}\n\n",
+            "fn func_{}(x: Int32, y: Int32): Int32 {{\n    val result = x + y * {};\n    result\n}}\n\n",
             i, i
         ));
     }
-    source.push_str("fn main() -> Int32 { return func_0(1, 2); }\n");
+    source.push_str("fn main(): Int32 { func_0(1, 2) }\n");
     source
 }
 
@@ -185,6 +185,53 @@ fn bench_linter_speed() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// MIR building benchmarks
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn bench_mir_build_speed() {
+    let source = generate_source(500);
+    let start = Instant::now();
+    let iterations = 5;
+    for _ in 0..iterations {
+        let (typed_program, _errors, checker) =
+            axonc::check_source_full(&source, "bench.axon");
+        let mut builder = axonc::mir::MirBuilder::new(&checker.interner);
+        let _mir = builder.build(&typed_program);
+    }
+    let elapsed = start.elapsed();
+    println!(
+        "MIR Build: {:.2}ms per iteration ({} funcs)",
+        elapsed.as_secs_f64() * 1000.0 / iterations as f64,
+        500
+    );
+    assert!(elapsed.as_millis() < 60000, "MIR build too slow: {}ms", elapsed.as_millis());
+}
+
+#[test]
+fn bench_mir_passes_speed() {
+    let source = generate_source(500);
+    let (typed_program, _, checker) = axonc::check_source_full(&source, "bench.axon");
+    let mut mir_builder = axonc::mir::MirBuilder::new(&checker.interner);
+    let base_mir = mir_builder.build(&typed_program);
+
+    let start = Instant::now();
+    let iterations = 5;
+    for _ in 0..iterations {
+        let mut mir = base_mir.clone();
+        let pm = axonc::mir::transform::PassManager::with_default_passes(2);
+        pm.run_all(&mut mir, &checker.interner);
+    }
+    let elapsed = start.elapsed();
+    println!(
+        "MIR Passes (O2): {:.2}ms per iteration ({} funcs)",
+        elapsed.as_secs_f64() * 1000.0 / iterations as f64,
+        500
+    );
+    assert!(elapsed.as_millis() < 60000, "MIR passes too slow: {}ms", elapsed.as_millis());
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Memory usage estimation
 // ═══════════════════════════════════════════════════════════════
 
@@ -207,8 +254,8 @@ fn bench_memory_estimate() {
 #[test]
 fn bench_scaling() {
     let sizes = [10, 50, 100, 500];
-    println!("\n{:<10} {:<15} {:<15} {:<15}", "Functions", "Lex (ms)", "Parse (ms)", "TypeCheck (ms)");
-    println!("{}", "-".repeat(55));
+    println!("\n{:<10} {:<12} {:<12} {:<12} {:<12} {:<12}", "Functions", "Lex (ms)", "Parse (ms)", "TyChk (ms)", "MIR (ms)", "Passes (ms)");
+    println!("{}", "-".repeat(70));
     for &n in &sizes {
         let source = generate_source(n);
 
@@ -225,6 +272,18 @@ fn bench_scaling() {
         let _ = axonc::typeck::check(&source, "bench.axon");
         let typecheck_ms = start.elapsed().as_secs_f64() * 1000.0;
 
-        println!("{:<10} {:<15.3} {:<15.3} {:<15.3}", n, lex_ms, parse_ms, typecheck_ms);
+        let (typed_program, _, checker) = axonc::check_source_full(&source, "bench.axon");
+        let start = Instant::now();
+        let mut builder = axonc::mir::MirBuilder::new(&checker.interner);
+        let mir = builder.build(&typed_program);
+        let mir_ms = start.elapsed().as_secs_f64() * 1000.0;
+
+        let start = Instant::now();
+        let mut mir_clone = mir.clone();
+        let pm = axonc::mir::transform::PassManager::with_default_passes(2);
+        pm.run_all(&mut mir_clone, &checker.interner);
+        let passes_ms = start.elapsed().as_secs_f64() * 1000.0;
+
+        println!("{:<10} {:<12.3} {:<12.3} {:<12.3} {:<12.3} {:<12.3}", n, lex_ms, parse_ms, typecheck_ms, mir_ms, passes_ms);
     }
 }

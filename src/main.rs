@@ -3,6 +3,7 @@
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::process;
+use std::time::Instant;
 
 use axonc::error::{DiagnosticConfig, ErrorReporter};
 
@@ -65,6 +66,10 @@ enum Commands {
         /// Stop compilation after N errors
         #[arg(long = "error-limit")]
         error_limit: Option<usize>,
+
+        /// Print per-phase timing information
+        #[arg(long)]
+        time: bool,
     },
 
     /// Format an Axon source file
@@ -159,6 +164,10 @@ enum Commands {
         /// Stop compilation after N errors
         #[arg(long = "error-limit")]
         error_limit: Option<usize>,
+
+        /// Print per-phase timing information
+        #[arg(long)]
+        time: bool,
     },
 }
 
@@ -213,10 +222,10 @@ fn main() {
         Commands::Lex { file } => {
             run_lex(&file);
         }
-        Commands::Check { file, error_format, emit_tast, deny, allow, warn, error_limit } => {
+        Commands::Check { file, error_format, emit_tast, deny, allow, warn, error_limit, time } => {
             let json_mode = error_format.as_deref() == Some("json");
             let config = parse_diagnostic_config(&deny, &allow, &warn, error_limit);
-            run_check(&file, json_mode, emit_tast, config);
+            run_check(&file, json_mode, emit_tast, config, time);
         }
         Commands::Fmt { file } => {
             run_fmt(&file);
@@ -239,10 +248,10 @@ fn main() {
         Commands::Pkg { action } => {
             run_pkg(action);
         }
-        Commands::Build { file, output, opt_level, emit_llvm, emit_mir, emit_obj, gpu, keep_temps, error_format, deny, allow, warn, error_limit } => {
+        Commands::Build { file, output, opt_level, emit_llvm, emit_mir, emit_obj, gpu, keep_temps, error_format, deny, allow, warn, error_limit, time } => {
             let json_mode = error_format.as_deref() == Some("json");
             let config = parse_diagnostic_config(&deny, &allow, &warn, error_limit);
-            run_build(&file, output.as_deref(), &opt_level, emit_llvm, emit_mir, emit_obj, &gpu, json_mode, keep_temps, config);
+            run_build(&file, output.as_deref(), &opt_level, emit_llvm, emit_mir, emit_obj, &gpu, json_mode, keep_temps, config, time);
         }
     }
 }
@@ -335,7 +344,7 @@ fn run_lex(file: &str) {
     }
 }
 
-fn run_check(file: &str, json_errors: bool, emit_tast: bool, config: DiagnosticConfig) {
+fn run_check(file: &str, json_errors: bool, emit_tast: bool, config: DiagnosticConfig, time: bool) {
     let source = match fs::read_to_string(file) {
         Ok(s) => s,
         Err(e) => {
@@ -344,9 +353,42 @@ fn run_check(file: &str, json_errors: bool, emit_tast: bool, config: DiagnosticC
         }
     };
 
-    let (typed_program, errors) = axonc::check_source(&source, file);
+    let total_start = Instant::now();
+
+    let t0 = Instant::now();
+    let (program, parse_errors) = axonc::parse_source(&source, file);
+    let parse_ms = t0.elapsed().as_secs_f64() * 1000.0;
+
+    let t0 = Instant::now();
+    let (checker, check_errors) = axonc::typeck::check(&source, file);
+    let typecheck_ms = t0.elapsed().as_secs_f64() * 1000.0;
+
+    let t0 = Instant::now();
+    let builder = axonc::tast::TastBuilder::new(&checker);
+    let typed_program = builder.build(&program);
+    let tast_ms = t0.elapsed().as_secs_f64() * 1000.0;
+
+    let t0 = Instant::now();
+    let mut borrow_checker = axonc::borrow::BorrowChecker::new(&checker.interner, &checker.symbols);
+    borrow_checker.check_program(&program);
+    let borrow_ms = t0.elapsed().as_secs_f64() * 1000.0;
+
+    let total_ms = total_start.elapsed().as_secs_f64() * 1000.0;
+
+    if time {
+        eprintln!("[time] Parse:      {:.1}ms", parse_ms);
+        eprintln!("[time] TypeCheck:  {:.1}ms", typecheck_ms);
+        eprintln!("[time] TAST Build: {:.1}ms", tast_ms);
+        eprintln!("[time] Borrow:     {:.1}ms", borrow_ms);
+        eprintln!("[time] Total:      {:.1}ms", total_ms);
+    }
+
+    let mut all_errors = parse_errors;
+    all_errors.extend(check_errors);
+    all_errors.extend(borrow_checker.take_errors());
+
     let mut reporter = ErrorReporter::new_with_config(json_errors, config);
-    for e in errors {
+    for e in all_errors {
         reporter.report(e);
     }
 
@@ -362,7 +404,7 @@ fn run_check(file: &str, json_errors: bool, emit_tast: bool, config: DiagnosticC
     }
 }
 
-fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: bool, emit_mir: bool, emit_obj: bool, gpu: &str, json_errors: bool, keep_temps: bool, config: DiagnosticConfig) {
+fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: bool, emit_mir: bool, emit_obj: bool, gpu: &str, json_errors: bool, keep_temps: bool, config: DiagnosticConfig, time: bool) {
     let source = match fs::read_to_string(file) {
         Ok(s) => s,
         Err(e) => {
@@ -370,6 +412,8 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
             process::exit(1);
         }
     };
+
+    let total_start = Instant::now();
 
     // Parse optimization level
     let opt_level = match opt_level_str {
@@ -381,7 +425,9 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
     };
 
     // Type check
+    let t0 = Instant::now();
     let (typed_program, check_errors, checker) = axonc::check_source_full(&source, file);
+    let check_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
     let mut reporter = ErrorReporter::new_with_config(json_errors, config);
     for e in &check_errors {
@@ -394,16 +440,26 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
     }
 
     // Build MIR
+    let t0 = Instant::now();
     let mut mir_builder = axonc::mir::MirBuilder::new(&checker.interner);
     let mut mir_program = mir_builder.build(&typed_program);
+    let mir_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
     // Run MIR optimization passes
+    let t0 = Instant::now();
     let opt_num: u8 = opt_level_str.parse().unwrap_or(0);
     let pass_manager = axonc::mir::transform::PassManager::with_default_passes(opt_num);
     pass_manager.run_all(&mut mir_program, &checker.interner);
+    let passes_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
     // If --emit-mir, print MIR and exit
     if emit_mir {
+        if time {
+            eprintln!("[time] Check:      {:.1}ms", check_ms);
+            eprintln!("[time] MIR Build:  {:.1}ms", mir_ms);
+            eprintln!("[time] MIR Passes: {:.1}ms", passes_ms);
+            eprintln!("[time] Total:      {:.1}ms", total_start.elapsed().as_secs_f64() * 1000.0);
+        }
         println!("{}", mir_program);
         return;
     }
@@ -427,6 +483,7 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
     }
 
     // Generate LLVM IR
+    let t0 = Instant::now();
     let mut codegen = axonc::codegen::llvm::LlvmCodegen::new(&checker.interner, opt_level);
     let llvm_ir = match codegen.generate(&mir_program) {
         Ok(ir) => ir,
@@ -435,12 +492,20 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
             process::exit(1);
         }
     };
+    let codegen_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
     // Determine output path
     let default_output = file.trim_end_matches(".axon");
     let output_path = output.unwrap_or(default_output);
 
     if emit_llvm {
+        if time {
+            eprintln!("[time] Check:      {:.1}ms", check_ms);
+            eprintln!("[time] MIR Build:  {:.1}ms", mir_ms);
+            eprintln!("[time] MIR Passes: {:.1}ms", passes_ms);
+            eprintln!("[time] LLVM Gen:   {:.1}ms", codegen_ms);
+            eprintln!("[time] Total:      {:.1}ms", total_start.elapsed().as_secs_f64() * 1000.0);
+        }
         // Write .ll file
         let ll_path = format!("{}.ll", output_path);
         match fs::write(&ll_path, &llvm_ir) {
@@ -487,8 +552,20 @@ fn run_build(file: &str, output: Option<&str>, opt_level_str: &str, emit_llvm: b
         output_path.to_string()
     };
 
+    let t0 = Instant::now();
     match axonc::codegen::llvm::compile_and_link(&llvm_ir, &exe_output, opt_level, keep_temps) {
-        Ok(_) => println!("Compiled to {}", exe_output),
+        Ok(_) => {
+            let link_ms = t0.elapsed().as_secs_f64() * 1000.0;
+            if time {
+                eprintln!("[time] Check:      {:.1}ms", check_ms);
+                eprintln!("[time] MIR Build:  {:.1}ms", mir_ms);
+                eprintln!("[time] MIR Passes: {:.1}ms", passes_ms);
+                eprintln!("[time] LLVM Gen:   {:.1}ms", codegen_ms);
+                eprintln!("[time] Link:       {:.1}ms", link_ms);
+                eprintln!("[time] Total:      {:.1}ms", total_start.elapsed().as_secs_f64() * 1000.0);
+            }
+            println!("Compiled to {}", exe_output);
+        }
         Err(e) => {
             eprintln!("error: {}", e);
             process::exit(1);

@@ -4,7 +4,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 
 use crate::ast::*;
-use crate::error::CompileError;
+use crate::error::{CompileError, DiagnosticCategory};
 use crate::span::Span;
 use crate::types::*;
 
@@ -122,6 +122,7 @@ impl SymbolTable {
                 format!("duplicate definition of `{}` in the same scope", name),
                 info.span.clone(),
             )
+            .with_category(DiagnosticCategory::TypeError)
             .with_suggestion(format!(
                 "a previous definition of `{}` exists in this scope; consider renaming one of them",
                 name
@@ -238,6 +239,7 @@ pub fn prim_from_name(name: &str) -> Option<PrimKind> {
         "UInt32" | "u32" => Some(PrimKind::UInt32),
         "UInt64" | "u64" => Some(PrimKind::UInt64),
         "Float16" | "f16" => Some(PrimKind::Float16),
+        "BFloat16" | "bf16" => Some(PrimKind::BFloat16),
         "Float32" | "f32" => Some(PrimKind::Float32),
         "Float64" | "f64" => Some(PrimKind::Float64),
         "Bool" | "bool" => Some(PrimKind::Bool),
@@ -394,6 +396,7 @@ impl<'a> NameResolver<'a> {
                 }
             }
             ItemKind::Impl(_) | ItemKind::Use(_) => {}
+            ItemKind::Error => {}
         }
     }
 
@@ -424,7 +427,7 @@ impl<'a> NameResolver<'a> {
                     "E1004",
                     format!("item `{}` is private", decl.path.last().unwrap()),
                     decl.span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 return;
             }
             // Bind alias in current scope
@@ -471,6 +474,7 @@ impl<'a> NameResolver<'a> {
                 }
             }
             ItemKind::Use(_) => {} // already handled in phase 2
+            ItemKind::Error => {}
         }
     }
 
@@ -683,6 +687,7 @@ impl<'a> NameResolver<'a> {
                 self.collect_item(item);
                 self.resolve_item(item);
             }
+            StmtKind::Error => {}
         }
     }
 
@@ -695,7 +700,7 @@ impl<'a> NameResolver<'a> {
                         "E1001",
                         format!("undefined name `{}`", name),
                         expr.span.clone(),
-                    );
+                    ).with_category(DiagnosticCategory::TypeError);
                     if let Some(suggestion) = self.symbols.find_similar(name) {
                         err = err.with_suggestion(format!("did you mean `{}`?", suggestion));
                     }
@@ -709,7 +714,7 @@ impl<'a> NameResolver<'a> {
                             "E1001",
                             format!("undefined name `{}`", first),
                             expr.span.clone(),
-                        );
+                        ).with_category(DiagnosticCategory::TypeError);
                         if let Some(suggestion) = self.symbols.find_similar(first) {
                             err = err.with_suggestion(format!("did you mean `{}`?", suggestion));
                         }
@@ -824,7 +829,7 @@ impl<'a> NameResolver<'a> {
                             "E1001",
                             format!("undefined name `{}`", first),
                             expr.span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                     }
                 }
                 for field in fields {
@@ -862,6 +867,17 @@ impl<'a> NameResolver<'a> {
                 self.resolve_expr(body);
                 self.symbols.pop_scope();
             }
+            ExprKind::Comprehension { body, pattern, iterable, condition } => {
+                self.resolve_expr(iterable);
+                self.symbols.push_scope(ScopeKind::Block);
+                self.resolve_pattern(pattern, false);
+                if let Some(ref cond) = condition {
+                    self.resolve_expr(cond);
+                }
+                self.resolve_expr(body);
+                self.symbols.pop_scope();
+            }
+            ExprKind::Error => {}
         }
     }
 
@@ -896,7 +912,7 @@ impl<'a> NameResolver<'a> {
                             "E1001",
                             format!("undefined name `{}`", first),
                             pattern.span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                     }
                 }
                 for field in fields {
@@ -927,7 +943,7 @@ impl<'a> NameResolver<'a> {
                             "E1001",
                             format!("undefined name `{}`", first),
                             pattern.span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                     }
                 }
                 for field in fields {
@@ -952,7 +968,7 @@ impl<'a> NameResolver<'a> {
                     "E1001",
                     format!("undefined name `{}`", name),
                     ty.span.clone(),
-                ));
+                ).with_category(DiagnosticCategory::TypeError));
                 TypeId::ERROR
             }
             TypeExprKind::Path(segments) => {
@@ -967,7 +983,7 @@ impl<'a> NameResolver<'a> {
                             "E1001",
                             format!("undefined name `{}`", first),
                             ty.span.clone(),
-                        ));
+                        ).with_category(DiagnosticCategory::TypeError));
                         return TypeId::ERROR;
                     }
                 }
@@ -1026,7 +1042,7 @@ impl<'a> NameResolver<'a> {
                                     "E1001",
                                     format!("undefined name `{}`", name),
                                     ty.span.clone(),
-                                ));
+                                ).with_category(DiagnosticCategory::TypeError));
                                 return TypeId::ERROR;
                             }
                         }

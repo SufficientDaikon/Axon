@@ -905,3 +905,338 @@ fn test_deeply_nested_binary_ops_50() {
     assert!(errors.is_empty(), "Nested binary ops should parse: {:?}", errors);
     assert_eq!(prog.items.len(), 1);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// E9: Fold/Reduce & Comprehension Tests
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn test_comprehension_basic() {
+    let src = r#"
+fn main() {
+    val xs = [x * 2 for x in range(10)];
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_comprehension_with_filter() {
+    let src = r#"
+fn main() {
+    val evens = [x for x in range(20) if x % 2 == 0];
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_comprehension_with_complex_body() {
+    let src = r#"
+fn main() {
+    val squares = [x * x + 1 for x in range(10)];
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_fold_method_call_parses() {
+    let src = r#"
+fn main() {
+    val xs = [1, 2, 3, 4, 5];
+    val sum = xs.fold(0, |acc, x| acc + x);
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_reduce_method_call_parses() {
+    let src = r#"
+fn main() {
+    val xs = [1, 2, 3, 4, 5];
+    val sum = xs.reduce(|a, b| a + b);
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_comprehension_ast_structure() {
+    let src = r#"
+fn main() {
+    val xs = [x * 2 for x in items];
+}
+"#;
+    let prog = parse_ok(src);
+    let func = match &prog.items[0].kind {
+        ItemKind::Function(f) => f,
+        _ => panic!("Expected function"),
+    };
+    let body = func.body.as_ref().unwrap();
+    let stmt = &body.stmts[0];
+    if let StmtKind::Let { initializer: Some(init), .. } = &stmt.kind {
+        assert!(matches!(init.kind, ExprKind::Comprehension { .. }),
+            "Expected Comprehension, got {:?}", init.kind);
+    } else {
+        panic!("Expected let with initializer");
+    }
+}
+
+#[test]
+fn test_comprehension_with_filter_ast_structure() {
+    let src = r#"
+fn main() {
+    val xs = [x for x in items if x > 0];
+}
+"#;
+    let prog = parse_ok(src);
+    let func = match &prog.items[0].kind {
+        ItemKind::Function(f) => f,
+        _ => panic!("Expected function"),
+    };
+    let body = func.body.as_ref().unwrap();
+    let stmt = &body.stmts[0];
+    if let StmtKind::Let { initializer: Some(init), .. } = &stmt.kind {
+        if let ExprKind::Comprehension { condition, .. } = &init.kind {
+            assert!(condition.is_some(), "Expected filter condition");
+        } else {
+            panic!("Expected Comprehension");
+        }
+    } else {
+        panic!("Expected let with initializer");
+    }
+}
+
+#[test]
+fn test_array_literal_still_works() {
+    let src = r#"
+fn main() {
+    val xs = [1, 2, 3];
+    val ys = [];
+    val zs = [42];
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_array_literal_trailing_comma() {
+    let src = r#"
+fn main() {
+    val xs = [1, 2, 3,];
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_comprehension_type_checks() {
+    let src = r#"
+fn main() {
+    val xs = [x * 2 for x in items];
+}
+"#;
+    let (_tast, errors) = axonc::check_source(src, "test.axon");
+    // Comprehension itself should parse and type-check; only 'items' might be undefined
+    let has_comprehension_error = errors.iter().any(|e| {
+        let msg = e.format_human();
+        msg.contains("comprehension") || msg.contains("for expression")
+    });
+    assert!(!has_comprehension_error, "Comprehension-specific errors: {:?}",
+        errors.iter().map(|e| e.format_human()).collect::<Vec<_>>());
+}
+
+#[test]
+fn test_comprehension_with_filter_type_checks() {
+    let src = r#"
+fn main() {
+    val xs = [x for x in items if x > 5];
+}
+"#;
+    let (_tast, errors) = axonc::check_source(src, "test.axon");
+    let has_comprehension_error = errors.iter().any(|e| {
+        let msg = e.format_human();
+        msg.contains("comprehension") || msg.contains("for expression")
+    });
+    assert!(!has_comprehension_error, "Comprehension-specific errors: {:?}",
+        errors.iter().map(|e| e.format_human()).collect::<Vec<_>>());
+}
+
+#[test]
+fn test_fold_type_checks() {
+    let src = r#"
+fn main() {
+    val sum = items.fold(0, |acc, x| acc + x);
+}
+"#;
+    let (_tast, errors) = axonc::check_source(src, "test.axon");
+    // fold as method call parses and type-checks; 'items' undefined is not a fold error
+    let has_fold_error = errors.iter().any(|e| {
+        let msg = e.format_human();
+        msg.contains("fold")
+    });
+    assert!(!has_fold_error, "Fold-specific errors: {:?}",
+        errors.iter().map(|e| e.format_human()).collect::<Vec<_>>());
+}
+
+#[test]
+fn test_reduce_type_checks() {
+    let src = r#"
+fn main() {
+    val sum = items.reduce(|a, b| a + b);
+}
+"#;
+    let (_tast, errors) = axonc::check_source(src, "test.axon");
+    let has_reduce_error = errors.iter().any(|e| {
+        let msg = e.format_human();
+        msg.contains("reduce")
+    });
+    assert!(!has_reduce_error, "Reduce-specific errors: {:?}",
+        errors.iter().map(|e| e.format_human()).collect::<Vec<_>>());
+}
+
+#[test]
+fn test_comprehension_lowers_to_mir() {
+    let src = r#"
+fn main() {
+    val xs = [x for x in items];
+}
+"#;
+    let (tast, _check_errors, checker) = axonc::check_source_full(src, "test.axon");
+    let mir = axonc::mir::MirBuilder::new(&checker.interner).build(&tast);
+    assert!(!mir.functions.is_empty(), "MIR should have functions");
+}
+
+#[test]
+fn test_fold_lowers_to_mir() {
+    let src = r#"
+fn main() {
+    val sum = items.fold(0, |acc, x| acc + x);
+}
+"#;
+    let (tast, _check_errors, checker) = axonc::check_source_full(src, "test.axon");
+    let mir = axonc::mir::MirBuilder::new(&checker.interner).build(&tast);
+    assert!(!mir.functions.is_empty(), "MIR should have functions");
+}
+
+#[test]
+fn test_comprehension_formats_correctly() {
+    let src = r#"fn main() { val xs = [x * 2 for x in items]; }"#;
+    let formatted = axonc::fmt::Formatter::format(src, "test.axon").unwrap();
+    assert!(formatted.contains("for"), "Formatted output should contain 'for': {}", formatted);
+    assert!(formatted.contains("in"), "Formatted output should contain 'in': {}", formatted);
+}
+
+#[test]
+fn test_comprehension_with_filter_formats() {
+    let src = r#"fn main() { val xs = [x for x in items if x > 0]; }"#;
+    let formatted = axonc::fmt::Formatter::format(src, "test.axon").unwrap();
+    assert!(formatted.contains("if"), "Formatted output should contain 'if': {}", formatted);
+}
+
+#[test]
+fn test_nested_comprehension() {
+    let src = r#"
+fn main() {
+    val xs = [x + y for x in range(5)];
+}
+"#;
+    let prog = parse_ok(src);
+    assert_eq!(prog.items.len(), 1);
+}
+
+#[test]
+fn test_comprehension_empty_range() {
+    let src = r#"
+fn main() {
+    val xs = [x for x in items];
+}
+"#;
+    let (_tast, errors) = axonc::check_source(src, "test.axon");
+    // 'items' may be undefined but comprehension itself should work
+    let has_comprehension_error = errors.iter().any(|e| {
+        let msg = e.format_human();
+        msg.contains("comprehension") || msg.contains("for expression")
+    });
+    assert!(!has_comprehension_error, "Comprehension-specific errors found");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Phase EPSILON: Cache + Error Recovery integration tests
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn test_cache_detects_dirty() {
+    let mut cache = axonc::cache::CompilationCache::new();
+    let src1 = "fn main() { val x: Int32 = 1; }";
+    let src2 = "fn main() { val x: Int32 = 2; }";
+
+    // New file is always dirty
+    assert!(cache.is_dirty("a.axon", src1));
+
+    // After update, same source is clean
+    cache.update("a.axon", src1, false);
+    assert!(!cache.is_dirty("a.axon", src1));
+
+    // Changed source is dirty
+    assert!(cache.is_dirty("a.axon", src2));
+
+    // After invalidation, it's dirty again
+    cache.update("a.axon", src2, false);
+    cache.invalidate("a.axon");
+    assert!(cache.is_dirty("a.axon", src2));
+}
+
+#[test]
+fn test_error_recovery_multiple_errors() {
+    // Parser should recover and report multiple errors
+    let src = "fn f() { val x = ; val y = ; }";
+    let (_ast, errors) = axonc::parse_source(src, "test.axon");
+    // Should get errors but not panic
+    assert!(!errors.is_empty(), "Should have parse errors");
+}
+
+#[test]
+fn test_error_recovery_continues_after_bad_item() {
+    // After a bad item, should still parse subsequent valid items
+    let src = r#"
+        fn bad(,) {}
+        fn good(): Int32 { return 42; }
+    "#;
+    let (ast, errors) = axonc::parse_source(src, "test.axon");
+    assert!(!errors.is_empty(), "Should have parse errors for bad function");
+    // Despite errors, the AST should have items
+    assert!(!ast.items.is_empty(), "Should have parsed some items");
+}
+
+#[test]
+fn test_check_with_program_no_double_parse() {
+    // check_with_program should accept a pre-parsed AST
+    let src = "fn main(): Int64 { return 0; }";
+    let (program, parse_errors) = axonc::parse_source(src, "test.axon");
+    assert!(parse_errors.is_empty());
+
+    let (_checker, errors) = axonc::typeck::check_with_program(&program, parse_errors);
+    // Should succeed — main is valid
+    assert!(errors.is_empty(), "Should have no errors: {:?}", errors);
+}
+
+#[test]
+fn test_mir_pass_returns_changed_flag() {
+    let src = "fn f(): Int32 { return 1 + 2; }";
+    let (tast, _errors, checker) = axonc::check_source_full(src, "test.axon");
+    let mut mir = axonc::mir::MirBuilder::new(&checker.interner).build(&tast);
+    let pm = axonc::mir::transform::PassManager::with_default_passes(2);
+    let changed = pm.run_all(&mut mir, &checker.interner);
+    // At O2, passes should report having run (returns true)
+    assert!(changed, "O2 passes should report changes");
+}

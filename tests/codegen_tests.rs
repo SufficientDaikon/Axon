@@ -563,7 +563,7 @@ fn test_runtime_c_source() {
 #[test]
 fn test_runtime_function_count() {
     let count = axonc::codegen::runtime::RUNTIME_FUNCTIONS.len();
-    assert_eq!(count, 39, "RUNTIME_FUNCTIONS should have 39 entries, got {}", count);
+    assert_eq!(count, 83, "RUNTIME_FUNCTIONS should have 83 entries, got {}", count);
 }
 
 #[test]

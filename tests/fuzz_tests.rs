@@ -431,3 +431,87 @@ fn fuzz_repeated_definitions() {
     should_not_panic(&source);
     should_not_panic_typecheck(&source);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Phase EPSILON: Error recovery stress tests
+// ═══════════════════════════════════════════════════════════════
+
+#[test]
+fn fuzz_nested_mismatched_delimiters() {
+    should_not_panic("fn f() { ( [ { } ] ) }");
+    should_not_panic("fn f() { ( [ ) ] }");
+    should_not_panic("fn f() { [ ( ] ) }");
+    should_not_panic("((((((((((");
+    should_not_panic("[[[[[[[[[[");
+    should_not_panic("{{{{{{{{{{");
+    should_not_panic("}}}}}}}}}}");
+    should_not_panic("))))))))))))");
+    should_not_panic("]]]]]]]]]]");
+}
+
+#[test]
+fn fuzz_return_in_expression_contexts() {
+    // return is a statement, not an expression — should not hang
+    should_not_panic("fn f(): Int32 { match x { 0 => return 1, _ => return 2, } }");
+    should_not_panic("fn f(): Int32 { if true { return 1; } else { return 2; } }");
+    should_not_panic("fn f() { val x = return; }");
+    should_not_panic("fn f() { [return, return] }");
+}
+
+#[test]
+fn fuzz_error_recovery_no_hang() {
+    // These inputs must complete in bounded time (no infinite loops)
+    let inputs = [
+        "fn f(,) {}",
+        "fn f() { val = ; }",
+        "fn f() { val x: = 1; }",
+        "fn f() { + + + }",
+        "fn { }",
+        "model {}",
+        "enum {}",
+        "fn f() { if { } }",
+        "fn f() { while { } }",
+        "fn f() { match { } }",
+        "fn f() { for in { } }",
+    ];
+    for input in &inputs {
+        should_not_panic(input);
+    }
+}
+
+#[test]
+fn fuzz_many_errors_in_one_file() {
+    // File with many intentional syntax errors — must not hang or OOM
+    let mut source = String::new();
+    for i in 0..50 {
+        source.push_str(&format!("fn f{}(,,,) {{ val = ; + - * }}\n", i));
+    }
+    should_not_panic(&source);
+}
+
+#[test]
+fn fuzz_deeply_nested_expressions() {
+    // Moderate nesting — stacker protects against stack overflow
+    let mut source = "fn f(): Int32 { return ".to_string();
+    for _ in 0..20 {
+        source.push_str("(1 + ");
+    }
+    source.push('1');
+    for _ in 0..20 {
+        source.push(')');
+    }
+    source.push_str("; }");
+    should_not_panic(&source);
+}
+
+#[test]
+fn fuzz_mixed_valid_invalid_items() {
+    // Valid items interleaved with garbage
+    should_not_panic(r#"
+        fn good1(): Int32 { return 1; }
+        model +++
+        fn good2(): Int32 { return 2; }
+        enum ???
+        fn good3(): Int32 { return 3; }
+    "#);
+}

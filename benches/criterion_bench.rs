@@ -12,11 +12,11 @@ fn generate_source(num_functions: usize) -> String {
     let mut source = String::new();
     for i in 0..num_functions {
         source.push_str(&format!(
-            "fn func_{}(x: Int32, y: Int32) -> Int32 {{\n    let result = x + y * {};\n    return result;\n}}\n\n",
+            "fn func_{}(x: Int32, y: Int32): Int32 {{\n    val result = x + y * {};\n    result\n}}\n\n",
             i, i
         ));
     }
-    source.push_str("fn main() -> Int32 { return func_0(1, 2); }\n");
+    source.push_str("fn main(): Int32 { func_0(1, 2) }\n");
     source
 }
 
@@ -89,6 +89,34 @@ fn bench_linter(c: &mut Criterion) {
     });
 }
 
+fn bench_mir_building(c: &mut Criterion) {
+    let source = generate_source(100);
+
+    c.bench_function("mir_building/100_functions", |b| {
+        b.iter(|| {
+            let (typed_program, _errors, checker) =
+                axonc::check_source_full(black_box(&source), "bench.axon");
+            let mut builder = axonc::mir::MirBuilder::new(&checker.interner);
+            let _mir = builder.build(&typed_program);
+        })
+    });
+}
+
+fn bench_mir_passes(c: &mut Criterion) {
+    let source = generate_source(100);
+    let (typed_program, _, checker) = axonc::check_source_full(&source, "bench.axon");
+    let mut mir_builder = axonc::mir::MirBuilder::new(&checker.interner);
+    let base_mir = mir_builder.build(&typed_program);
+
+    c.bench_function("mir_passes_o2/100_functions", |b| {
+        b.iter(|| {
+            let mut mir = base_mir.clone();
+            let pm = axonc::mir::transform::PassManager::with_default_passes(2);
+            pm.run_all(&mut mir, &checker.interner);
+        })
+    });
+}
+
 fn bench_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("scaling/lex");
     for size in [10, 50, 100, 500].iter() {
@@ -122,6 +150,8 @@ criterion_group!(
     bench_full_pipeline,
     bench_formatter,
     bench_linter,
+    bench_mir_building,
+    bench_mir_passes,
     bench_scaling,
 );
 criterion_main!(benches);

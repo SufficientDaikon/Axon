@@ -4,7 +4,7 @@
 // clear error messages with source locations, and multiple error recovery.
 
 use crate::ast::*;
-use crate::error::CompileError;
+use crate::error::{CompileError, DiagnosticCategory};
 use crate::span::Span;
 use crate::token::{Token, TokenKind};
 
@@ -74,7 +74,7 @@ impl Parser {
                 "E0100",
                 format!("expected '{}', found '{}'", expected.name(), self.peek()),
                 span,
-            ))
+            ).with_category(DiagnosticCategory::ParseError))
         }
     }
 
@@ -87,7 +87,7 @@ impl Parser {
                 "E0100",
                 format!("expected '{}', found '{}'", expected.name(), self.peek()),
                 span,
-            ))
+            ).with_category(DiagnosticCategory::ParseError))
         }
     }
 
@@ -131,7 +131,7 @@ impl Parser {
                     "E0101",
                     format!("expected identifier, found '{}'", self.peek()),
                     span,
-                ))
+                ).with_category(DiagnosticCategory::ParseError))
             }
         }
     }
@@ -155,7 +155,7 @@ impl Parser {
                     "E0101",
                     format!("expected identifier or type name, found '{}'", self.peek()),
                     span,
-                ))
+                ).with_category(DiagnosticCategory::ParseError))
             }
         }
     }
@@ -184,6 +184,20 @@ impl Parser {
         }
     }
 
+    /// Parse an expression, recovering on failure with `ExprKind::Error`.
+    /// Uses statement-level synchronization to guarantee forward progress.
+    fn parse_expression_or_error(&mut self) -> Expr {
+        match self.parse_expression() {
+            Ok(expr) => expr,
+            Err(e) => {
+                let span = self.current_span();
+                self.report(e);
+                self.synchronize();
+                Expr { kind: ExprKind::Error, span }
+            }
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════
     // Top-Level: Program
     // ═══════════════════════════════════════════════════════════
@@ -194,11 +208,23 @@ impl Parser {
         let mut items = Vec::new();
 
         while !self.is_at_end() {
+            let pos_before = self.pos;
             match self.parse_item() {
                 Ok(item) => items.push(item),
                 Err(e) => {
+                    let span = self.current_span();
                     self.report(e);
                     self.synchronize();
+                    items.push(Item {
+                        kind: ItemKind::Error,
+                        span,
+                        visibility: Visibility::Private,
+                        attributes: vec![],
+                    });
+                    // If no progress was made, force advance to avoid infinite loops
+                    if self.pos == pos_before && !self.is_at_end() {
+                        self.advance();
+                    }
                 }
             }
         }
@@ -279,7 +305,7 @@ impl Parser {
                             "E0102",
                             format!("expected 'fn' after 'unsafe', found '{}'", self.peek()),
                             self.current_span(),
-                        ));
+                        ).with_category(DiagnosticCategory::ParseError));
                     }
                 }
             }
@@ -288,7 +314,7 @@ impl Parser {
                     "E0102",
                     format!("expected item (fn, struct, model, enum, extend, impl, trait, type, mod, use), found '{}'", self.peek()),
                     self.current_span(),
-                ).with_suggestion("top-level items must be declarations"));
+                ).with_category(DiagnosticCategory::ParseError).with_suggestion("top-level items must be declarations"));
             }
         };
 
@@ -624,11 +650,22 @@ impl Parser {
         let mut items = Vec::new();
 
         while !self.at(&TokenKind::RBrace) && !self.is_at_end() {
+            let pos_before = self.pos;
             match self.parse_item() {
                 Ok(item) => items.push(item),
                 Err(e) => {
+                    let span = self.current_span();
                     self.report(e);
                     self.synchronize();
+                    items.push(Item {
+                        kind: ItemKind::Error,
+                        span,
+                        visibility: Visibility::Private,
+                        attributes: vec![],
+                    });
+                    if self.pos == pos_before && !self.is_at_end() {
+                        self.advance();
+                    }
                 }
             }
         }
@@ -668,11 +705,22 @@ impl Parser {
         let mut items = Vec::new();
 
         while !self.at(&TokenKind::RBrace) && !self.is_at_end() {
+            let pos_before = self.pos;
             match self.parse_item() {
                 Ok(item) => items.push(item),
                 Err(e) => {
+                    let span = self.current_span();
                     self.report(e);
                     self.synchronize();
+                    items.push(Item {
+                        kind: ItemKind::Error,
+                        span,
+                        visibility: Visibility::Private,
+                        attributes: vec![],
+                    });
+                    if self.pos == pos_before && !self.is_at_end() {
+                        self.advance();
+                    }
                 }
             }
         }
@@ -723,11 +771,22 @@ impl Parser {
             self.advance();
             let mut inner = Vec::new();
             while !self.at(&TokenKind::RBrace) && !self.is_at_end() {
+                let pos_before = self.pos;
                 match self.parse_item() {
                     Ok(item) => inner.push(item),
                     Err(e) => {
+                        let span = self.current_span();
                         self.report(e);
                         self.synchronize();
+                        inner.push(Item {
+                            kind: ItemKind::Error,
+                            span,
+                            visibility: Visibility::Private,
+                            attributes: vec![],
+                        });
+                        if self.pos == pos_before && !self.is_at_end() {
+                            self.advance();
+                        }
                     }
                 }
             }
@@ -796,7 +855,15 @@ impl Parser {
                 })
             }
             _ => {
-                let expr = self.parse_expression()?;
+                let expr = self.parse_expression_or_error();
+
+                // If we got an error node, just return it as an error statement
+                if matches!(expr.kind, ExprKind::Error) {
+                    return Ok(Stmt {
+                        kind: StmtKind::Error,
+                        span: start.merge(&self.current_span()),
+                    });
+                }
 
                 // Check if this is an assignment
                 let kind = match self.peek() {
@@ -882,7 +949,15 @@ impl Parser {
         };
 
         let initializer = if self.eat(&TokenKind::Eq) {
-            Some(self.parse_expression()?)
+            let expr = self.parse_expression_or_error();
+            if matches!(expr.kind, ExprKind::Error) {
+                // synchronize() already moved past the statement boundary
+                return Ok(Stmt {
+                    kind: StmtKind::Error,
+                    span: start.merge(&self.current_span()),
+                });
+            }
+            Some(expr)
         } else {
             None
         };
@@ -958,11 +1033,20 @@ impl Parser {
         let mut stmts = Vec::new();
 
         while !self.at(&TokenKind::RBrace) && !self.is_at_end() {
+            let pos_before = self.pos;
             match self.parse_statement() {
                 Ok(stmt) => stmts.push(stmt),
                 Err(e) => {
+                    let span = self.current_span();
                     self.report(e);
                     self.synchronize();
+                    stmts.push(Stmt {
+                        kind: StmtKind::Error,
+                        span,
+                    });
+                    if self.pos == pos_before && !self.is_at_end() {
+                        self.advance();
+                    }
                 }
             }
         }
@@ -1518,18 +1602,59 @@ impl Parser {
                 }
             }
 
-            // ── Array literal: [expr, expr, ...] ─────────────
+            // ── Array literal or comprehension ─────────────
             TokenKind::LBracket => {
                 self.advance();
-                let mut elements = Vec::new();
-                while !self.at(&TokenKind::RBracket) && !self.is_at_end() {
-                    elements.push(self.parse_expression()?);
-                    if !self.eat(&TokenKind::Comma) {
-                        break;
+                if self.at(&TokenKind::RBracket) {
+                    // Empty array: []
+                    self.advance();
+                    return Ok(Expr {
+                        kind: ExprKind::FnCall {
+                            function: Box::new(Expr {
+                                kind: ExprKind::Identifier("__array".to_string()),
+                                span: start.clone(),
+                            }),
+                            args: vec![],
+                        },
+                        span: start.merge(&self.current_span()),
+                    });
+                }
+
+                let first = self.parse_expression()?;
+
+                // Check for comprehension: [expr for x in iterable] or [expr for x in iterable if pred]
+                if self.at(&TokenKind::For) {
+                    self.advance(); // consume 'for'
+                    let pattern = self.parse_pattern()?;
+                    self.expect_exact(TokenKind::In)?;
+                    let iterable = self.parse_expression()?;
+                    let condition = if self.at(&TokenKind::If) {
+                        self.advance();
+                        Some(Box::new(self.parse_expression()?))
+                    } else {
+                        None
+                    };
+                    self.expect_exact(TokenKind::RBracket)?;
+                    return Ok(Expr {
+                        kind: ExprKind::Comprehension {
+                            body: Box::new(first),
+                            pattern,
+                            iterable: Box::new(iterable),
+                            condition,
+                        },
+                        span: start.merge(&self.current_span()),
+                    });
+                }
+
+                // Normal array literal
+                let mut elements = vec![first];
+                while self.eat(&TokenKind::Comma) {
+                    if self.at(&TokenKind::RBracket) {
+                        break; // trailing comma
                     }
+                    elements.push(self.parse_expression()?);
                 }
                 self.expect_exact(TokenKind::RBracket)?;
-                // Represent as a function call to a built-in array constructor
                 Ok(Expr {
                     kind: ExprKind::FnCall {
                         function: Box::new(Expr {
@@ -1548,12 +1673,63 @@ impl Parser {
             // ── Type keywords as identifiers in expressions ──
             ref kind if is_type_keyword(kind) => self.parse_identifier_or_path(),
 
+            // ── Closure: |params| body ─────────────────────
+            TokenKind::Bar => {
+                self.advance(); // consume opening |
+                let mut params = Vec::new();
+                while !self.at(&TokenKind::Bar) && !self.is_at_end() {
+                    let param_start = self.current_span();
+                    let name = self.expect_identifier()?;
+                    let ty = if self.eat(&TokenKind::Colon) {
+                        Some(self.parse_type()?)
+                    } else {
+                        None
+                    };
+                    params.push(ClosureParam {
+                        name,
+                        ty,
+                        span: param_start.merge(&self.current_span()),
+                    });
+                    if !self.eat(&TokenKind::Comma) {
+                        break;
+                    }
+                }
+                self.expect_exact(TokenKind::Bar)?; // closing |
+                let return_type = if self.eat(&TokenKind::Colon) {
+                    Some(self.parse_type()?)
+                } else {
+                    None
+                };
+                let body = self.parse_expression()?;
+                Ok(Expr {
+                    kind: ExprKind::Closure {
+                        params,
+                        return_type,
+                        body: Box::new(body),
+                    },
+                    span: start.merge(&self.current_span()),
+                })
+            }
+            // Zero-param closure: || body
+            TokenKind::OrOr => {
+                self.advance(); // consume ||
+                let body = self.parse_expression()?;
+                Ok(Expr {
+                    kind: ExprKind::Closure {
+                        params: Vec::new(),
+                        return_type: None,
+                        body: Box::new(body),
+                    },
+                    span: start.merge(&self.current_span()),
+                })
+            }
+
             _ => {
                 Err(CompileError::new(
                     "E0103",
                     format!("expected expression, found '{}'", self.peek()),
                     start,
-                ).with_suggestion("expressions include literals, identifiers, function calls, and operators"))
+                ).with_category(DiagnosticCategory::ParseError).with_suggestion("expressions include literals, identifiers, function calls, and operators"))
             }
         }
     }
@@ -1944,7 +2120,7 @@ impl Parser {
                             self.peek()
                         ),
                         self.current_span(),
-                    ));
+                    ).with_category(DiagnosticCategory::ParseError));
                 }
             }
 
@@ -2108,7 +2284,7 @@ impl Parser {
                 "E0104",
                 format!("expected pattern, found '{}'", self.peek()),
                 start,
-            )),
+            ).with_category(DiagnosticCategory::ParseError)),
         }
     }
 }
@@ -2129,6 +2305,7 @@ fn is_type_keyword(kind: &TokenKind) -> bool {
             | TokenKind::UInt32
             | TokenKind::UInt64
             | TokenKind::Float16
+            | TokenKind::BFloat16
             | TokenKind::Float32
             | TokenKind::Float64
             | TokenKind::BoolType

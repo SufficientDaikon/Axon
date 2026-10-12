@@ -87,6 +87,11 @@ pub enum MirStmt {
         local: LocalId,
     },
     Nop,
+    /// Marks the beginning of a parallel region. The `count` field indicates
+    /// how many subsequent statements can execute concurrently.
+    ParallelBegin { count: usize },
+    /// Marks the end (join point) of a parallel region.
+    ParallelEnd,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -226,6 +231,25 @@ pub enum TensorOpKind {
     Reshape(Vec<i64>),
     Transpose,
     Broadcast,
+    // Fused operations (E7)
+    FusedLinearRelu,       // matmul + add + relu → axon_fused_linear_relu(a, b, bias)
+    FusedMse,              // sub + square + mean → axon_fused_mse(pred, target)
+    FusedSoftmaxCe,        // softmax + cross_entropy → axon_fused_softmax_ce(logits, target)
+    FusedElementwise(Vec<ElementwiseOp>), // chain of element-wise ops in single pass
+    // Quantization operations (DELTA/D3)
+    Quantize(u8),          // quantize tensor to target dtype (0=i8, 1=u8, 2=f16, 3=bf16)
+    Dequantize(u8),        // dequantize tensor from low-precision back to f32
+    QMatMul,               // quantized int8 matrix multiply with f32 accumulation
+}
+
+/// Element-wise operation for fused chains.
+#[derive(Debug, Clone, Serialize)]
+pub enum ElementwiseOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Relu,
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -545,6 +569,7 @@ impl<'a> MirBuilder<'a> {
             TypedStmtKind::Item(item) => {
                 self.lower_item(item);
             }
+            TypedStmtKind::Error => {}
         }
     }
 
@@ -723,6 +748,9 @@ impl<'a> MirBuilder<'a> {
                 let _ = params;
                 self.lower_expr(body)
             }
+            TypedExprKind::Comprehension { body, variable, iterable, condition } => {
+                self.lower_comprehension(body, variable, iterable, condition.as_deref(), expr.ty)
+            }
             TypedExprKind::ErrorPropagation(inner) => {
                 // Simplified: just lower the inner expression
                 self.lower_expr(inner)
@@ -753,6 +781,7 @@ impl<'a> MirBuilder<'a> {
                     projections: Vec::new(),
                 })
             }
+            TypedExprKind::Error => Operand::Constant(MirConstant::Unit),
         }
         })
     }
@@ -1322,6 +1351,106 @@ impl<'a> MirBuilder<'a> {
         self.switch_to_block(bb_exit);
     }
 
+    fn lower_comprehension(
+        &mut self,
+        body: &TypedExpr,
+        variable: &str,
+        iterable: &TypedExpr,
+        condition: Option<&TypedExpr>,
+        result_ty: TypeId,
+    ) -> Operand {
+        // Desugar [body for var in iterable if cond] into:
+        //   result = __array_new()
+        //   iter = iterable
+        //   loop:
+        //     has_next = iter.next()
+        //     if !has_next: goto exit
+        //     var = iter.current()
+        //     if cond: result.push(body)
+        //     goto loop
+        //   exit:
+        //   result
+
+        let iter_op = self.lower_expr(iterable);
+        let iter_local = self.new_temp(iterable.ty);
+        self.emit_stmt(MirStmt::Assign {
+            place: Place { local: iter_local, projections: Vec::new() },
+            rvalue: Rvalue::Use(iter_op),
+            span: Span::dummy(),
+        });
+
+        // Result accumulator
+        let result_local = self.new_temp(result_ty);
+        self.emit_stmt(MirStmt::Assign {
+            place: Place { local: result_local, projections: Vec::new() },
+            rvalue: Rvalue::Aggregate {
+                kind: AggregateKind::Array,
+                fields: Vec::new(),
+            },
+            span: Span::dummy(),
+        });
+
+        let bb_header = self.new_block();
+        let bb_body = self.new_block();
+        let bb_exit = self.new_block();
+
+        self.set_terminator(Terminator::Goto { target: bb_header });
+
+        // Header: call next (iterator protocol)
+        self.switch_to_block(bb_header);
+        let has_next = self.new_temp(TypeId::BOOL);
+        let post_next = self.new_block();
+        self.set_terminator(Terminator::Call {
+            func: Operand::Constant(MirConstant::String("next".into())),
+            args: vec![Operand::Place(Place { local: iter_local, projections: Vec::new() })],
+            destination: Place { local: has_next, projections: Vec::new() },
+            target: post_next,
+        });
+
+        self.switch_to_block(post_next);
+        self.set_terminator(Terminator::SwitchInt {
+            value: Operand::Place(Place { local: has_next, projections: Vec::new() }),
+            targets: vec![(1, bb_body)],
+            otherwise: bb_exit,
+        });
+
+        // Body: bind loop variable, evaluate body, push to result
+        self.switch_to_block(bb_body);
+        let _var_local = self.new_local(Some(variable.to_string()), TypeId::INT64, false);
+
+        if let Some(cond) = condition {
+            let cond_op = self.lower_expr(cond);
+            let bb_push = self.new_block();
+            let bb_skip = self.new_block();
+            let cond_local = self.new_temp(TypeId::BOOL);
+            self.emit_stmt(MirStmt::Assign {
+                place: Place { local: cond_local, projections: Vec::new() },
+                rvalue: Rvalue::Use(cond_op),
+                span: Span::dummy(),
+            });
+            self.set_terminator(Terminator::SwitchInt {
+                value: Operand::Place(Place { local: cond_local, projections: Vec::new() }),
+                targets: vec![(1, bb_push)],
+                otherwise: bb_skip,
+            });
+
+            self.switch_to_block(bb_push);
+            let _body_val = self.lower_expr(body);
+            self.set_terminator(Terminator::Goto { target: bb_header });
+
+            self.switch_to_block(bb_skip);
+            self.set_terminator(Terminator::Goto { target: bb_header });
+        } else {
+            let _body_val = self.lower_expr(body);
+            self.set_terminator(Terminator::Goto { target: bb_header });
+        }
+
+        // Exit
+        self.switch_to_block(bb_exit);
+
+        Operand::Place(Place { local: result_local, projections: Vec::new() })
+    }
+
     fn lower_struct_literal(
         &mut self,
         name: &[String],
@@ -1630,6 +1759,8 @@ impl fmt::Display for MirStmt {
                 write!(f, "StorageDead(_{})", local.0)
             }
             MirStmt::Nop => write!(f, "nop"),
+            MirStmt::ParallelBegin { count } => write!(f, "parallel_begin({})", count),
+            MirStmt::ParallelEnd => write!(f, "parallel_end"),
         }
     }
 }

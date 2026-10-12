@@ -42,6 +42,7 @@ pub enum TokenKind {
     UInt32,
     UInt64,
     Float16,
+    BFloat16,
     Float32,
     Float64,
     BoolType,
@@ -79,6 +80,7 @@ pub enum TokenKind {
     Question,  // ?
     FatArrow,  // =>
     Pipe,      // |>
+    Bar,       // | (closure delimiter)
     Dot,       // .
     DotDot,    // ..
     Eq,        // =
@@ -153,6 +155,7 @@ impl TokenKind {
             TokenKind::UInt32 => "UInt32",
             TokenKind::UInt64 => "UInt64",
             TokenKind::Float16 => "Float16",
+            TokenKind::BFloat16 => "BFloat16",
             TokenKind::Float32 => "Float32",
             TokenKind::Float64 => "Float64",
             TokenKind::BoolType => "Bool",
@@ -188,6 +191,7 @@ impl TokenKind {
             TokenKind::Question => "?",
             TokenKind::FatArrow => "=>",
             TokenKind::Pipe => "|>",
+            TokenKind::Bar => "|",
             TokenKind::Dot => ".",
             TokenKind::DotDot => "..",
             TokenKind::Eq => "=",
@@ -280,6 +284,7 @@ pub fn lookup_keyword(ident: &str) -> Option<TokenKind> {
         "UInt32" => Some(TokenKind::UInt32),
         "UInt64" => Some(TokenKind::UInt64),
         "Float16" => Some(TokenKind::Float16),
+        "BFloat16" => Some(TokenKind::BFloat16),
         "Float32" => Some(TokenKind::Float32),
         "Float64" => Some(TokenKind::Float64),
         "Bool" => Some(TokenKind::BoolType),

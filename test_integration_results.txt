@@ -1,0 +1,643 @@
+warning: variants `Eq` and `HasTrait` are never constructed
+  --> src\typeck.rs:17:5
+   |
+16 | enum Constraint {
+   |      ---------- variants in this enum
+17 |     Eq(TypeId, TypeId, Span),
+   |     ^^
+18 |     HasTrait(TypeId, String, Span),
+   |     ^^^^^^^^
+   |
+   = note: `Constraint` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `check_device_transfer`, `check_device_borrow`, and `check_reference_escape` are never used
+   --> src\borrow.rs:613:8
+    |
+138 | impl<'a> BorrowChecker<'a> {
+    | -------------------------- methods in this implementation
+...
+613 |     fn check_device_transfer(
+    |        ^^^^^^^^^^^^^^^^^^^^^
+...
+649 |     fn check_device_borrow(
+    |        ^^^^^^^^^^^^^^^^^^^
+...
+672 |     fn check_reference_escape(
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `current_block_mut` is never used
+   --> src\mir.rs:326:8
+    |
+248 | impl<'a> MirBuilder<'a> {
+    | ----------------------- method in this implementation
+...
+326 |     fn current_block_mut(&mut self) -> &mut MirBasicBlock {
+    |        ^^^^^^^^^^^^^^^^^
+
+warning: method `writeln` is never used
+   --> src\fmt.rs:794:8
+    |
+ 13 | impl Formatter {
+    | -------------- method in this implementation
+...
+794 |     fn writeln(&mut self, s: &str) {
+    |        ^^^^^^^
+
+warning: field `uri` is never read
+  --> src\lsp\server.rs:13:9
+   |
+12 | pub(crate) struct DocumentState {
+   |                   ------------- field in this struct
+13 |     pub uri: String,
+   |         ^^^
+
+warning: field `0` is never read
+  --> src\pkg\manifest.rs:84:13
+   |
+84 |     Boolean(bool),
+   |     ------- ^^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `TomlValue` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+84 -     Boolean(bool),
+84 +     Boolean(()),
+   |
+
+warning: `axonc` (lib) generated 6 warnings
+warning: unused macro definition: `check_err_contains`
+  --> tests\type_tests.rs:25:14
+   |
+25 | macro_rules! check_err_contains {
+   |              ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_macros)]` (part of `#[warn(unused)]`) on by default
+
+warning: `axonc` (test "type_tests") generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running tests\ai_framework_tests.rs (target\debug\deps\ai_framework_tests-caaed2d50056b3a0.exe)
+
+running 114 tests
+test autograd_detach ... ok
+test autograd_no_grad ... ok
+test autograd_zero_grad ... ok
+test autograd_context_new_returns_int64 ... ok
+test autograd_context_new ... ok
+test autograd_backward ... ok
+test autograd_detach_returns_int64 ... ok
+test autograd_grad_checkpoint ... ok
+test autograd_grad_tensor_new_returns_int64 ... ok
+test autograd_grad_tensor_new ... ok
+test export_load_model ... ok
+test export_load_model_returns_int64 ... ok
+test export_load_tensor ... ok
+test export_onnx_export_returns_bool ... ok
+test export_onnx_export ... ok
+test export_save_model ... ok
+test export_save_model_returns_bool ... ok
+test export_save_tensor ... ok
+test init_constant ... ok
+test init_kaiming_normal ... ok
+test init_kaiming_uniform ... ok
+test init_normal ... ok
+test init_ones ... ok
+test init_xavier_normal ... ok
+test init_uniform ... ok
+test init_xavier_uniform ... ok
+test loss_bce_returns_tensor ... ok
+test loss_bce_loss ... ok
+test init_zeros ... ok
+test loss_bce_with_logits_loss ... ok
+test loss_cosine_embedding_loss ... ok
+test loss_cross_entropy_loss ... ok
+test loss_cross_entropy_returns_tensor ... ok
+test loss_ctc_loss ... ok
+test loss_huber_loss ... ok
+test loss_kl_div_loss ... ok
+test loss_l1_loss ... ok
+test loss_l1_returns_tensor ... ok
+test loss_mse_loss ... ok
+test loss_nll_loss ... ok
+test loss_mse_returns_tensor ... ok
+test loss_nll_returns_tensor ... ok
+test loss_triplet_margin_loss ... ok
+test metrics_accuracy ... ok
+test metrics_accuracy_returns_float32 ... ok
+test metrics_confusion_matrix ... ok
+test metrics_f1_score ... ok
+test metrics_mean_absolute_error ... ok
+test metrics_mean_squared_error ... ok
+test metrics_r2_score ... ok
+test metrics_precision ... ok
+test metrics_roc_auc ... ok
+test metrics_recall ... ok
+test neg_accuracy_wrong_type ... ok
+test neg_backward_wrong_arity ... ok
+test neg_checkpoint_save_wrong_type ... ok
+test neg_confusion_matrix_wrong_arity ... ok
+test neg_conv2d_new_wrong_arity ... ok
+test neg_linear_new_wrong_arity ... ok
+test neg_mse_loss_wrong_arity ... ok
+test neg_linear_new_wrong_type ... ok
+test neg_grad_tensor_new_wrong_type ... ok
+test neg_sequential_new_wrong_arity ... ok
+test neg_embedding_new_wrong_arity ... ok
+test neg_trainer_new_wrong_arity ... ok
+test nn_adaptive_avgpool2d_new ... ok
+test neg_tokenize_wrong_type ... ok
+test nn_batchnorm_new ... ok
+test nn_avgpool2d_new ... ok
+test nn_embedding_new ... ok
+test nn_conv2d_new ... ok
+test nn_gru_new ... ok
+test nn_dropout_new ... ok
+test nn_linear_forward_typechecks ... ok
+test nn_layernorm_new ... ok
+test nn_multihead_attention_new ... ok
+test nn_sequential_new ... ok
+test nn_linear_new ... ok
+test nn_maxpool2d_new ... ok
+test nn_lstm_new ... ok
+test nn_linear_new_returns_int64 ... ok
+test nn_sequential_new_returns_int64 ... ok
+test nn_sequential_new_typechecks ... ok
+test nn_sigmoid_struct_exists ... ok
+test nn_transformer_encoder_layer_new ... ok
+test nn_transformer_encoder_new ... ok
+test optim_adam_full_new ... ok
+test optim_adagrad_new ... ok
+test optim_adam_new ... ok
+test optim_adamw_full_new ... ok
+test optim_adam_new_returns_int64 ... ok
+test optim_adamw_new ... ok
+test optim_cosine_annealing_lr_new ... ok
+test optim_one_cycle_lr_new ... ok
+test optim_reduce_lr_on_plateau_new ... ok
+test optim_rmsprop_full_new ... ok
+test optim_rmsprop_new ... ok
+test optim_step_lr_new ... ok
+test optim_sgd_full_new ... ok
+test optim_sgd_new ... ok
+test optim_sgd_new_float64 ... ok
+test train_autocast ... ok
+test train_checkpoint_load ... ok
+test train_checkpoint_save ... ok
+test train_grad_scaler_new ... ok
+test train_trainer_new ... ok
+test transforms_normalize_transform ... ok
+test transforms_pad_sequence ... ok
+test transforms_random_horizontal_flip ... ok
+test transforms_center_crop ... ok
+test transforms_random_crop ... ok
+test transforms_to_tensor_transform ... ok
+test transforms_resize ... ok
+test transforms_tokenize ... ok
+
+test result: ok. 114 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+
+     Running tests\codegen_tests.rs (target\debug\deps\codegen_tests-ebe6fb2ecb46f9ee.exe)
+
+running 44 tests
+test test_arithmetic_add ... ok
+test test_arithmetic_mul ... ok
+test test_demangle_roundtrip ... ok
+test test_arithmetic_div ... ok
+test test_arithmetic_sub ... ok
+test test_compile_simple_ir ... ok
+test test_compile_return_42 ... ok
+test test_boolean_not ... ok
+test test_comparison_ops ... ok
+test test_e2e_ir_is_valid_text ... ok
+test test_e2e_multiple_functions_call ... ok
+test test_e2e_with_control_flow ... ok
+test test_float_arithmetic ... ok
+test test_function_call_ir ... ok
+test test_function_with_locals ... ok
+test test_function_params ... ok
+test test_empty_main ... ok
+test test_mangle_generic ... ok
+test test_if_else_ir ... ok
+test test_let_binding ... ok
+test test_logical_and ... ok
+test test_mangle_namespaced ... ok
+test test_mangle_main ... ok
+test test_mangle_type ... ok
+test test_logical_or ... ok
+test test_mir_basic_blocks ... ok
+test test_mir_let_binding ... ok
+test test_mir_empty_function ... ok
+test test_mir_return ... ok
+test test_mir_display ... ok
+test test_mir_while_loop ... ok
+test test_module_header ... ok
+test test_multiple_params ... ok
+test test_multiple_functions ... ok
+test test_negation ... ok
+test test_return_bool ... ok
+test test_nested_if ... ok
+test test_return_float ... ok
+test test_return_integer ... ok
+test test_runtime_c_source ... ok
+test test_runtime_function_count ... ok
+test test_runtime_declarations_in_ir ... ok
+test test_void_function ... ok
+test test_while_loop_ir ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+     Running benches\compiler_bench.rs (target\debug\deps\compiler_bench-a33fa0ea11a25d6b.exe)
+
+running 10 tests
+test bench_formatter_speed ... ok
+test bench_linter_speed ... ok
+test bench_scaling ... ok
+test bench_lexer_throughput ... ok
+test bench_memory_estimate ... ok
+test bench_lexer_small_file ... ok
+test bench_type_checker_speed ... ok
+test bench_parser_throughput ... ok
+test bench_parser_small_file ... ok
+test bench_full_pipeline ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.87s
+
+     Running tests\e2e_tests.rs (target\debug\deps\e2e_tests-c485a0033dcfbdba.exe)
+
+running 36 tests
+test e2e_error_missing_main ... ok
+test e2e_function_call ... ok
+test e2e_empty_main ... ok
+test e2e_composed_calls ... ok
+test e2e_hello_world ... ok
+test e2e_arithmetic_output ... ok
+test e2e_fibonacci ... ok
+test e2e_fib_output ... ok
+test e2e_enums ... ok
+test e2e_comparisons ... ok
+test e2e_arithmetic ... ok
+test e2e_inline_chain_arithmetic ... ok
+test e2e_inline_bool_logic ... ok
+test e2e_if_else ... ok
+test e2e_inline_print_34 ... ok
+test e2e_inline_println_true ... ok
+test e2e_inline_nested_calls ... ok
+test e2e_inline_simple_return ... ok
+test e2e_multi_function ... ok
+test e2e_let_binding ... ok
+test e2e_inline_print_42 ... ok
+test e2e_mutual_recursion ... ok
+test e2e_nested_if ... ok
+test e2e_nested_calls_output ... ok
+test e2e_print_concat ... ok
+test e2e_print_bool ... ok
+test e2e_print_float ... ok
+test e2e_println_bool ... ok
+test e2e_print_int ... ok
+test e2e_structs ... ok
+test e2e_println_multiple ... ok
+test e2e_tuples ... ok
+test e2e_type_casts ... ok
+test e2e_unary_ops ... ok
+test e2e_while_loop ... ok
+test e2e_while_output ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.56s
+
+     Running tests\fuzz_tests.rs (target\debug\deps\fuzz_tests-f2ab810804567799.exe)
+
+running 53 tests
+test fuzz_comments_only ... ok
+test fuzz_empty ... ok
+test fuzz_deep_expression_nesting ... ok
+test fuzz_extra_closing ... ok
+test fuzz_deep_nesting ... ok
+test fuzz_all_constructs_combined ... ok
+test fuzz_empty_enum ... ok
+test fuzz_empty_impl ... ok
+test fuzz_formatter_empty ... ok
+test fuzz_empty_match ... ok
+test fuzz_formatter_garbage ... ok
+test fuzz_empty_trait ... ok
+test fuzz_formatter_partial ... ok
+test fuzz_empty_struct ... ok
+test fuzz_formatter_unicode ... ok
+test fuzz_formatter_valid ... ok
+test fuzz_keywords_alone ... ok
+test fuzz_linter_garbage ... ok
+test fuzz_keyword_combinations ... ok
+test fuzz_linter_warnings ... ok
+test fuzz_linter_valid ... ok
+test fuzz_linter_empty ... ok
+test fuzz_long_number ... ok
+test fuzz_long_string ... ok
+test fuzz_long_identifier ... ok
+test fuzz_mismatched_delimiters ... ok
+test fuzz_nested_braces ... ok
+test fuzz_nested_comments ... ok
+test fuzz_only_operators ... ok
+test fuzz_many_parameters ... ok
+test fuzz_null_bytes ... ok
+test fuzz_number_literals ... ok
+test fuzz_many_statements ... ok
+test fuzz_semicolon_spam ... ok
+test fuzz_repeated_definitions ... ok
+test fuzz_single_char ... ok
+test fuzz_string_escapes ... ok
+test fuzz_trailing_comma ... ok
+test fuzz_typecheck_empty ... ok
+test fuzz_typecheck_duplicate_params ... ok
+test fuzz_typecheck_recursive ... ok
+test fuzz_typecheck_type_mismatch ... ok
+test fuzz_typecheck_mutual_recursion ... ok
+test fuzz_typecheck_invalid_types ... ok
+test fuzz_typecheck_just_fn ... ok
+test fuzz_generated_programs ... ok
+test fuzz_typecheck_undefined_var ... ok
+test fuzz_unclosed_brace ... ok
+test fuzz_unclosed_char ... ok
+test fuzz_unclosed_paren ... ok
+test fuzz_unclosed_string ... ok
+test fuzz_unicode ... ok
+test fuzz_whitespace_only ... ok
+
+test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests\integration_tests.rs (target\debug\deps\integration_tests-77400d808754edd0.exe)
+
+running 47 tests
+test test_assignment_operators ... ok
+test test_ast_json_output ... ok
+test test_attributes_on_functions ... ok
+test test_boolean_operators ... ok
+test test_chained_method_calls ... ok
+test test_comment_only_program ... ok
+test test_complex_match_patterns ... ok
+test test_empty_program ... ok
+test test_fr001_brace_syntax ... ok
+test test_deeply_nested_expressions ... ok
+test test_fr002_tensor_notation ... ok
+test test_fr003_whitespace_insensitive ... ok
+test test_fr004_variable_declarations ... ok
+test test_fr005_function_definitions ... ok
+test test_fr006_for_loop_with_destructuring ... ok
+test test_fr006_if_else_chain ... ok
+test test_fr007_enum_variants ... ok
+test test_fr006_match_expression ... ok
+test test_fr007_struct ... ok
+test test_fr007_type_alias ... ok
+test test_fr008_comments ... ok
+test test_fr010_primitive_types ... ok
+test test_fr013_generics ... ok
+test test_fr014_dynamic_shapes ... ok
+test test_fr011_tensor_types ... ok
+test test_fr015_references ... ok
+test test_fr040_result_type ... ok
+test test_fr041_question_operator ... ok
+test test_fr043_error_details ... ok
+test test_fr045_multiple_errors ... ok
+test test_fr044_json_error_format ... ok
+test test_impl_trait_for_type ... ok
+test test_module_with_items ... ok
+test test_negative_number_literal ... ok
+test test_public_struct_fields ... ok
+test test_spec_example1_hello_world ... ok
+test test_spec_example2_tensors ... ok
+test test_spec_example3_ownership ... ok
+test test_spec_example5_training ... ok
+test test_spec_example4_neural_net ... ok
+test test_spec_example6_device ... ok
+test test_spec_example7_errors ... ok
+test test_string_with_format_args ... ok
+test test_spec_example8_generics ... ok
+test test_trait_with_methods ... ok
+test test_type_cast_as ... ok
+test test_use_as_alias ... ok
+
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests\stdlib_tests.rs (target\debug\deps\stdlib_tests-0a013c86581aad69.exe)
+
+running 70 tests
+test test_asin ... ok
+test test_assert_accepted ... ok
+test test_acos ... ok
+test test_align_of ... ok
+test test_abs ... ok
+test test_cbrt ... ok
+test test_available_parallelism ... ok
+test test_atan2 ... ok
+test test_atan ... ok
+test test_cos ... ok
+test test_current_thread_id ... ok
+test test_ceil ... ok
+test test_clamp_wrong_arity ... ok
+test test_clamp ... ok
+test test_assert_wrong_arg_type ... ok
+test test_eprintln_accepted ... ok
+test test_exp ... ok
+test test_dbg_accepted ... ok
+test test_e_constant ... ok
+test test_hypot ... ok
+test test_current_thread_id_returns_int64 ... ok
+test test_is_finite ... ok
+test test_floor ... ok
+test test_fract ... ok
+test test_log ... ok
+test test_is_inf ... ok
+test test_format_fn ... ok
+test test_log2 ... ok
+test test_min ... ok
+test test_is_nan ... ok
+test test_max ... ok
+test test_min_wrong_arity ... ok
+test test_log10 ... ok
+test test_max_int_constant ... ok
+test test_parse_json ... ok
+test test_panic_accepted ... ok
+test test_pi_constant ... ok
+test test_print_accepted ... ok
+test test_pow ... ok
+test test_print_wrong_arg_type ... ok
+test test_random ... ok
+test test_println_wrong_arg_type ... ok
+test test_random_bool ... ok
+test test_random_returns_float64 ... ok
+test test_panic_wrong_arg_type ... ok
+test test_random_wrong_arity ... ok
+test test_read_csv ... ok
+test test_seed ... ok
+test test_signum ... ok
+test test_sin ... ok
+test test_read_json ... ok
+test test_random_range ... ok
+test test_sin_wrong_type ... ok
+test test_size_of ... ok
+test test_sleep ... ok
+test test_random_int ... ok
+test test_round ... ok
+test test_println_accepted ... ok
+test test_tau_constant ... ok
+test test_todo_accepted ... ok
+test test_sqrt ... ok
+test test_tan ... ok
+test test_todo_wrong_arity ... ok
+test test_sin_returns_float64 ... ok
+test test_sin_wrong_arity ... ok
+test test_yield_now_wrong_arity ... ok
+test test_unreachable_accepted ... ok
+test test_yield_now ... ok
+test test_unimplemented_accepted ... ok
+test test_trunc ... ok
+
+test result: ok. 70 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running tests\tooling_tests.rs (target\debug\deps\tooling_tests-1fb205036032863e.exe)
+
+running 58 tests
+test doc_tests::doc_comments_extracted_correctly ... ok
+test doc_tests::generate_docs_for_function_with_doc_comment ... ok
+test doc_tests::generate_docs_for_struct ... ok
+test doc_tests::generate_docs_for_enum ... ok
+test doc_tests::generate_docs_multiple_items ... ok
+test doc_tests::generate_docs_parse_error_produces_comment ... ok
+test doc_tests::output_is_valid_html ... ok
+test formatter_tests::format_enum_definition ... ok
+test doc_tests::public_items_included ... ok
+test formatter_tests::format_idempotent ... ok
+test formatter_tests::format_multiple_functions ... ok
+test formatter_tests::format_let_bindings ... ok
+test formatter_tests::format_match_expression ... ok
+test formatter_tests::format_if_else_braces_same_line ... ok
+test formatter_tests::format_parse_error_returns_err ... ok
+test formatter_tests::format_public_function ... ok
+test formatter_tests::format_simple_function ... ok
+test formatter_tests::format_struct ... ok
+test linter_tests::allow_underscore_prefixed_variables ... ok
+test linter_tests::clean_file_produces_no_warnings ... ok
+test linter_tests::detect_empty_function_body ... ok
+test linter_tests::detect_non_pascal_case_struct ... ok
+test linter_tests::detect_todo_comment ... ok
+test linter_tests::detect_too_many_parameters ... ok
+test linter_tests::detect_non_snake_case_function ... ok
+test linter_tests::lint_warning_format_human ... ok
+test linter_tests::detect_unused_variable ... ok
+test linter_tests::multiple_warnings_in_one_file ... ok
+test lsp_tests::diagnostic_from_compile_error ... ok
+test lsp_tests::completion_item_creation ... ok
+test lsp_tests::document_symbol_serialization ... ok
+test lsp_tests::message_deserialization ... ok
+test lsp_tests::message_notification_serialization ... ok
+test lsp_tests::message_response_serialization ... ok
+test lsp_tests::hover_content_generation ... ok
+test lsp_tests::position_default_is_zero ... ok
+test lsp_tests::text_document_item_roundtrip ... ok
+test pkg_tests::generate_lock_file ... ok
+test lsp_tests::server_capabilities_serialization ... ok
+test pkg_tests::manifest_with_build_config ... ok
+test pkg_tests::manifest_missing_package_section_errors ... ok
+test pkg_tests::lock_file_roundtrip ... ok
+test pkg_tests::lockfile_serialize_with_checksum ... ok
+test pkg_tests::parse_axon_toml_manifest ... ok
+test pkg_tests::manifest_with_features ... ok
+test pkg_tests::parse_manifest_with_dependencies ... ok
+test pkg_tests::create_project_scaffolding ... ok
+test pkg_tests::resolve_empty_dependencies ... ok
+test pkg_tests::resolve_simple_dependencies ... ok
+test repl_tests::clear_command ... ok
+test repl_tests::eval_struct_definition ... ok
+test repl_tests::eval_function_definition ... ok
+test repl_tests::help_command ... ok
+test repl_tests::eval_let_binding ... ok
+test repl_tests::quit_command ... ok
+test repl_tests::unknown_command_returns_error ... ok
+test repl_tests::eval_expression ... ok
+test repl_tests::type_command ... ok
+
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests\type_tests.rs (target\debug\deps\type_tests-3f111cf5ea887a6e.exe)
+
+running 77 tests
+test test_assign_immutable ... ok
+test test_bool_copy_reuse ... ok
+test test_assignment_type_mismatch ... ok
+test test_binary_op_mismatch ... ok
+test test_assign_mutable_ok ... ok
+test test_complex_program ... ok
+test test_comparison_operators ... ok
+test test_comparison_returns_bool ... ok
+test test_boolean_not_ok ... ok
+test test_duplicate_function ... ok
+test test_empty_function_body ... ok
+test test_bool_operations ... ok
+test test_empty_program ... ok
+test test_copy_type_reuse ... ok
+test test_deeply_nested_expressions ... ok
+test test_enum_definition ... ok
+test test_equality_operators ... ok
+test test_error_has_span ... ok
+test test_error_has_code ... ok
+test test_error_json_format ... ok
+test test_function_calls ... ok
+test test_float_copy_reuse ... ok
+test test_function_visible_before_definition ... ok
+test test_function_with_return_type ... ok
+test test_error_has_suggestion_for_typo ... ok
+test test_if_condition_not_bool ... ok
+test test_if_else ... ok
+test test_let_with_inference ... ok
+test test_let_binding ... ok
+test test_logical_and_ok ... ok
+test test_many_parameters ... ok
+test test_if_else_branch_mismatch ... ok
+test test_logical_or_ok ... ok
+test test_logical_op_requires_bool ... ok
+test test_match_arm_type_mismatch ... ok
+test test_matmul_on_non_tensor_fails ... ok
+test test_match_expression ... ok
+test test_multiple_functions ... ok
+test test_matmul_operator ... ok
+test test_multiple_immutable_borrows_ok ... ok
+test test_mutable_variable ... ok
+test test_multiple_errors_reported ... ok
+test test_nested_blocks ... ok
+test test_not_a_function ... ok
+test test_not_equals ... ok
+test test_reference_type_check ... ok
+test test_negation_requires_numeric ... ok
+test test_return_type_inference_int ... ok
+test test_not_requires_bool ... ok
+test test_single_mutable_borrow_ok ... ok
+test test_string_literal ... ok
+test test_return_type_inference_float ... ok
+test test_struct_definition ... ok
+test test_struct_literal_type_check ... ok
+test test_tast_empty_program ... ok
+test test_simple_function ... ok
+test test_tast_has_items ... ok
+test test_tast_json_output ... ok
+test test_tensor_dynamic_dim ... ok
+test test_tuple_type_check ... ok
+test test_type_mismatch_let ... ok
+test test_type_cast_numeric ... ok
+test test_scope_isolation ... ok
+test test_undefined_type ... ok
+test test_tensor_param_no_crash ... ok
+test test_tensor_type_valid ... ok
+test test_undefined_variable ... ok
+test test_type_mismatch_return ... ok
+test test_undefined_variable_with_suggestion ... ok
+test test_unit_return ... ok
+test test_use_after_move_string ... ok
+test test_while_condition_must_be_bool ... ok
+test test_undefined_function ... ok
+test test_variable_shadowing_not_allowed ... ok
+test test_while_loop ... ok
+test test_wrong_arg_count ... ok
+test test_wrong_arg_count_too_few ... ok
+
+test result: ok. 77 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+

@@ -4,7 +4,7 @@
 // string, char), comments (// and /* */), attributes (@cpu, @gpu, @device),
 // identifiers, and source location tracking.
 
-use crate::error::CompileError;
+use crate::error::{CompileError, DiagnosticCategory};
 use crate::span::Span;
 use crate::token::{lookup_keyword, Token, TokenKind};
 
@@ -63,7 +63,7 @@ impl Lexer {
     }
 
     fn report_error(&mut self, code: &str, message: impl Into<String>, span: Span) {
-        self.errors.push(CompileError::new(code, message, span));
+        self.errors.push(CompileError::new(code, message, span).with_category(DiagnosticCategory::ParseError));
     }
 
     // ── Main tokenize entry point ────────────────────────────
@@ -254,14 +254,8 @@ impl Lexer {
                     self.advance();
                     Some(Token::new(TokenKind::Pipe, self.make_span(sl, sc)))
                 } else {
-                    // Bare `|` — used for closures; for now treat as unexpected
-                    // We'll report an error
-                    self.report_error(
-                        "E0001",
-                        "unexpected character '|' (did you mean '||'?)",
-                        self.make_span(sl, sc),
-                    );
-                    None
+                    // Bare `|` — used for closure parameter delimiters
+                    Some(Token::new(TokenKind::Bar, self.make_span(sl, sc)))
                 }
             }
 

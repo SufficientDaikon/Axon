@@ -183,6 +183,7 @@ impl<'a> LlvmCodegen<'a> {
             PrimKind::Int32 | PrimKind::UInt32 => "i32",
             PrimKind::Int64 | PrimKind::UInt64 => "i64",
             PrimKind::Float16 => "half",
+            PrimKind::BFloat16 => "bfloat",
             PrimKind::Float32 => "float",
             PrimKind::Float64 => "double",
             PrimKind::Bool => "i1",
@@ -306,6 +307,15 @@ impl<'a> LlvmCodegen<'a> {
             }
             MirStmt::StorageLive { .. } | MirStmt::StorageDead { .. } | MirStmt::Nop => {
                 // No-op in LLVM IR; storage annotations are informational.
+            }
+            MirStmt::ParallelBegin { count } => {
+                self.output.push_str(&format!(
+                    "  call void @axon_parallel_begin(i32 {})\n",
+                    count
+                ));
+            }
+            MirStmt::ParallelEnd => {
+                self.output.push_str("  call void @axon_parallel_end()\n");
             }
         }
     }
@@ -1127,6 +1137,167 @@ impl<'a> LlvmCodegen<'a> {
                     self.output.push_str(&format!(
                         "  {} = call i8* @axon_tensor_broadcast(i8* {})\n",
                         result, src
+                    ));
+                    result
+                } else {
+                    "null".to_string()
+                }
+            }
+            // ── Fused operations (E7) ───────────────────────────────
+            TensorOpKind::FusedLinearRelu => {
+                if operands.len() >= 3 {
+                    let a = self.emit_operand(&operands[0], func);
+                    let b = self.emit_operand(&operands[1], func);
+                    let bias = self.emit_operand(&operands[2], func);
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_fused_linear_relu(i8* {}, i8* {}, i8* {})\n",
+                        result, a, b, bias
+                    ));
+                    result
+                } else {
+                    "null".to_string()
+                }
+            }
+            TensorOpKind::FusedMse => {
+                if operands.len() >= 2 {
+                    let pred = self.emit_operand(&operands[0], func);
+                    let target = self.emit_operand(&operands[1], func);
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_fused_mse(i8* {}, i8* {})\n",
+                        result, pred, target
+                    ));
+                    result
+                } else {
+                    "null".to_string()
+                }
+            }
+            TensorOpKind::FusedSoftmaxCe => {
+                if operands.len() >= 2 {
+                    let logits = self.emit_operand(&operands[0], func);
+                    let target = self.emit_operand(&operands[1], func);
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_fused_softmax_ce(i8* {}, i8* {})\n",
+                        result, logits, target
+                    ));
+                    result
+                } else {
+                    "null".to_string()
+                }
+            }
+            TensorOpKind::FusedElementwise(ref ops) => {
+                // Emit the ops array as a global constant, then call the fused kernel
+                if operands.len() >= 2 {
+                    let n_ops = ops.len() as i32;
+                    let n_tensors = operands.len() as i32;
+
+                    // Encode ops: 0=add, 1=sub, 2=mul, 3=div, 4=relu
+                    let ops_encoded: Vec<String> = ops
+                        .iter()
+                        .map(|o| match o {
+                            crate::mir::ElementwiseOp::Add => "i8 0".to_string(),
+                            crate::mir::ElementwiseOp::Sub => "i8 1".to_string(),
+                            crate::mir::ElementwiseOp::Mul => "i8 2".to_string(),
+                            crate::mir::ElementwiseOp::Div => "i8 3".to_string(),
+                            crate::mir::ElementwiseOp::Relu => "i8 4".to_string(),
+                        })
+                        .collect();
+
+                    // Allocate stack space for ops array
+                    let ops_arr = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = alloca [{} x i8]\n",
+                        ops_arr, n_ops
+                    ));
+                    // Store each op byte
+                    for (i, enc) in ops_encoded.iter().enumerate() {
+                        let ptr = self.fresh_name();
+                        self.output.push_str(&format!(
+                            "  {} = getelementptr [{} x i8], [{} x i8]* {}, i64 0, i64 {}\n",
+                            ptr, n_ops, n_ops, ops_arr, i
+                        ));
+                        let val: &str = enc.split_whitespace().last().unwrap_or("0");
+                        self.output.push_str(&format!(
+                            "  store i8 {}, i8* {}\n",
+                            val, ptr
+                        ));
+                    }
+                    let ops_ptr = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = getelementptr [{} x i8], [{} x i8]* {}, i64 0, i64 0\n",
+                        ops_ptr, n_ops, n_ops, ops_arr
+                    ));
+
+                    // Allocate stack space for tensor pointers array
+                    let tensors_arr = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = alloca [{} x i8*]\n",
+                        tensors_arr, n_tensors
+                    ));
+                    for (i, op) in operands.iter().enumerate() {
+                        let t = self.emit_operand(op, func);
+                        let ptr = self.fresh_name();
+                        self.output.push_str(&format!(
+                            "  {} = getelementptr [{} x i8*], [{} x i8*]* {}, i64 0, i64 {}\n",
+                            ptr, n_tensors, n_tensors, tensors_arr, i
+                        ));
+                        self.output.push_str(&format!(
+                            "  store i8* {}, i8** {}\n",
+                            t, ptr
+                        ));
+                    }
+                    let tensors_ptr = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = getelementptr [{} x i8*], [{} x i8*]* {}, i64 0, i64 0\n",
+                        tensors_ptr, n_tensors, n_tensors, tensors_arr
+                    ));
+
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_fused_elementwise(i8** {}, i32 {}, i8* {}, i32 {})\n",
+                        result, tensors_ptr, n_tensors, ops_ptr, n_ops
+                    ));
+                    result
+                } else {
+                    "null".to_string()
+                }
+            }
+            TensorOpKind::Quantize(target_dtype) => {
+                if let Some(first) = operands.first() {
+                    let t = self.emit_operand(first, func);
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_tensor_quantize(i8* {}, i8 {})\n",
+                        result, t, target_dtype
+                    ));
+                    result
+                } else {
+                    "null".to_string()
+                }
+            }
+            TensorOpKind::Dequantize(_) => {
+                if let Some(first) = operands.first() {
+                    let t = self.emit_operand(first, func);
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_tensor_dequantize(i8* {})\n",
+                        result, t
+                    ));
+                    result
+                } else {
+                    "null".to_string()
+                }
+            }
+            TensorOpKind::QMatMul => {
+                if operands.len() >= 2 {
+                    let a = self.emit_operand(&operands[0], func);
+                    let b = self.emit_operand(&operands[1], func);
+                    let result = self.fresh_name();
+                    self.output.push_str(&format!(
+                        "  {} = call i8* @axon_tensor_qmatmul(i8* {}, i8* {})\n",
+                        result, a, b
                     ));
                     result
                 } else {
@@ -1995,6 +2166,7 @@ impl<'a> LlvmCodegen<'a> {
     fn float_bits(ty: &Type) -> u32 {
         match ty {
             Type::Primitive(PrimKind::Float16) => 16,
+            Type::Primitive(PrimKind::BFloat16) => 16,
             Type::Primitive(PrimKind::Float32) => 32,
             Type::Primitive(PrimKind::Float64) => 64,
             _ => 64,

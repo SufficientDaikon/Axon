@@ -207,6 +207,234 @@ pub const RUNTIME_FUNCTIONS: &[RuntimeFunction] = &[
         llvm_name: "axon_tensor_set_requires_grad",
         description: "Set requires_grad flag: (tensor: *u8, flag: i32) -> void",
     },
+    // Fused tensor operations (E7)
+    RuntimeFunction {
+        name: "fused_linear_relu",
+        llvm_name: "axon_fused_linear_relu",
+        description: "Fused matmul+add+relu: (a: *u8, b: *u8, bias: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "fused_mse",
+        llvm_name: "axon_fused_mse",
+        description: "Fused sub+square+mean (MSE): (pred: *u8, target: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "fused_softmax_ce",
+        llvm_name: "axon_fused_softmax_ce",
+        description: "Fused softmax+cross_entropy: (logits: *u8, target: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "fused_elementwise",
+        llvm_name: "axon_fused_elementwise",
+        description: "Fused element-wise chain: (tensors: **u8, n_tensors: i32, ops: *u8, n_ops: i32) -> *u8",
+    },
+    // Parallel execution runtime (E8)
+    RuntimeFunction {
+        name: "parallel_begin",
+        llvm_name: "axon_parallel_begin",
+        description: "Begin parallel region: (count: i32) -> void",
+    },
+    RuntimeFunction {
+        name: "parallel_end",
+        llvm_name: "axon_parallel_end",
+        description: "End parallel region (join point): () -> void",
+    },
+    // Thread pool runtime (GAMMA/E10)
+    RuntimeFunction {
+        name: "threadpool_init",
+        llvm_name: "axon_threadpool_init",
+        description: "Initialize global thread pool: (num_threads: i32) -> void",
+    },
+    RuntimeFunction {
+        name: "threadpool_shutdown",
+        llvm_name: "axon_threadpool_shutdown",
+        description: "Shutdown global thread pool: () -> void",
+    },
+    RuntimeFunction {
+        name: "threadpool_num_threads",
+        llvm_name: "axon_threadpool_num_threads",
+        description: "Get thread pool size: () -> i32",
+    },
+    // Memory pool runtime (GAMMA/E11)
+    RuntimeFunction {
+        name: "mempool_init",
+        llvm_name: "axon_mempool_init",
+        description: "Initialize memory pool: () -> void",
+    },
+    RuntimeFunction {
+        name: "mempool_alloc",
+        llvm_name: "axon_mempool_alloc",
+        description: "Allocate from memory pool: (size: i64) -> *u8",
+    },
+    RuntimeFunction {
+        name: "mempool_free",
+        llvm_name: "axon_mempool_free",
+        description: "Return allocation to memory pool: (ptr: *u8, size: i64) -> void",
+    },
+    RuntimeFunction {
+        name: "mempool_clear",
+        llvm_name: "axon_mempool_clear",
+        description: "Release all cached memory pool blocks: () -> void",
+    },
+    RuntimeFunction {
+        name: "mempool_stats",
+        llvm_name: "axon_mempool_stats",
+        description: "Print memory pool statistics: () -> void",
+    },
+    // GPU dispatch stubs (GAMMA/E12)
+    RuntimeFunction {
+        name: "gpu_init",
+        llvm_name: "axon_gpu_init",
+        description: "Initialize GPU context: () -> i32 (0=success, -1=no GPU)",
+    },
+    RuntimeFunction {
+        name: "gpu_shutdown",
+        llvm_name: "axon_gpu_shutdown",
+        description: "Shutdown GPU context: () -> void",
+    },
+    RuntimeFunction {
+        name: "gpu_device_count",
+        llvm_name: "axon_gpu_device_count",
+        description: "Get number of GPUs: () -> i32",
+    },
+    RuntimeFunction {
+        name: "gpu_alloc",
+        llvm_name: "axon_gpu_alloc",
+        description: "Allocate GPU memory: (size: i64) -> *u8",
+    },
+    RuntimeFunction {
+        name: "gpu_free",
+        llvm_name: "axon_gpu_free",
+        description: "Free GPU memory: (ptr: *u8) -> void",
+    },
+    RuntimeFunction {
+        name: "gpu_tensor_to_device",
+        llvm_name: "axon_gpu_tensor_to_device",
+        description: "Copy tensor to GPU: (tensor: *u8, device_id: i32) -> *u8",
+    },
+    RuntimeFunction {
+        name: "gpu_tensor_to_host",
+        llvm_name: "axon_gpu_tensor_to_host",
+        description: "Copy tensor to CPU: (tensor: *u8) -> *u8",
+    },
+    // Autograd forward ops (DELTA/D1)
+    RuntimeFunction {
+        name: "ag_sigmoid",
+        llvm_name: "axon_ag_sigmoid",
+        description: "Autograd sigmoid: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_tanh",
+        llvm_name: "axon_ag_tanh",
+        description: "Autograd tanh: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_log",
+        llvm_name: "axon_ag_log",
+        description: "Autograd log: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_exp",
+        llvm_name: "axon_ag_exp",
+        description: "Autograd exp: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_neg",
+        llvm_name: "axon_ag_neg",
+        description: "Autograd negate: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_abs",
+        llvm_name: "axon_ag_abs",
+        description: "Autograd abs: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_sqrt",
+        llvm_name: "axon_ag_sqrt",
+        description: "Autograd sqrt: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_sin",
+        llvm_name: "axon_ag_sin",
+        description: "Autograd sin: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_cos",
+        llvm_name: "axon_ag_cos",
+        description: "Autograd cos: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_pow",
+        llvm_name: "axon_ag_pow",
+        description: "Autograd pow: (a: *u8, b: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_gelu",
+        llvm_name: "axon_ag_gelu",
+        description: "Autograd GELU: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_silu",
+        llvm_name: "axon_ag_silu",
+        description: "Autograd SiLU: (a: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "ag_leaky_relu",
+        llvm_name: "axon_ag_leaky_relu",
+        description: "Autograd LeakyReLU: (a: *u8) -> *u8",
+    },
+    // Adam optimizer (DELTA/D1)
+    RuntimeFunction {
+        name: "adam_init",
+        llvm_name: "axon_adam_init",
+        description: "Initialize Adam state: (params: **u8, n: i32) -> void",
+    },
+    RuntimeFunction {
+        name: "adam_step",
+        llvm_name: "axon_adam_step",
+        description: "Adam step: (params: **u8, n: i32, lr: f64, beta1: f64, beta2: f64, eps: f64) -> void",
+    },
+    // Quantization (DELTA/D3)
+    RuntimeFunction {
+        name: "tensor_quantize",
+        llvm_name: "axon_tensor_quantize",
+        description: "Quantize f32 tensor to int8/uint8: (tensor: *u8, target_dtype: u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_dequantize",
+        llvm_name: "axon_tensor_dequantize",
+        description: "Dequantize low-precision tensor back to f32: (tensor: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_qmatmul",
+        llvm_name: "axon_tensor_qmatmul",
+        description: "Quantized int8 matmul with f32 accumulation: (a: *u8, b: *u8) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_quantize_symmetric",
+        llvm_name: "axon_tensor_quantize_symmetric",
+        description: "Symmetric quantization (scale only, no zero-point): (tensor: *u8, bits: i32) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_dequantize_scale",
+        llvm_name: "axon_tensor_dequantize_scale",
+        description: "Dequantize using explicit scale: (tensor: *u8, scale: f64) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_calibrate_range",
+        llvm_name: "axon_tensor_calibrate_range",
+        description: "Compute min/max calibration range: (tensor: *u8, out_min: *f64, out_max: *f64) -> void",
+    },
+    RuntimeFunction {
+        name: "tensor_quantize_dynamic",
+        llvm_name: "axon_tensor_quantize_dynamic",
+        description: "Dynamic quantization (compute scale per-tensor at runtime): (tensor: *u8, bits: i32) -> *u8",
+    },
+    RuntimeFunction {
+        name: "tensor_mixed_precision_cast",
+        llvm_name: "axon_tensor_mixed_precision_cast",
+        description: "Cast tensor dtype for mixed precision: (tensor: *u8, target_dtype: u8) -> *u8",
+    },
 ];
 
 /// Generate LLVM IR declarations for all runtime functions.
@@ -288,6 +516,74 @@ pub fn emit_runtime_declarations() -> String {
     ir.push_str("declare void @axon_tensor_set_requires_grad(i8*, i32)\n");
     ir.push_str("declare i8* @axon_cross_entropy_loss(i8*, i8*)\n");
     ir.push_str("declare i8* @axon_mse_loss(i8*, i8*)\n");
+
+    // Fused tensor operations (E7)
+    ir.push_str("\n; Fused tensor operations\n");
+    ir.push_str("declare i8* @axon_fused_linear_relu(i8*, i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_fused_mse(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_fused_softmax_ce(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_fused_elementwise(i8**, i32, i8*, i32)\n");
+
+    // Parallel execution runtime (E8)
+    ir.push_str("\n; Parallel execution runtime\n");
+    ir.push_str("declare void @axon_parallel_begin(i32)\n");
+    ir.push_str("declare void @axon_parallel_end()\n");
+
+    // Thread pool runtime (GAMMA/E10)
+    ir.push_str("\n; Thread pool runtime\n");
+    ir.push_str("declare void @axon_threadpool_init(i32)\n");
+    ir.push_str("declare void @axon_threadpool_shutdown()\n");
+    ir.push_str("declare i32 @axon_threadpool_num_threads()\n");
+
+    // Memory pool runtime (GAMMA/E11)
+    ir.push_str("\n; Memory pool runtime\n");
+    ir.push_str("declare void @axon_mempool_init()\n");
+    ir.push_str("declare i8* @axon_mempool_alloc(i64)\n");
+    ir.push_str("declare void @axon_mempool_free(i8*, i64)\n");
+    ir.push_str("declare void @axon_mempool_clear()\n");
+    ir.push_str("declare void @axon_mempool_stats()\n");
+
+    // GPU dispatch stubs (GAMMA/E12)
+    ir.push_str("\n; GPU dispatch stubs\n");
+    ir.push_str("declare i32 @axon_gpu_init()\n");
+    ir.push_str("declare void @axon_gpu_shutdown()\n");
+    ir.push_str("declare i32 @axon_gpu_device_count()\n");
+    ir.push_str("declare i8* @axon_gpu_alloc(i64)\n");
+    ir.push_str("declare void @axon_gpu_free(i8*)\n");
+    ir.push_str("declare i8* @axon_gpu_tensor_to_device(i8*, i32)\n");
+    ir.push_str("declare i8* @axon_gpu_tensor_to_host(i8*)\n");
+
+    // Autograd forward ops (DELTA/D1)
+    ir.push_str("\n; Autograd forward ops\n");
+    ir.push_str("declare i8* @axon_ag_sigmoid(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_tanh(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_log(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_exp(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_neg(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_abs(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_sqrt(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_sin(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_cos(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_pow(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_ag_gelu(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_silu(i8*)\n");
+    ir.push_str("declare i8* @axon_ag_leaky_relu(i8*)\n");
+
+    // Adam optimizer (DELTA/D1)
+    ir.push_str("\n; Adam optimizer\n");
+    ir.push_str("declare void @axon_adam_init(i8**, i32)\n");
+    ir.push_str("declare void @axon_adam_step(i8**, i32, double, double, double, double)\n");
+
+    // Quantization (DELTA/D3)
+    ir.push_str("\n; Quantization runtime\n");
+    ir.push_str("declare i8* @axon_tensor_quantize(i8*, i8)\n");
+    ir.push_str("declare i8* @axon_tensor_dequantize(i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_qmatmul(i8*, i8*)\n");
+    ir.push_str("declare i8* @axon_tensor_quantize_symmetric(i8*, i32)\n");
+    ir.push_str("declare i8* @axon_tensor_dequantize_scale(i8*, double)\n");
+    ir.push_str("declare void @axon_tensor_calibrate_range(i8*, double*, double*)\n");
+    ir.push_str("declare i8* @axon_tensor_quantize_dynamic(i8*, i32)\n");
+    ir.push_str("declare i8* @axon_tensor_mixed_precision_cast(i8*, i8)\n");
 
     // C stdlib (for printf-based I/O)
     ir.push_str("\n; C standard library\n");
@@ -799,7 +1095,10 @@ double axon_tensor_item(void* va) {
 typedef enum {
     OP_ADD = 0, OP_SUB = 1, OP_MUL = 2, OP_DIV = 3,
     OP_MATMUL = 4, OP_RELU = 5, OP_SIGMOID = 6, OP_TANH = 7,
-    OP_SUM = 8, OP_MEAN = 9, OP_RESHAPE = 10, OP_TRANSPOSE = 11
+    OP_SUM = 8, OP_MEAN = 9, OP_RESHAPE = 10, OP_TRANSPOSE = 11,
+    OP_LOG = 12, OP_EXP = 13, OP_POW = 14, OP_NEG = 15,
+    OP_ABS = 16, OP_SQRT = 17, OP_SIN = 18, OP_COS = 19,
+    OP_GELU = 20, OP_SILU = 21, OP_LEAKY_RELU = 22
 } GradOp;
 
 typedef struct TapeEntry {
@@ -809,11 +1108,18 @@ typedef struct TapeEntry {
     void* input_b;    // AxonTensor* — second input (NULL for unary)
 } TapeEntry;
 
-// Global tape (thread-local in a full implementation)
-static TapeEntry* g_tape = NULL;
-static int32_t g_tape_len = 0;
-static int32_t g_tape_cap = 0;
-static int32_t g_tape_enabled = 1;
+// Thread-local tape (using __declspec(thread) on Windows, __thread on Unix)
+#ifdef _WIN32
+static __declspec(thread) TapeEntry* g_tape = NULL;
+static __declspec(thread) int32_t g_tape_len = 0;
+static __declspec(thread) int32_t g_tape_cap = 0;
+static __declspec(thread) int32_t g_tape_enabled = 1;
+#else
+static __thread TapeEntry* g_tape = NULL;
+static __thread int32_t g_tape_len = 0;
+static __thread int32_t g_tape_cap = 0;
+static __thread int32_t g_tape_enabled = 1;
+#endif
 
 void axon_autograd_enable(void)  { g_tape_enabled = 1; }
 void axon_autograd_disable(void) { g_tape_enabled = 0; }
@@ -837,6 +1143,57 @@ static void tape_record(GradOp op, void* out, void* a, void* b) {
     e->input_b = b;
     ((AxonTensor*)out)->requires_grad = 1;
 }
+
+// Helper: element-wise unary op on tensor (creates new tensor)
+static AxonTensor* tensor_unary_op_f(AxonTensor* a, float (*f32_fn)(float), double (*f64_fn)(double)) {
+    AxonTensor* out = axon_tensor_new(a->shape, a->ndim, a->dtype);
+    if (a->dtype == 0) {
+        float *s=(float*)a->data, *d=(float*)out->data;
+        for(int64_t i=0;i<a->numel;i++) d[i] = f32_fn(s[i]);
+    } else {
+        double *s=(double*)a->data, *d=(double*)out->data;
+        for(int64_t i=0;i<a->numel;i++) d[i] = f64_fn(s[i]);
+    }
+    return out;
+}
+
+// Forward unary ops used by autograd
+static float  _sigmoidf(float x)  { return 1.0f/(1.0f+expf(-x)); }
+static double _sigmoid(double x)  { return 1.0/(1.0+exp(-x)); }
+static float  _tanhf_(float x)    { return tanhf(x); }
+static double _tanh_(double x)    { return tanh(x); }
+static float  _negf(float x)      { return -x; }
+static double _negd(double x)     { return -x; }
+static float  _absf_(float x)     { return fabsf(x); }
+static double _absd(double x)     { return fabs(x); }
+static float  _sqrtf_(float x)    { return sqrtf(x); }
+static double _sqrtd(double x)    { return sqrt(x); }
+static float  _sinf_(float x)     { return sinf(x); }
+static double _sind(double x)     { return sin(x); }
+static float  _cosf_(float x)     { return cosf(x); }
+static double _cosd(double x)     { return cos(x); }
+static float  _logf_(float x)     { return logf(x > 1e-12f ? x : 1e-12f); }
+static double _logd(double x)     { return log(x > 1e-12 ? x : 1e-12); }
+static float  _expf_(float x)     { return expf(x); }
+static double _expd(double x)     { return exp(x); }
+
+// GELU: 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
+static float  _geluf(float x) {
+    float c = 0.7978845608f; // sqrt(2/pi)
+    return 0.5f * x * (1.0f + tanhf(c * (x + 0.044715f * x * x * x)));
+}
+static double _gelud(double x) {
+    double c = 0.7978845608028654;
+    return 0.5 * x * (1.0 + tanh(c * (x + 0.044715 * x * x * x)));
+}
+
+// SiLU (Swish): x * sigmoid(x)
+static float  _siluf(float x) { return x * _sigmoidf(x); }
+static double _silud(double x) { return x * _sigmoid(x); }
+
+// LeakyReLU: max(0.01*x, x)
+static float  _leaky_reluf(float x) { return x > 0 ? x : 0.01f * x; }
+static double _leaky_relud(double x) { return x > 0 ? x : 0.01 * x; }
 
 // Autograd-aware forward ops (record on tape, then compute)
 void* axon_ag_add(void* a, void* b) {
@@ -879,6 +1236,92 @@ void* axon_ag_mean(void* a) {
     tape_record(OP_MEAN, c, a, NULL);
     return c;
 }
+void* axon_ag_sigmoid(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _sigmoidf, _sigmoid);
+    tape_record(OP_SIGMOID, c, a, NULL);
+    return c;
+}
+void* axon_ag_tanh(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _tanhf_, _tanh_);
+    tape_record(OP_TANH, c, a, NULL);
+    return c;
+}
+void* axon_ag_log(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _logf_, _logd);
+    tape_record(OP_LOG, c, a, NULL);
+    return c;
+}
+void* axon_ag_exp(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _expf_, _expd);
+    tape_record(OP_EXP, c, a, NULL);
+    return c;
+}
+void* axon_ag_neg(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _negf, _negd);
+    tape_record(OP_NEG, c, a, NULL);
+    return c;
+}
+void* axon_ag_abs(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _absf_, _absd);
+    tape_record(OP_ABS, c, a, NULL);
+    return c;
+}
+void* axon_ag_sqrt(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _sqrtf_, _sqrtd);
+    tape_record(OP_SQRT, c, a, NULL);
+    return c;
+}
+void* axon_ag_sin(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _sinf_, _sind);
+    tape_record(OP_SIN, c, a, NULL);
+    return c;
+}
+void* axon_ag_cos(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _cosf_, _cosd);
+    tape_record(OP_COS, c, a, NULL);
+    return c;
+}
+void* axon_ag_pow(void* a, void* b) {
+    AxonTensor* ta = (AxonTensor*)a;
+    AxonTensor* tb = (AxonTensor*)b;
+    AxonTensor* c = axon_tensor_new(ta->shape, ta->ndim, ta->dtype);
+    if (ta->dtype == 0) {
+        float *sa=(float*)ta->data, *sb=(float*)tb->data, *d=(float*)c->data;
+        for(int64_t i=0;i<ta->numel;i++) d[i] = powf(sa[i], sb[i % tb->numel]);
+    } else {
+        double *sa=(double*)ta->data, *sb=(double*)tb->data, *d=(double*)c->data;
+        for(int64_t i=0;i<ta->numel;i++) d[i] = pow(sa[i], sb[i % tb->numel]);
+    }
+    tape_record(OP_POW, c, a, b);
+    return c;
+}
+void* axon_ag_gelu(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _geluf, _gelud);
+    tape_record(OP_GELU, c, a, NULL);
+    return c;
+}
+void* axon_ag_silu(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _siluf, _silud);
+    tape_record(OP_SILU, c, a, NULL);
+    return c;
+}
+void* axon_ag_leaky_relu(void* a) {
+    AxonTensor* t = (AxonTensor*)a;
+    AxonTensor* c = tensor_unary_op_f(t, _leaky_reluf, _leaky_relud);
+    tape_record(OP_LEAKY_RELU, c, a, NULL);
+    return c;
+}
 
 // Accumulate gradient: t->grad += grad
 static void accum_grad(AxonTensor* t, AxonTensor* grad) {
@@ -902,6 +1345,11 @@ static AxonTensor* ones_like(AxonTensor* t) {
     return (AxonTensor*)axon_tensor_ones(t->shape, t->ndim, t->dtype);
 }
 
+// Helper: element-wise negate
+static AxonTensor* tensor_negate(AxonTensor* t) {
+    return tensor_unary_op_f(t, _negf, _negd);
+}
+
 // Backward pass: traverse tape in reverse, apply gradient rules
 void axon_backward(void* va) {
     AxonTensor* root = (AxonTensor*)va;
@@ -913,7 +1361,7 @@ void axon_backward(void* va) {
     // Seed gradient: dL/dL = 1.0
     root->grad = axon_tensor_ones(root->shape, root->ndim, root->dtype);
 
-    // Reverse tape traversal
+    // Reverse tape traversal (topological order by construction)
     for (int32_t i = g_tape_len - 1; i >= 0; i--) {
         TapeEntry* e = &g_tape[i];
         AxonTensor* out = (AxonTensor*)e->output;
@@ -932,14 +1380,7 @@ void axon_backward(void* va) {
                 // d/da(a-b) = 1, d/db(a-b) = -1
                 if (a->requires_grad) accum_grad(a, grad_out);
                 if (b && b->requires_grad) {
-                    AxonTensor* neg = axon_tensor_new(grad_out->shape, grad_out->ndim, grad_out->dtype);
-                    if (grad_out->dtype == 0) {
-                        float *ds=(float*)grad_out->data, *dd=(float*)neg->data;
-                        for (int64_t j=0; j<grad_out->numel; j++) dd[j] = -ds[j];
-                    } else {
-                        double *ds=(double*)grad_out->data, *dd=(double*)neg->data;
-                        for (int64_t j=0; j<grad_out->numel; j++) dd[j] = -ds[j];
-                    }
+                    AxonTensor* neg = tensor_negate(grad_out);
                     accum_grad(b, neg);
                     axon_tensor_release(neg);
                 }
@@ -966,9 +1407,7 @@ void axon_backward(void* va) {
                 }
                 if (b && b->requires_grad) {
                     AxonTensor* b2 = (AxonTensor*)axon_tensor_mul(b, b);
-                    AxonTensor* neg_a = axon_tensor_new(a->shape, a->ndim, a->dtype);
-                    if (a->dtype == 0) { float *s=(float*)a->data,*d=(float*)neg_a->data; for(int64_t j=0;j<a->numel;j++) d[j]=-s[j]; }
-                    else { double *s=(double*)a->data,*d=(double*)neg_a->data; for(int64_t j=0;j<a->numel;j++) d[j]=-s[j]; }
+                    AxonTensor* neg_a = tensor_negate(a);
                     AxonTensor* gb = (AxonTensor*)axon_tensor_div(axon_tensor_mul(grad_out, neg_a), b2);
                     accum_grad(b, gb);
                     axon_tensor_release(b2);
@@ -1008,6 +1447,233 @@ void axon_backward(void* va) {
                     axon_tensor_release(ga);
                 }
                 break;
+            case OP_SIGMOID: {
+                // d/da(sigmoid(a)) = sigmoid(a) * (1 - sigmoid(a)) * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *dout=(float*)out->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * dout[j] * (1.0f - dout[j]);
+                    } else {
+                        double *dout=(double*)out->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * dout[j] * (1.0 - dout[j]);
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_TANH: {
+                // d/da(tanh(a)) = (1 - tanh(a)^2) * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *dout=(float*)out->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * (1.0f - dout[j]*dout[j]);
+                    } else {
+                        double *dout=(double*)out->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * (1.0 - dout[j]*dout[j]);
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_LOG: {
+                // d/da(log(a)) = 1/a * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *da=(float*)a->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] / (da[j] > 1e-12f ? da[j] : 1e-12f);
+                    } else {
+                        double *da=(double*)a->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] / (da[j] > 1e-12 ? da[j] : 1e-12);
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_EXP: {
+                // d/da(exp(a)) = exp(a) * grad_out = out * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = (AxonTensor*)axon_tensor_mul(grad_out, out);
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_POW: {
+                // d/da(a^b) = b * a^(b-1) * grad_out
+                // d/db(a^b) = a^b * log(a) * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *da=(float*)a->data, *db=(float*)b->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * db[j % b->numel] * powf(da[j], db[j % b->numel] - 1.0f);
+                    } else {
+                        double *da=(double*)a->data, *db=(double*)b->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * db[j % b->numel] * pow(da[j], db[j % b->numel] - 1.0);
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                if (b && b->requires_grad) {
+                    AxonTensor* gb = axon_tensor_new(b->shape, b->ndim, b->dtype);
+                    if (b->dtype == 0) {
+                        float *da=(float*)a->data, *dout=(float*)out->data, *dg=(float*)grad_out->data, *dd=(float*)gb->data;
+                        for(int64_t j=0;j<b->numel;j++) dd[j] = dg[j] * dout[j] * logf(da[j] > 1e-12f ? da[j] : 1e-12f);
+                    } else {
+                        double *da=(double*)a->data, *dout=(double*)out->data, *dg=(double*)grad_out->data, *dd=(double*)gb->data;
+                        for(int64_t j=0;j<b->numel;j++) dd[j] = dg[j] * dout[j] * log(da[j] > 1e-12 ? da[j] : 1e-12);
+                    }
+                    accum_grad(b, gb);
+                    axon_tensor_release(gb);
+                }
+                break;
+            }
+            case OP_NEG:
+                // d/da(-a) = -grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = tensor_negate(grad_out);
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            case OP_ABS: {
+                // d/da(|a|) = sign(a) * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *da=(float*)a->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * (da[j] > 0 ? 1.0f : (da[j] < 0 ? -1.0f : 0.0f));
+                    } else {
+                        double *da=(double*)a->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * (da[j] > 0 ? 1.0 : (da[j] < 0 ? -1.0 : 0.0));
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_SQRT: {
+                // d/da(sqrt(a)) = 1/(2*sqrt(a)) * grad_out = grad_out / (2*out)
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *dout=(float*)out->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] / (2.0f * (dout[j] > 1e-12f ? dout[j] : 1e-12f));
+                    } else {
+                        double *dout=(double*)out->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] / (2.0 * (dout[j] > 1e-12 ? dout[j] : 1e-12));
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_SIN: {
+                // d/da(sin(a)) = cos(a) * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *da=(float*)a->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * cosf(da[j]);
+                    } else {
+                        double *da=(double*)a->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = dg[j] * cos(da[j]);
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_COS: {
+                // d/da(cos(a)) = -sin(a) * grad_out
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *da=(float*)a->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = -dg[j] * sinf(da[j]);
+                    } else {
+                        double *da=(double*)a->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = -dg[j] * sin(da[j]);
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_GELU: {
+                // Approximate GELU gradient
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float c = 0.7978845608f;
+                        float *da=(float*)a->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) {
+                            float x = da[j];
+                            float inner = c * (x + 0.044715f * x*x*x);
+                            float t = tanhf(inner);
+                            float sech2 = 1.0f - t*t;
+                            dd[j] = dg[j] * (0.5f * (1.0f + t) + 0.5f * x * sech2 * c * (1.0f + 3.0f*0.044715f*x*x));
+                        }
+                    } else {
+                        double c = 0.7978845608028654;
+                        double *da=(double*)a->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) {
+                            double x = da[j];
+                            double inner = c * (x + 0.044715 * x*x*x);
+                            double t = tanh(inner);
+                            double sech2 = 1.0 - t*t;
+                            dd[j] = dg[j] * (0.5 * (1.0 + t) + 0.5 * x * sech2 * c * (1.0 + 3.0*0.044715*x*x));
+                        }
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_SILU: {
+                // d/da(x*sigmoid(x)) = sigmoid(x) + x*sigmoid(x)*(1-sigmoid(x))
+                //                    = sigmoid(x) * (1 + x*(1-sigmoid(x)))
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *da=(float*)a->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) {
+                            float s = _sigmoidf(da[j]);
+                            dd[j] = dg[j] * (s + da[j] * s * (1.0f - s));
+                        }
+                    } else {
+                        double *da=(double*)a->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) {
+                            double s = _sigmoid(da[j]);
+                            dd[j] = dg[j] * (s + da[j] * s * (1.0 - s));
+                        }
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
+            case OP_LEAKY_RELU: {
+                // d/da(leaky_relu(a)) = 1 if a > 0, else 0.01
+                if (a->requires_grad) {
+                    AxonTensor* ga = axon_tensor_new(a->shape, a->ndim, a->dtype);
+                    if (a->dtype == 0) {
+                        float *da=(float*)a->data, *dg=(float*)grad_out->data, *dd=(float*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = da[j] > 0 ? dg[j] : 0.01f * dg[j];
+                    } else {
+                        double *da=(double*)a->data, *dg=(double*)grad_out->data, *dd=(double*)ga->data;
+                        for(int64_t j=0;j<a->numel;j++) dd[j] = da[j] > 0 ? dg[j] : 0.01 * dg[j];
+                    }
+                    accum_grad(a, ga);
+                    axon_tensor_release(ga);
+                }
+                break;
+            }
             case OP_SUM:
                 // d/da(sum(a)) = ones_like(a) * grad_out
                 if (a->requires_grad) {
@@ -1114,6 +1780,71 @@ void axon_tensor_set_requires_grad(void* va, int32_t flag) {
     t->requires_grad = (int8_t)flag;
 }
 
+// Adam optimizer state (per-parameter)
+typedef struct {
+    void* m;   // first moment (AxonTensor*)
+    void* v;   // second moment (AxonTensor*)
+    int32_t t; // timestep
+} AxonAdamState;
+
+static AxonAdamState* axon_adam_states = NULL;
+static int32_t axon_adam_n_params = 0;
+
+// Initialize Adam optimizer state for n parameters
+void axon_adam_init(void** params, int32_t n_params) {
+    if (axon_adam_states) free(axon_adam_states);
+    axon_adam_states = (AxonAdamState*)calloc(n_params, sizeof(AxonAdamState));
+    axon_adam_n_params = n_params;
+    for (int32_t i = 0; i < n_params; i++) {
+        AxonTensor* p = (AxonTensor*)params[i];
+        axon_adam_states[i].m = axon_tensor_zeros(p->shape, p->ndim, p->dtype);
+        axon_adam_states[i].v = axon_tensor_zeros(p->shape, p->ndim, p->dtype);
+        axon_adam_states[i].t = 0;
+    }
+}
+
+// Adam optimizer step: params updated in-place
+void axon_adam_step(void** params, int32_t n_params, double lr, double beta1, double beta2, double eps) {
+    if (!axon_adam_states || axon_adam_n_params != n_params) {
+        axon_adam_init(params, n_params);
+    }
+    for (int32_t i = 0; i < n_params; i++) {
+        AxonTensor* w = (AxonTensor*)params[i];
+        if (!w->grad) continue;
+        AxonTensor* g = (AxonTensor*)w->grad;
+        AxonAdamState* s = &axon_adam_states[i];
+        AxonTensor* m = (AxonTensor*)s->m;
+        AxonTensor* v = (AxonTensor*)s->v;
+        s->t++;
+
+        if (w->dtype == 0) {
+            float b1=(float)beta1, b2=(float)beta2, e=(float)eps, flr=(float)lr;
+            float *dw=(float*)w->data, *dg=(float*)g->data, *dm=(float*)m->data, *dv=(float*)v->data;
+            float bc1 = 1.0f - powf(b1, (float)s->t);
+            float bc2 = 1.0f - powf(b2, (float)s->t);
+            for(int64_t j=0;j<w->numel;j++) {
+                dm[j] = b1*dm[j] + (1.0f-b1)*dg[j];
+                dv[j] = b2*dv[j] + (1.0f-b2)*dg[j]*dg[j];
+                float m_hat = dm[j] / bc1;
+                float v_hat = dv[j] / bc2;
+                dw[j] -= flr * m_hat / (sqrtf(v_hat) + e);
+            }
+        } else {
+            double b1=beta1, b2=beta2, e=eps;
+            double *dw=(double*)w->data, *dg=(double*)g->data, *dm=(double*)m->data, *dv=(double*)v->data;
+            double bc1 = 1.0 - pow(b1, (double)s->t);
+            double bc2 = 1.0 - pow(b2, (double)s->t);
+            for(int64_t j=0;j<w->numel;j++) {
+                dm[j] = b1*dm[j] + (1.0-b1)*dg[j];
+                dv[j] = b2*dv[j] + (1.0-b2)*dg[j]*dg[j];
+                double m_hat = dm[j] / bc1;
+                double v_hat = dv[j] / bc2;
+                dw[j] -= lr * m_hat / (sqrt(v_hat) + e);
+            }
+        }
+    }
+}
+
 // Cross-entropy loss: -sum(target * log(softmax(pred)))
 void* axon_cross_entropy_loss(void* vpred, void* vtarget) {
     AxonTensor* pred = (AxonTensor*)vpred;
@@ -1167,6 +1898,943 @@ void* axon_mse_loss(void* vpred, void* vtarget) {
     }
     return loss;
 }
+
+// ════════════════════════════════════════════════════════════════
+// Fused Tensor Operations (E7)
+// ════════════════════════════════════════════════════════════════
+
+// Fused linear+relu: result = relu(matmul(a, b) + bias)
+// Combines matmul, bias add, and relu into a single kernel,
+// eliminating 2 intermediate tensor allocations.
+void* axon_fused_linear_relu(void* va, void* vb, void* vbias) {
+    AxonTensor* a = (AxonTensor*)va;
+    AxonTensor* b = (AxonTensor*)vb;
+    AxonTensor* bias = (AxonTensor*)vbias;
+    // a is (M, K), b is (K, N) → result is (M, N)
+    int64_t M = a->shape[0];
+    int64_t K = a->shape[a->ndim > 1 ? 1 : 0];
+    int64_t N = b->shape[b->ndim > 1 ? 1 : 0];
+    int64_t out_shape[2] = {M, N};
+    AxonTensor* out = axon_tensor_new(out_shape, 2, a->dtype);
+    if (a->dtype == 0) {
+        float *da=(float*)a->data, *db=(float*)b->data;
+        float *dbias=(float*)bias->data, *dout=(float*)out->data;
+        for(int64_t i=0;i<M;i++) {
+            for(int64_t j=0;j<N;j++) {
+                float sum = 0.0f;
+                for(int64_t k=0;k<K;k++) sum += da[i*K+k] * db[k*N+j];
+                sum += dbias[j % bias->numel];
+                dout[i*N+j] = sum > 0.0f ? sum : 0.0f; // relu
+            }
+        }
+    } else {
+        double *da=(double*)a->data, *db=(double*)b->data;
+        double *dbias=(double*)bias->data, *dout=(double*)out->data;
+        for(int64_t i=0;i<M;i++) {
+            for(int64_t j=0;j<N;j++) {
+                double sum = 0.0;
+                for(int64_t k=0;k<K;k++) sum += da[i*K+k] * db[k*N+j];
+                sum += dbias[j % bias->numel];
+                dout[i*N+j] = sum > 0.0 ? sum : 0.0; // relu
+            }
+        }
+    }
+    return out;
+}
+
+// Fused MSE loss: result = mean((pred - target)^2)
+// Combines subtract, square, and mean into a single pass.
+void* axon_fused_mse(void* vpred, void* vtarget) {
+    AxonTensor* pred = (AxonTensor*)vpred;
+    AxonTensor* target = (AxonTensor*)vtarget;
+    int64_t scalar_shape[1] = {1};
+    AxonTensor* loss = axon_tensor_new(scalar_shape, 1, pred->dtype);
+    if (pred->dtype == 0) {
+        float *dp=(float*)pred->data, *dt=(float*)target->data;
+        float sum = 0.0f;
+        for(int64_t i=0;i<pred->numel;i++) { float d=dp[i]-dt[i]; sum+=d*d; }
+        ((float*)loss->data)[0] = sum / (float)pred->numel;
+    } else {
+        double *dp=(double*)pred->data, *dt=(double*)target->data;
+        double sum = 0.0;
+        for(int64_t i=0;i<pred->numel;i++) { double d=dp[i]-dt[i]; sum+=d*d; }
+        ((double*)loss->data)[0] = sum / (double)pred->numel;
+    }
+    return loss;
+}
+
+// Fused softmax + cross-entropy loss
+void* axon_fused_softmax_ce(void* vlogits, void* vtarget) {
+    AxonTensor* logits = (AxonTensor*)vlogits;
+    AxonTensor* target = (AxonTensor*)vtarget;
+    int64_t scalar_shape[1] = {1};
+    AxonTensor* loss = axon_tensor_new(scalar_shape, 1, logits->dtype);
+    if (logits->dtype == 0) {
+        float *dl=(float*)logits->data, *dt=(float*)target->data;
+        // Find max for numerical stability
+        float max_val = dl[0];
+        for(int64_t i=1;i<logits->numel;i++) if(dl[i]>max_val) max_val=dl[i];
+        // Compute log-sum-exp
+        float sum_exp = 0.0f;
+        for(int64_t i=0;i<logits->numel;i++) sum_exp += expf(dl[i]-max_val);
+        float log_sum = logf(sum_exp) + max_val;
+        // Cross-entropy: -sum(target * log(softmax))
+        float ce = 0.0f;
+        for(int64_t i=0;i<logits->numel;i++) ce -= dt[i] * (dl[i] - log_sum);
+        ((float*)loss->data)[0] = ce;
+    } else {
+        double *dl=(double*)logits->data, *dt=(double*)target->data;
+        double max_val = dl[0];
+        for(int64_t i=1;i<logits->numel;i++) if(dl[i]>max_val) max_val=dl[i];
+        double sum_exp = 0.0;
+        for(int64_t i=0;i<logits->numel;i++) sum_exp += exp(dl[i]-max_val);
+        double log_sum = log(sum_exp) + max_val;
+        double ce = 0.0;
+        for(int64_t i=0;i<logits->numel;i++) ce -= dt[i] * (dl[i] - log_sum);
+        ((double*)loss->data)[0] = ce;
+    }
+    return loss;
+}
+
+// Fused element-wise chain: applies a sequence of element-wise ops in one pass.
+// ops encoding: 0=add, 1=sub, 2=mul, 3=div, 4=relu(unary)
+// tensors[0] and tensors[1] are the first op's inputs, tensors[2..] are
+// the additional right-hand operands for subsequent binary ops.
+void* axon_fused_elementwise(void** tensors, int32_t n_tensors, void* ops_buf, int32_t n_ops) {
+    if (n_tensors < 2 || n_ops < 1) return NULL;
+    AxonTensor* first = (AxonTensor*)tensors[0];
+    AxonTensor* out = axon_tensor_new(first->shape, first->ndim, first->dtype);
+    uint8_t* ops = (uint8_t*)ops_buf;
+    int64_t n = first->numel;
+
+    if (first->dtype == 0) {
+        float* result = (float*)out->data;
+        // Initialize with first op
+        float* lhs = (float*)first->data;
+        float* rhs = (float*)((AxonTensor*)tensors[1])->data;
+        for(int64_t i=0;i<n;i++) {
+            switch(ops[0]) {
+                case 0: result[i]=lhs[i]+rhs[i]; break;
+                case 1: result[i]=lhs[i]-rhs[i]; break;
+                case 2: result[i]=lhs[i]*rhs[i]; break;
+                case 3: result[i]=rhs[i]!=0?lhs[i]/rhs[i]:0; break;
+                case 4: result[i]=lhs[i]>0?lhs[i]:0; break;
+                default: result[i]=lhs[i]; break;
+            }
+        }
+        // Apply subsequent ops
+        int32_t tensor_idx = 2;
+        for(int32_t op_idx=1; op_idx<n_ops; op_idx++) {
+            if(ops[op_idx] == 4) { // relu is unary
+                for(int64_t i=0;i<n;i++) result[i]=result[i]>0?result[i]:0;
+            } else if(tensor_idx < n_tensors) {
+                float* r = (float*)((AxonTensor*)tensors[tensor_idx])->data;
+                for(int64_t i=0;i<n;i++) {
+                    switch(ops[op_idx]) {
+                        case 0: result[i]=result[i]+r[i]; break;
+                        case 1: result[i]=result[i]-r[i]; break;
+                        case 2: result[i]=result[i]*r[i]; break;
+                        case 3: result[i]=r[i]!=0?result[i]/r[i]:0; break;
+                        default: break;
+                    }
+                }
+                tensor_idx++;
+            }
+        }
+    } else {
+        double* result = (double*)out->data;
+        double* lhs = (double*)first->data;
+        double* rhs = (double*)((AxonTensor*)tensors[1])->data;
+        for(int64_t i=0;i<n;i++) {
+            switch(ops[0]) {
+                case 0: result[i]=lhs[i]+rhs[i]; break;
+                case 1: result[i]=lhs[i]-rhs[i]; break;
+                case 2: result[i]=lhs[i]*rhs[i]; break;
+                case 3: result[i]=rhs[i]!=0?lhs[i]/rhs[i]:0; break;
+                case 4: result[i]=lhs[i]>0?lhs[i]:0; break;
+                default: result[i]=lhs[i]; break;
+            }
+        }
+        int32_t tensor_idx = 2;
+        for(int32_t op_idx=1; op_idx<n_ops; op_idx++) {
+            if(ops[op_idx] == 4) {
+                for(int64_t i=0;i<n;i++) result[i]=result[i]>0?result[i]:0;
+            } else if(tensor_idx < n_tensors) {
+                double* r = (double*)((AxonTensor*)tensors[tensor_idx])->data;
+                for(int64_t i=0;i<n;i++) {
+                    switch(ops[op_idx]) {
+                        case 0: result[i]=result[i]+r[i]; break;
+                        case 1: result[i]=result[i]-r[i]; break;
+                        case 2: result[i]=result[i]*r[i]; break;
+                        case 3: result[i]=r[i]!=0?result[i]/r[i]:0; break;
+                        default: break;
+                    }
+                }
+                tensor_idx++;
+            }
+        }
+    }
+    return out;
+}
+
+// ════════════════════════════════════════════════════════════════
+// Thread Pool Runtime (GAMMA/E10)
+// ════════════════════════════════════════════════════════════════
+// Cross-platform thread pool using Win32 threads on Windows,
+// pthreads on Unix. Supports work submission and barrier-based
+// parallel regions.
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#include <unistd.h>
+#endif
+
+typedef struct AxonTask {
+    void (*fn_ptr)(void*);
+    void* arg;
+    struct AxonTask* next;
+} AxonTask;
+
+typedef struct {
+#ifdef _WIN32
+    HANDLE* threads;
+    HANDLE queue_mutex;
+    HANDLE queue_cond;      // event for signaling
+    HANDLE done_cond;       // event for barrier
+    CRITICAL_SECTION cs;
+#else
+    pthread_t* threads;
+    pthread_mutex_t queue_mutex;
+    pthread_cond_t queue_cond;
+    pthread_cond_t done_cond;
+#endif
+    AxonTask* head;
+    AxonTask* tail;
+    int32_t num_threads;
+    int32_t active_tasks;       // tasks currently being executed
+    int32_t pending_tasks;      // tasks in queue + being executed
+    int32_t shutdown;
+} AxonThreadPool;
+
+static AxonThreadPool* axon_global_pool = NULL;
+
+#ifdef _WIN32
+static DWORD WINAPI axon_worker_thread(LPVOID arg) {
+    AxonThreadPool* pool = (AxonThreadPool*)arg;
+    for (;;) {
+        EnterCriticalSection(&pool->cs);
+        while (pool->head == NULL && !pool->shutdown) {
+            LeaveCriticalSection(&pool->cs);
+            WaitForSingleObject(pool->queue_cond, INFINITE);
+            EnterCriticalSection(&pool->cs);
+        }
+        if (pool->shutdown && pool->head == NULL) {
+            LeaveCriticalSection(&pool->cs);
+            return 0;
+        }
+        AxonTask* task = pool->head;
+        pool->head = task->next;
+        if (pool->head == NULL) pool->tail = NULL;
+        pool->active_tasks++;
+        LeaveCriticalSection(&pool->cs);
+
+        task->fn_ptr(task->arg);
+        free(task);
+
+        EnterCriticalSection(&pool->cs);
+        pool->active_tasks--;
+        pool->pending_tasks--;
+        if (pool->pending_tasks == 0) SetEvent(pool->done_cond);
+        LeaveCriticalSection(&pool->cs);
+    }
+    return 0;
+}
+#else
+static void* axon_worker_thread(void* arg) {
+    AxonThreadPool* pool = (AxonThreadPool*)arg;
+    for (;;) {
+        pthread_mutex_lock(&pool->queue_mutex);
+        while (pool->head == NULL && !pool->shutdown) {
+            pthread_cond_wait(&pool->queue_cond, &pool->queue_mutex);
+        }
+        if (pool->shutdown && pool->head == NULL) {
+            pthread_mutex_unlock(&pool->queue_mutex);
+            return NULL;
+        }
+        AxonTask* task = pool->head;
+        pool->head = task->next;
+        if (pool->head == NULL) pool->tail = NULL;
+        pool->active_tasks++;
+        pthread_mutex_unlock(&pool->queue_mutex);
+
+        task->fn_ptr(task->arg);
+        free(task);
+
+        pthread_mutex_lock(&pool->queue_mutex);
+        pool->active_tasks--;
+        pool->pending_tasks--;
+        if (pool->pending_tasks == 0) pthread_cond_broadcast(&pool->done_cond);
+        pthread_mutex_unlock(&pool->queue_mutex);
+    }
+    return NULL;
+}
+#endif
+
+void axon_threadpool_init(int32_t num_threads) {
+    if (axon_global_pool != NULL) return; // already initialized
+    if (num_threads <= 0) {
+#ifdef _WIN32
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        num_threads = (int32_t)si.dwNumberOfProcessors;
+#else
+        num_threads = (int32_t)sysconf(_SC_NPROCESSORS_ONLN);
+#endif
+        if (num_threads <= 0) num_threads = 4;
+    }
+    AxonThreadPool* pool = (AxonThreadPool*)calloc(1, sizeof(AxonThreadPool));
+    pool->num_threads = num_threads;
+    pool->head = NULL;
+    pool->tail = NULL;
+    pool->active_tasks = 0;
+    pool->pending_tasks = 0;
+    pool->shutdown = 0;
+#ifdef _WIN32
+    InitializeCriticalSection(&pool->cs);
+    pool->queue_cond = CreateEvent(NULL, FALSE, FALSE, NULL);
+    pool->done_cond = CreateEvent(NULL, TRUE, FALSE, NULL);  // manual reset
+    pool->threads = (HANDLE*)malloc(num_threads * sizeof(HANDLE));
+    for (int32_t i = 0; i < num_threads; i++) {
+        pool->threads[i] = CreateThread(NULL, 0, axon_worker_thread, pool, 0, NULL);
+    }
+#else
+    pthread_mutex_init(&pool->queue_mutex, NULL);
+    pthread_cond_init(&pool->queue_cond, NULL);
+    pthread_cond_init(&pool->done_cond, NULL);
+    pool->threads = (pthread_t*)malloc(num_threads * sizeof(pthread_t));
+    for (int32_t i = 0; i < num_threads; i++) {
+        pthread_create(&pool->threads[i], NULL, axon_worker_thread, pool);
+    }
+#endif
+    axon_global_pool = pool;
+}
+
+void axon_threadpool_shutdown(void) {
+    AxonThreadPool* pool = axon_global_pool;
+    if (pool == NULL) return;
+#ifdef _WIN32
+    EnterCriticalSection(&pool->cs);
+    pool->shutdown = 1;
+    LeaveCriticalSection(&pool->cs);
+    // Wake all workers
+    for (int32_t i = 0; i < pool->num_threads; i++) SetEvent(pool->queue_cond);
+    WaitForMultipleObjects(pool->num_threads, pool->threads, TRUE, INFINITE);
+    for (int32_t i = 0; i < pool->num_threads; i++) CloseHandle(pool->threads[i]);
+    CloseHandle(pool->queue_cond);
+    CloseHandle(pool->done_cond);
+    DeleteCriticalSection(&pool->cs);
+#else
+    pthread_mutex_lock(&pool->queue_mutex);
+    pool->shutdown = 1;
+    pthread_cond_broadcast(&pool->queue_cond);
+    pthread_mutex_unlock(&pool->queue_mutex);
+    for (int32_t i = 0; i < pool->num_threads; i++) {
+        pthread_join(pool->threads[i], NULL);
+    }
+    pthread_mutex_destroy(&pool->queue_mutex);
+    pthread_cond_destroy(&pool->queue_cond);
+    pthread_cond_destroy(&pool->done_cond);
+#endif
+    // Drain any remaining tasks
+    AxonTask* t = pool->head;
+    while (t) { AxonTask* n = t->next; free(t); t = n; }
+    free(pool->threads);
+    free(pool);
+    axon_global_pool = NULL;
+}
+
+int32_t axon_threadpool_num_threads(void) {
+    if (axon_global_pool == NULL) return 0;
+    return axon_global_pool->num_threads;
+}
+
+static void axon_threadpool_submit(void (*fn)(void*), void* arg) {
+    AxonThreadPool* pool = axon_global_pool;
+    if (pool == NULL) { fn(arg); return; }  // fallback: run inline
+    AxonTask* task = (AxonTask*)malloc(sizeof(AxonTask));
+    task->fn_ptr = fn;
+    task->arg = arg;
+    task->next = NULL;
+#ifdef _WIN32
+    EnterCriticalSection(&pool->cs);
+    if (pool->tail) pool->tail->next = task; else pool->head = task;
+    pool->tail = task;
+    pool->pending_tasks++;
+    ResetEvent(pool->done_cond);
+    LeaveCriticalSection(&pool->cs);
+    SetEvent(pool->queue_cond);
+#else
+    pthread_mutex_lock(&pool->queue_mutex);
+    if (pool->tail) pool->tail->next = task; else pool->head = task;
+    pool->tail = task;
+    pool->pending_tasks++;
+    pthread_cond_signal(&pool->queue_cond);
+    pthread_mutex_unlock(&pool->queue_mutex);
+#endif
+}
+
+static void axon_threadpool_wait(void) {
+    AxonThreadPool* pool = axon_global_pool;
+    if (pool == NULL) return;
+#ifdef _WIN32
+    EnterCriticalSection(&pool->cs);
+    while (pool->pending_tasks > 0) {
+        LeaveCriticalSection(&pool->cs);
+        WaitForSingleObject(pool->done_cond, INFINITE);
+        EnterCriticalSection(&pool->cs);
+    }
+    LeaveCriticalSection(&pool->cs);
+#else
+    pthread_mutex_lock(&pool->queue_mutex);
+    while (pool->pending_tasks > 0) {
+        pthread_cond_wait(&pool->done_cond, &pool->queue_mutex);
+    }
+    pthread_mutex_unlock(&pool->queue_mutex);
+#endif
+}
+
+// ── Parallel Region Implementation (replaces E8 no-op stubs) ──
+// axon_parallel_begin/end now integrate with the thread pool.
+// Each tensor op between begin/end is dispatched to the pool.
+// The parallel dispatch state is tracked on a per-region stack.
+
+#define AXON_MAX_PARALLEL_DEPTH 16
+
+typedef struct {
+    int32_t count;     // number of independent tasks in this region
+    int32_t submitted; // tasks submitted so far
+} AxonParallelRegion;
+
+static AxonParallelRegion axon_parallel_stack[AXON_MAX_PARALLEL_DEPTH];
+static int32_t axon_parallel_depth = 0;
+
+void axon_parallel_begin(int32_t count) {
+    // Lazily initialize thread pool on first parallel region
+    if (axon_global_pool == NULL) axon_threadpool_init(0);
+    if (axon_parallel_depth < AXON_MAX_PARALLEL_DEPTH) {
+        axon_parallel_stack[axon_parallel_depth].count = count;
+        axon_parallel_stack[axon_parallel_depth].submitted = 0;
+    }
+    axon_parallel_depth++;
+}
+
+void axon_parallel_end(void) {
+    // Wait for all tasks in the current parallel region to finish
+    axon_threadpool_wait();
+    if (axon_parallel_depth > 0) axon_parallel_depth--;
+}
+
+// ════════════════════════════════════════════════════════════════
+// Memory Pool Runtime (GAMMA/E11)
+// ════════════════════════════════════════════════════════════════
+// Slab-based memory pool that caches freed allocations by size
+// bucket. Reduces malloc overhead in training loops where tensors
+// of the same size are repeatedly allocated and freed.
+
+#define AXON_MEMPOOL_NUM_BUCKETS 32
+#define AXON_MEMPOOL_MAX_CACHED  64   // max cached blocks per bucket
+
+typedef struct AxonMemBlock {
+    struct AxonMemBlock* next;
+    int64_t size;
+} AxonMemBlock;
+
+typedef struct {
+    AxonMemBlock* free_list;
+    int32_t count;
+    int64_t bucket_size;  // size of allocations in this bucket
+} AxonMemBucket;
+
+typedef struct {
+    AxonMemBucket buckets[AXON_MEMPOOL_NUM_BUCKETS];
+    int64_t total_allocs;
+    int64_t pool_hits;
+    int64_t pool_misses;
+#ifdef _WIN32
+    CRITICAL_SECTION lock;
+#else
+    pthread_mutex_t lock;
+#endif
+} AxonMemPool;
+
+static AxonMemPool* axon_global_mempool = NULL;
+
+// Bucket sizes: 64, 128, 256, ... up to 64*2^31 (powers of 2 starting at 64)
+static int32_t axon_mempool_bucket_index(int64_t size) {
+    if (size <= 64) return 0;
+    int32_t idx = 0;
+    int64_t bucket = 64;
+    while (bucket < size && idx < AXON_MEMPOOL_NUM_BUCKETS - 1) {
+        bucket *= 2;
+        idx++;
+    }
+    return idx;
+}
+
+static int64_t axon_mempool_bucket_size(int32_t idx) {
+    int64_t size = 64;
+    for (int32_t i = 0; i < idx; i++) size *= 2;
+    return size;
+}
+
+void axon_mempool_init(void) {
+    if (axon_global_mempool != NULL) return;
+    AxonMemPool* pool = (AxonMemPool*)calloc(1, sizeof(AxonMemPool));
+    for (int32_t i = 0; i < AXON_MEMPOOL_NUM_BUCKETS; i++) {
+        pool->buckets[i].free_list = NULL;
+        pool->buckets[i].count = 0;
+        pool->buckets[i].bucket_size = axon_mempool_bucket_size(i);
+    }
+    pool->total_allocs = 0;
+    pool->pool_hits = 0;
+    pool->pool_misses = 0;
+#ifdef _WIN32
+    InitializeCriticalSection(&pool->lock);
+#else
+    pthread_mutex_init(&pool->lock, NULL);
+#endif
+    axon_global_mempool = pool;
+}
+
+void* axon_mempool_alloc(int64_t size) {
+    if (size <= 0) return NULL;
+    // Lazily initialize on first alloc
+    if (axon_global_mempool == NULL) axon_mempool_init();
+    AxonMemPool* pool = axon_global_mempool;
+    int32_t idx = axon_mempool_bucket_index(size);
+
+#ifdef _WIN32
+    EnterCriticalSection(&pool->lock);
+#else
+    pthread_mutex_lock(&pool->lock);
+#endif
+    pool->total_allocs++;
+    AxonMemBucket* bucket = &pool->buckets[idx];
+    void* ptr = NULL;
+
+    if (bucket->free_list != NULL) {
+        // Reuse a cached block
+        AxonMemBlock* block = bucket->free_list;
+        bucket->free_list = block->next;
+        bucket->count--;
+        pool->pool_hits++;
+        ptr = (void*)block;  // reuse the block memory itself
+    } else {
+        pool->pool_misses++;
+    }
+
+#ifdef _WIN32
+    LeaveCriticalSection(&pool->lock);
+#else
+    pthread_mutex_unlock(&pool->lock);
+#endif
+
+    if (ptr == NULL) {
+        // Allocate from system
+        int64_t alloc_size = bucket->bucket_size;
+        if (alloc_size < size) alloc_size = size;
+        ptr = malloc((size_t)alloc_size);
+    }
+    return ptr;
+}
+
+void axon_mempool_free(void* ptr, int64_t size) {
+    if (ptr == NULL || size <= 0) return;
+    if (axon_global_mempool == NULL) { free(ptr); return; }
+    AxonMemPool* pool = axon_global_mempool;
+    int32_t idx = axon_mempool_bucket_index(size);
+
+#ifdef _WIN32
+    EnterCriticalSection(&pool->lock);
+#else
+    pthread_mutex_lock(&pool->lock);
+#endif
+    AxonMemBucket* bucket = &pool->buckets[idx];
+
+    if (bucket->count < AXON_MEMPOOL_MAX_CACHED) {
+        // Cache the block
+        AxonMemBlock* block = (AxonMemBlock*)ptr;
+        block->size = size;
+        block->next = bucket->free_list;
+        bucket->free_list = block;
+        bucket->count++;
+#ifdef _WIN32
+        LeaveCriticalSection(&pool->lock);
+#else
+        pthread_mutex_unlock(&pool->lock);
+#endif
+    } else {
+        // Bucket full, free to system
+#ifdef _WIN32
+        LeaveCriticalSection(&pool->lock);
+#else
+        pthread_mutex_unlock(&pool->lock);
+#endif
+        free(ptr);
+    }
+}
+
+void axon_mempool_clear(void) {
+    if (axon_global_mempool == NULL) return;
+    AxonMemPool* pool = axon_global_mempool;
+#ifdef _WIN32
+    EnterCriticalSection(&pool->lock);
+#else
+    pthread_mutex_lock(&pool->lock);
+#endif
+    for (int32_t i = 0; i < AXON_MEMPOOL_NUM_BUCKETS; i++) {
+        AxonMemBlock* block = pool->buckets[i].free_list;
+        while (block) {
+            AxonMemBlock* next = block->next;
+            free(block);
+            block = next;
+        }
+        pool->buckets[i].free_list = NULL;
+        pool->buckets[i].count = 0;
+    }
+#ifdef _WIN32
+    LeaveCriticalSection(&pool->lock);
+#else
+    pthread_mutex_unlock(&pool->lock);
+#endif
+}
+
+void axon_mempool_stats(void) {
+    if (axon_global_mempool == NULL) { printf("Memory pool: not initialized\n"); return; }
+    AxonMemPool* pool = axon_global_mempool;
+    printf("Memory pool stats:\n");
+    printf("  Total allocations: %lld\n", (long long)pool->total_allocs);
+    printf("  Pool hits:         %lld\n", (long long)pool->pool_hits);
+    printf("  Pool misses:       %lld\n", (long long)pool->pool_misses);
+    if (pool->total_allocs > 0) {
+        printf("  Hit rate:          %.1f%%\n",
+               100.0 * pool->pool_hits / pool->total_allocs);
+    }
+    int32_t total_cached = 0;
+    for (int32_t i = 0; i < AXON_MEMPOOL_NUM_BUCKETS; i++) {
+        total_cached += pool->buckets[i].count;
+    }
+    printf("  Cached blocks:     %d\n", total_cached);
+}
+
+// ════════════════════════════════════════════════════════════════
+// GPU Dispatch Stubs (GAMMA/E12)
+// ════════════════════════════════════════════════════════════════
+// Compile-time GPU support detection. When AXON_USE_CUDA or
+// AXON_USE_ROCM are defined, real GPU dispatch is enabled.
+// Otherwise these are graceful CPU-only stubs.
+
+static int32_t axon_gpu_initialized = 0;
+
+int32_t axon_gpu_init(void) {
+#if defined(AXON_USE_CUDA) || defined(AXON_USE_ROCM)
+    // Placeholder for real GPU initialization
+    axon_gpu_initialized = 1;
+    return 0;
+#else
+    axon_gpu_initialized = 0;
+    return -1;  // no GPU support compiled in
+#endif
+}
+
+void axon_gpu_shutdown(void) {
+#if defined(AXON_USE_CUDA) || defined(AXON_USE_ROCM)
+    // Placeholder for real GPU shutdown
+#endif
+    axon_gpu_initialized = 0;
+}
+
+int32_t axon_gpu_device_count(void) {
+#if defined(AXON_USE_CUDA) || defined(AXON_USE_ROCM)
+    return 1;  // placeholder
+#else
+    return 0;
+#endif
+}
+
+void* axon_gpu_alloc(int64_t size) {
+    (void)size;
+#if defined(AXON_USE_CUDA) || defined(AXON_USE_ROCM)
+    return NULL;  // placeholder for cudaMalloc/hipMalloc
+#else
+    fprintf(stderr, "axon: GPU allocation not available (compiled without GPU support)\n");
+    return NULL;
+#endif
+}
+
+void axon_gpu_free(void* ptr) {
+    (void)ptr;
+#if defined(AXON_USE_CUDA) || defined(AXON_USE_ROCM)
+    // placeholder for cudaFree/hipFree
+#else
+    // no-op on CPU-only builds
+#endif
+}
+
+void* axon_gpu_tensor_to_device(void* tensor, int32_t device_id) {
+    (void)device_id;
+#if defined(AXON_USE_CUDA) || defined(AXON_USE_ROCM)
+    return tensor;  // placeholder: would copy data to GPU
+#else
+    fprintf(stderr, "axon: GPU transfer not available (compiled without GPU support)\n");
+    return tensor;  // return original tensor on CPU-only builds
+#endif
+}
+
+void* axon_gpu_tensor_to_host(void* tensor) {
+#if defined(AXON_USE_CUDA) || defined(AXON_USE_ROCM)
+    return tensor;  // placeholder: would copy data to CPU
+#else
+    return tensor;  // already on host
+#endif
+}
+
+// ══════════════════════════════════════════════════════════════
+// QUANTIZATION — dtype casting, int8 compute, calibration
+// ══════════════════════════════════════════════════════════════
+
+// Dtype codes: 0=f32, 1=f64, 2=i32, 3=i64, 4=bool/u8, 5=i8, 6=f16, 7=bf16
+
+// Quantize: f32 tensor → int8/uint8 (affine, per-tensor scale+zero_point)
+void* axon_tensor_quantize(void* vtensor, uint8_t target_dtype) {
+    AxonTensor* t = (AxonTensor*)vtensor;
+    if (t->dtype != 0) return vtensor;  // only quantize f32 tensors
+
+    AxonTensor* q = axon_tensor_new(t->shape, t->ndim, target_dtype == 5 ? 5 : 4);
+    float* src = (float*)t->data;
+
+    // Find min/max for affine quantization
+    float vmin = src[0], vmax = src[0];
+    for (int64_t i = 1; i < t->numel; i++) {
+        if (src[i] < vmin) vmin = src[i];
+        if (src[i] > vmax) vmax = src[i];
+    }
+
+    float scale = (vmax - vmin) / 255.0f;
+    if (scale < 1e-10f) scale = 1e-10f;
+
+    if (target_dtype == 5) {
+        // Signed int8: range [-128, 127]
+        int8_t* dst = (int8_t*)q->data;
+        float zero_point = -128.0f - vmin / scale;
+        for (int64_t i = 0; i < t->numel; i++) {
+            float v = src[i] / scale + zero_point;
+            if (v < -128.0f) v = -128.0f;
+            if (v > 127.0f) v = 127.0f;
+            dst[i] = (int8_t)(v + (v >= 0 ? 0.5f : -0.5f));
+        }
+    } else {
+        // Unsigned uint8: range [0, 255]
+        uint8_t* dst = (uint8_t*)q->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            float v = (src[i] - vmin) / scale;
+            if (v < 0.0f) v = 0.0f;
+            if (v > 255.0f) v = 255.0f;
+            dst[i] = (uint8_t)(v + 0.5f);
+        }
+    }
+    return q;
+}
+
+// Dequantize: int8/uint8 tensor → f32
+void* axon_tensor_dequantize(void* vtensor) {
+    AxonTensor* t = (AxonTensor*)vtensor;
+    if (t->dtype == 0 || t->dtype == 1) return vtensor;  // already float
+
+    AxonTensor* out = axon_tensor_new(t->shape, t->ndim, 0);
+    float* dst = (float*)out->data;
+
+    if (t->dtype == 5) {
+        // int8 → f32 (assume scale=1, zero_point=0 for simple case)
+        int8_t* src = (int8_t*)t->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            dst[i] = (float)src[i];
+        }
+    } else if (t->dtype == 4) {
+        // uint8 → f32
+        uint8_t* src = (uint8_t*)t->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            dst[i] = (float)src[i];
+        }
+    } else if (t->dtype == 2) {
+        // i32 → f32
+        int32_t* src = (int32_t*)t->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            dst[i] = (float)src[i];
+        }
+    }
+    return out;
+}
+
+// Quantized int8 matmul: accumulate in int32, return f32 result
+void* axon_tensor_qmatmul(void* va, void* vb) {
+    AxonTensor* a = (AxonTensor*)va;
+    AxonTensor* b = (AxonTensor*)vb;
+    if (a->ndim < 2 || b->ndim < 2) return NULL;
+
+    int64_t M = a->shape[a->ndim - 2];
+    int64_t K = a->shape[a->ndim - 1];
+    int64_t N = b->shape[b->ndim - 1];
+    int64_t out_shape[2] = {M, N};
+    AxonTensor* out = axon_tensor_new(out_shape, 2, 0);  // f32 output
+    float* dst = (float*)out->data;
+
+    if (a->dtype == 5 && b->dtype == 5) {
+        // int8 x int8 → int32 accumulation → f32
+        int8_t* da = (int8_t*)a->data;
+        int8_t* db = (int8_t*)b->data;
+        for (int64_t i = 0; i < M; i++) {
+            for (int64_t j = 0; j < N; j++) {
+                int32_t acc = 0;
+                for (int64_t k = 0; k < K; k++) {
+                    acc += (int32_t)da[i * K + k] * (int32_t)db[k * N + j];
+                }
+                dst[i * N + j] = (float)acc;
+            }
+        }
+    } else {
+        // Fallback: treat as uint8
+        uint8_t* da = (uint8_t*)a->data;
+        uint8_t* db = (uint8_t*)b->data;
+        for (int64_t i = 0; i < M; i++) {
+            for (int64_t j = 0; j < N; j++) {
+                int32_t acc = 0;
+                for (int64_t k = 0; k < K; k++) {
+                    acc += (int32_t)da[i * K + k] * (int32_t)db[k * N + j];
+                }
+                dst[i * N + j] = (float)acc;
+            }
+        }
+    }
+    return out;
+}
+
+// Symmetric quantization: centered at zero, scale only (no zero-point)
+void* axon_tensor_quantize_symmetric(void* vtensor, int32_t bits) {
+    AxonTensor* t = (AxonTensor*)vtensor;
+    if (t->dtype != 0) return vtensor;
+
+    int32_t qmax = (1 << (bits - 1)) - 1;  // e.g., 127 for 8-bit
+    AxonTensor* q = axon_tensor_new(t->shape, t->ndim, 5);  // int8 output
+    float* src = (float*)t->data;
+    int8_t* dst = (int8_t*)q->data;
+
+    // Find absolute max
+    float absmax = 0.0f;
+    for (int64_t i = 0; i < t->numel; i++) {
+        float v = src[i] < 0 ? -src[i] : src[i];
+        if (v > absmax) absmax = v;
+    }
+
+    float scale = absmax / (float)qmax;
+    if (scale < 1e-10f) scale = 1e-10f;
+
+    for (int64_t i = 0; i < t->numel; i++) {
+        float v = src[i] / scale;
+        if (v > (float)qmax) v = (float)qmax;
+        if (v < -(float)qmax) v = -(float)qmax;
+        dst[i] = (int8_t)(v + (v >= 0 ? 0.5f : -0.5f));
+    }
+    return q;
+}
+
+// Dequantize with explicit scale factor
+void* axon_tensor_dequantize_scale(void* vtensor, double scale) {
+    AxonTensor* t = (AxonTensor*)vtensor;
+    AxonTensor* out = axon_tensor_new(t->shape, t->ndim, 0);
+    float* dst = (float*)out->data;
+    float fscale = (float)scale;
+
+    if (t->dtype == 5) {
+        int8_t* src = (int8_t*)t->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            dst[i] = (float)src[i] * fscale;
+        }
+    } else if (t->dtype == 4) {
+        uint8_t* src = (uint8_t*)t->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            dst[i] = (float)src[i] * fscale;
+        }
+    } else {
+        // Already float — just scale
+        float* src = (float*)t->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            dst[i] = src[i] * fscale;
+        }
+    }
+    return out;
+}
+
+// Calibrate: compute per-tensor min and max for quantization range
+void axon_tensor_calibrate_range(void* vtensor, double* out_min, double* out_max) {
+    AxonTensor* t = (AxonTensor*)vtensor;
+    if (t->dtype != 0 || t->numel == 0) {
+        *out_min = 0.0;
+        *out_max = 0.0;
+        return;
+    }
+    float* src = (float*)t->data;
+    float vmin = src[0], vmax = src[0];
+    for (int64_t i = 1; i < t->numel; i++) {
+        if (src[i] < vmin) vmin = src[i];
+        if (src[i] > vmax) vmax = src[i];
+    }
+    *out_min = (double)vmin;
+    *out_max = (double)vmax;
+}
+
+// Dynamic quantization: compute scale at runtime, then quantize
+void* axon_tensor_quantize_dynamic(void* vtensor, int32_t bits) {
+    AxonTensor* t = (AxonTensor*)vtensor;
+    if (t->dtype != 0) return vtensor;
+
+    // Compute symmetric scale on the fly
+    return axon_tensor_quantize_symmetric(vtensor, bits);
+}
+
+// Mixed-precision dtype cast (e.g., f32→f16 or f32→bf16)
+void* axon_tensor_mixed_precision_cast(void* vtensor, uint8_t target_dtype) {
+    AxonTensor* t = (AxonTensor*)vtensor;
+
+    // For CPU-only: truncate f32 to reduced precision via rounding
+    // (Real f16/bf16 hardware would use native conversion)
+    if (t->dtype == 0 && (target_dtype == 6 || target_dtype == 7)) {
+        // f32 → f16/bf16: simulate reduced precision by rounding
+        AxonTensor* out = axon_tensor_new(t->shape, t->ndim, 0);  // keep as f32 storage
+        float* src = (float*)t->data;
+        float* dst = (float*)out->data;
+        for (int64_t i = 0; i < t->numel; i++) {
+            if (target_dtype == 7) {
+                // BFloat16: truncate lower 16 bits of mantissa
+                uint32_t bits;
+                memcpy(&bits, &src[i], 4);
+                bits &= 0xFFFF0000u;  // zero lower 16 bits
+                memcpy(&dst[i], &bits, 4);
+            } else {
+                // Float16: clamp + round (simplified)
+                float v = src[i];
+                if (v > 65504.0f) v = 65504.0f;
+                if (v < -65504.0f) v = -65504.0f;
+                dst[i] = v;
+            }
+        }
+        return out;
+    }
+    // No-op for same dtype or unsupported cast
+    return vtensor;
+}
 "#.to_string()
 }
 
@@ -1176,7 +2844,7 @@ mod tests {
 
     #[test]
     fn runtime_functions_count() {
-        assert_eq!(RUNTIME_FUNCTIONS.len(), 39);
+        assert_eq!(RUNTIME_FUNCTIONS.len(), 83);
     }
 
     #[test]
@@ -1320,5 +2988,169 @@ mod tests {
         // Verify axon_panic uses file and line parameters (not hardcoded)
         assert!(src.contains("void axon_panic(const char* msg, const char* file, int32_t line)"));
         assert!(src.contains("file, line, msg"), "axon_panic should use file and line parameters");
+    }
+
+    #[test]
+    fn generate_c_source_contains_threadpool() {
+        let src = generate_runtime_c_source();
+        assert!(src.contains("void axon_threadpool_init(int32_t num_threads)"));
+        assert!(src.contains("void axon_threadpool_shutdown(void)"));
+        assert!(src.contains("int32_t axon_threadpool_num_threads(void)"));
+        assert!(src.contains("AxonThreadPool"));
+        assert!(src.contains("axon_worker_thread"));
+        assert!(src.contains("axon_threadpool_submit"));
+        assert!(src.contains("axon_threadpool_wait"));
+    }
+
+    #[test]
+    fn generate_c_source_contains_mempool() {
+        let src = generate_runtime_c_source();
+        assert!(src.contains("void axon_mempool_init(void)"));
+        assert!(src.contains("void* axon_mempool_alloc(int64_t size)"));
+        assert!(src.contains("void axon_mempool_free(void* ptr, int64_t size)"));
+        assert!(src.contains("void axon_mempool_clear(void)"));
+        assert!(src.contains("void axon_mempool_stats(void)"));
+        assert!(src.contains("AxonMemPool"));
+        assert!(src.contains("AxonMemBucket"));
+    }
+
+    #[test]
+    fn generate_c_source_contains_gpu_stubs() {
+        let src = generate_runtime_c_source();
+        assert!(src.contains("int32_t axon_gpu_init(void)"));
+        assert!(src.contains("void axon_gpu_shutdown(void)"));
+        assert!(src.contains("int32_t axon_gpu_device_count(void)"));
+        assert!(src.contains("void* axon_gpu_alloc(int64_t size)"));
+        assert!(src.contains("void axon_gpu_free(void* ptr)"));
+        assert!(src.contains("void* axon_gpu_tensor_to_device(void* tensor, int32_t device_id)"));
+        assert!(src.contains("void* axon_gpu_tensor_to_host(void* tensor)"));
+    }
+
+    #[test]
+    fn emit_declarations_contains_threadpool() {
+        let ir = emit_runtime_declarations();
+        assert!(ir.contains("@axon_threadpool_init(i32)"));
+        assert!(ir.contains("@axon_threadpool_shutdown()"));
+        assert!(ir.contains("@axon_threadpool_num_threads()"));
+    }
+
+    #[test]
+    fn emit_declarations_contains_mempool() {
+        let ir = emit_runtime_declarations();
+        assert!(ir.contains("@axon_mempool_init()"));
+        assert!(ir.contains("@axon_mempool_alloc(i64)"));
+        assert!(ir.contains("@axon_mempool_free(i8*, i64)"));
+        assert!(ir.contains("@axon_mempool_clear()"));
+        assert!(ir.contains("@axon_mempool_stats()"));
+    }
+
+    #[test]
+    fn emit_declarations_contains_gpu_stubs() {
+        let ir = emit_runtime_declarations();
+        assert!(ir.contains("@axon_gpu_init()"));
+        assert!(ir.contains("@axon_gpu_shutdown()"));
+        assert!(ir.contains("@axon_gpu_device_count()"));
+        assert!(ir.contains("@axon_gpu_alloc(i64)"));
+        assert!(ir.contains("@axon_gpu_free(i8*)"));
+        assert!(ir.contains("@axon_gpu_tensor_to_device(i8*, i32)"));
+        assert!(ir.contains("@axon_gpu_tensor_to_host(i8*)"));
+    }
+
+    #[test]
+    fn generate_c_source_contains_autograd_ops() {
+        let src = generate_runtime_c_source();
+        assert!(src.contains("void* axon_ag_sigmoid(void* a)"));
+        assert!(src.contains("void* axon_ag_tanh(void* a)"));
+        assert!(src.contains("void* axon_ag_log(void* a)"));
+        assert!(src.contains("void* axon_ag_exp(void* a)"));
+        assert!(src.contains("void* axon_ag_neg(void* a)"));
+        assert!(src.contains("void* axon_ag_abs(void* a)"));
+        assert!(src.contains("void* axon_ag_sqrt(void* a)"));
+        assert!(src.contains("void* axon_ag_sin(void* a)"));
+        assert!(src.contains("void* axon_ag_cos(void* a)"));
+        assert!(src.contains("void* axon_ag_pow(void* a, void* b)"));
+        assert!(src.contains("void* axon_ag_gelu(void* a)"));
+        assert!(src.contains("void* axon_ag_silu(void* a)"));
+        assert!(src.contains("void* axon_ag_leaky_relu(void* a)"));
+    }
+
+    #[test]
+    fn generate_c_source_contains_adam_optimizer() {
+        let src = generate_runtime_c_source();
+        assert!(src.contains("void axon_adam_init(void** params, int32_t n_params)"));
+        assert!(src.contains("void axon_adam_step("));
+        assert!(src.contains("AxonAdamState"));
+    }
+
+    #[test]
+    fn generate_c_source_thread_local_tape() {
+        let src = generate_runtime_c_source();
+        // Verify tape is thread-local (not just static)
+        assert!(src.contains("__declspec(thread)") || src.contains("__thread"),
+            "tape should use thread-local storage");
+    }
+
+    #[test]
+    fn generate_c_source_backward_has_all_gradops() {
+        let src = generate_runtime_c_source();
+        assert!(src.contains("case OP_SIGMOID:"));
+        assert!(src.contains("case OP_TANH:"));
+        assert!(src.contains("case OP_LOG:"));
+        assert!(src.contains("case OP_EXP:"));
+        assert!(src.contains("case OP_POW:"));
+        assert!(src.contains("case OP_NEG:"));
+        assert!(src.contains("case OP_ABS:"));
+        assert!(src.contains("case OP_SQRT:"));
+        assert!(src.contains("case OP_SIN:"));
+        assert!(src.contains("case OP_COS:"));
+        assert!(src.contains("case OP_GELU:"));
+        assert!(src.contains("case OP_SILU:"));
+        assert!(src.contains("case OP_LEAKY_RELU:"));
+    }
+
+    #[test]
+    fn emit_declarations_contains_autograd_ops() {
+        let ir = emit_runtime_declarations();
+        assert!(ir.contains("@axon_ag_sigmoid(i8*)"));
+        assert!(ir.contains("@axon_ag_tanh(i8*)"));
+        assert!(ir.contains("@axon_ag_log(i8*)"));
+        assert!(ir.contains("@axon_ag_exp(i8*)"));
+        assert!(ir.contains("@axon_ag_pow(i8*, i8*)"));
+        assert!(ir.contains("@axon_ag_gelu(i8*)"));
+        assert!(ir.contains("@axon_ag_silu(i8*)"));
+        assert!(ir.contains("@axon_adam_step("));
+    }
+
+    #[test]
+    fn emit_declarations_contains_quantization_ops() {
+        let ir = emit_runtime_declarations();
+        assert!(ir.contains("@axon_tensor_quantize(i8*, i8)"));
+        assert!(ir.contains("@axon_tensor_dequantize(i8*)"));
+        assert!(ir.contains("@axon_tensor_qmatmul(i8*, i8*)"));
+        assert!(ir.contains("@axon_tensor_quantize_symmetric(i8*, i32)"));
+        assert!(ir.contains("@axon_tensor_dequantize_scale(i8*, double)"));
+        assert!(ir.contains("@axon_tensor_calibrate_range(i8*, double*, double*)"));
+        assert!(ir.contains("@axon_tensor_quantize_dynamic(i8*, i32)"));
+        assert!(ir.contains("@axon_tensor_mixed_precision_cast(i8*, i8)"));
+    }
+
+    #[test]
+    fn generate_c_source_has_quantization() {
+        let src = generate_runtime_c_source();
+        assert!(src.contains("void* axon_tensor_quantize("));
+        assert!(src.contains("void* axon_tensor_dequantize("));
+        assert!(src.contains("void* axon_tensor_qmatmul("));
+        assert!(src.contains("void* axon_tensor_quantize_symmetric("));
+        assert!(src.contains("void* axon_tensor_dequantize_scale("));
+        assert!(src.contains("void axon_tensor_calibrate_range("));
+        assert!(src.contains("void* axon_tensor_quantize_dynamic("));
+        assert!(src.contains("void* axon_tensor_mixed_precision_cast("));
+    }
+
+    #[test]
+    fn generate_c_source_qmatmul_int32_accum() {
+        let src = generate_runtime_c_source();
+        // Verify qmatmul uses int32 accumulation
+        assert!(src.contains("int32_t acc = 0;"), "qmatmul should accumulate in int32");
     }
 }

@@ -36,7 +36,7 @@ impl LspServer {
             }),
         };
 
-        self.send_response(id, serde_json::to_value(result).unwrap());
+        self.send_response_value(id, &result);
     }
 
     pub fn handle_initialized(&mut self) {
@@ -82,6 +82,8 @@ impl LspServer {
 
     pub fn handle_did_close(&mut self, params: serde_json::Value) {
         if let Ok(p) = serde_json::from_value::<DidCloseTextDocumentParams>(params) {
+            let filename = uri_to_filename(&p.text_document.uri);
+            self.cache.invalidate(&filename);
             self.documents.remove(&p.text_document.uri);
             // Clear diagnostics
             self.send_notification(
@@ -90,7 +92,7 @@ impl LspServer {
                     uri: p.text_document.uri,
                     diagnostics: vec![],
                 })
-                .unwrap(),
+                .unwrap_or(serde_json::json!(null)),
             );
         }
     }
@@ -105,7 +107,14 @@ impl LspServer {
             None => return,
         };
 
+        // Skip re-compilation if the source hasn't changed
+        if !self.cache.is_dirty(&filename, &source) {
+            return;
+        }
+
         let diagnostics = self.compile_and_get_diagnostics(&source, &filename);
+        let had_errors = !diagnostics.is_empty();
+        self.cache.update(&filename, &source, had_errors);
 
         self.send_notification(
             "textDocument/publishDiagnostics",
@@ -113,7 +122,7 @@ impl LspServer {
                 uri: uri.to_string(),
                 diagnostics,
             })
-            .unwrap(),
+            .unwrap_or(serde_json::json!(null)),
         );
     }
 
@@ -168,7 +177,7 @@ impl LspServer {
         items.extend(self.get_type_completions());
         items.extend(self.get_stdlib_completions());
 
-        self.send_response(id, serde_json::to_value(&items).unwrap());
+        self.send_response_value(id, &items);
     }
 
     pub(crate) fn get_keyword_completions(&self) -> Vec<CompletionItem> {
@@ -287,7 +296,7 @@ impl LspServer {
         if let Ok(p) = serde_json::from_value::<TextDocumentPositionParams>(params) {
             let result = self.get_hover_info(&p.text_document.uri, p.position);
             match result {
-                Some(hover) => self.send_response(id, serde_json::to_value(hover).unwrap()),
+                Some(hover) => self.send_response_value(id, &hover),
                 None => self.send_response(id, serde_json::json!(null)),
             }
         } else {
@@ -370,7 +379,7 @@ impl LspServer {
         if let Ok(p) = serde_json::from_value::<TextDocumentPositionParams>(params) {
             let result = self.get_definition(&p.text_document.uri, p.position);
             match result {
-                Some(loc) => self.send_response(id, serde_json::to_value(loc).unwrap()),
+                Some(loc) => self.send_response_value(id, &loc),
                 None => self.send_response(id, serde_json::json!(null)),
             }
         } else {
@@ -407,7 +416,7 @@ impl LspServer {
                 .unwrap_or("");
 
             let symbols = self.get_document_symbols(uri);
-            self.send_response(id, serde_json::to_value(&symbols).unwrap());
+            self.send_response_value(id, &symbols);
         } else {
             self.send_response(id, serde_json::json!([]));
         }
@@ -439,7 +448,7 @@ impl LspServer {
         if let Ok(p) = serde_json::from_value::<DocumentFormattingParams>(params) {
             let result = self.format_document(&p.text_document.uri);
             match result {
-                Some(edits) => self.send_response(id, serde_json::to_value(&edits).unwrap()),
+                Some(edits) => self.send_response_value(id, &edits),
                 None => self.send_response(id, serde_json::json!(null)),
             }
         } else {
@@ -479,7 +488,7 @@ impl LspServer {
         if let Ok(p) = serde_json::from_value::<TextDocumentPositionParams>(params) {
             let result = self.get_signature_help(&p.text_document.uri, p.position);
             match result {
-                Some(help) => self.send_response(id, serde_json::to_value(help).unwrap()),
+                Some(help) => self.send_response_value(id, &help),
                 None => self.send_response(id, serde_json::json!(null)),
             }
         } else {
@@ -580,7 +589,7 @@ impl LspServer {
                 p.position,
                 p.context.include_declaration,
             );
-            self.send_response(id, serde_json::to_value(&result).unwrap());
+            self.send_response_value(id, &result);
         } else {
             self.send_response(id, serde_json::json!([]));
         }
@@ -667,7 +676,7 @@ impl LspServer {
                 p.position,
                 &p.new_name,
             );
-            self.send_response(id, serde_json::to_value(&result).unwrap());
+            self.send_response_value(id, &result);
         } else {
             self.send_response(id, serde_json::json!(null));
         }
@@ -717,7 +726,7 @@ impl LspServer {
                 p.range,
                 &p.context.diagnostics,
             );
-            self.send_response(id, serde_json::to_value(&result).unwrap());
+            self.send_response_value(id, &result);
         } else {
             self.send_response(id, serde_json::json!([]));
         }

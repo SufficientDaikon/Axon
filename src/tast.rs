@@ -40,6 +40,7 @@ pub enum TypedItemKind {
     TypeAlias(TypedTypeAlias),
     Module(TypedModuleDecl),
     Use(crate::ast::UseDecl),
+    Error,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -156,6 +157,7 @@ pub enum TypedStmtKind {
         body: TypedBlock,
     },
     Item(TypedItem),
+    Error,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -245,6 +247,13 @@ pub enum TypedExprKind {
         params: Vec<TypedFnParam>,
         body: Box<TypedExpr>,
     },
+    Comprehension {
+        body: Box<TypedExpr>,
+        variable: String,
+        iterable: Box<TypedExpr>,
+        condition: Option<Box<TypedExpr>>,
+    },
+    Error,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -482,6 +491,7 @@ impl<'a> TastBuilder<'a> {
                 span: m.span.clone(),
             }),
             ast::ItemKind::Use(u) => TypedItemKind::Use(u.clone()),
+            ast::ItemKind::Error => TypedItemKind::Error,
         };
 
         TypedItem {
@@ -601,6 +611,7 @@ impl<'a> TastBuilder<'a> {
                 }
             }
             ast::StmtKind::Item(item) => TypedStmtKind::Item(self.build_item(item)),
+            ast::StmtKind::Error => TypedStmtKind::Error,
         };
 
         TypedStmt {
@@ -707,6 +718,23 @@ impl<'a> TastBuilder<'a> {
                     span: p.span.clone(),
                 }).collect(),
                 body: Box::new(self.build_expr(body)),
+            },
+            ast::ExprKind::Comprehension { body, pattern, iterable, condition } => {
+                let variable = match &pattern.kind {
+                    ast::PatternKind::Identifier(s) => s.clone(),
+                    _ => "_".to_string(),
+                };
+                TypedExprKind::Comprehension {
+                    body: Box::new(self.build_expr(body)),
+                    variable,
+                    iterable: Box::new(self.build_expr(iterable)),
+                    condition: condition.as_ref().map(|c| Box::new(self.build_expr(c))),
+                }
+            },
+            ast::ExprKind::Error => return TypedExpr {
+                kind: TypedExprKind::Error,
+                ty: TypeId::ERROR,
+                span: expr.span.clone(),
             },
         };
 

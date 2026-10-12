@@ -89,6 +89,7 @@ impl Formatter {
                 self.write(vis_prefix);
                 self.format_use(u);
             }
+            ItemKind::Error => {}
         }
     }
 
@@ -392,6 +393,7 @@ impl Formatter {
             StmtKind::Item(item) => {
                 self.format_item(item);
             }
+            StmtKind::Error => {}
         }
     }
 
@@ -576,6 +578,20 @@ impl Formatter {
                 self.write(" ");
                 self.format_expr(body);
             }
+            ExprKind::Comprehension { body, pattern, iterable, condition } => {
+                self.write("[");
+                self.format_expr(body);
+                self.write(" for ");
+                self.format_pattern(pattern);
+                self.write(" in ");
+                self.format_expr(iterable);
+                if let Some(cond) = condition {
+                    self.write(" if ");
+                    self.format_expr(cond);
+                }
+                self.write("]");
+            }
+            ExprKind::Error => {}
         }
     }
 

@@ -29,7 +29,7 @@ diagnostics in a single compilation pass.
 | **Borrow Checker**  | `src/borrow.rs` | Ownership, move, and borrow analysis. Tracks value lifetimes, prevents use-after-move, and enforces mutable borrow exclusivity.                                                                                             |
 | **TAST**            | `src/tast.rs`   | Typed Abstract Syntax Tree. Annotates each AST node with its resolved type. Serves as the bridge between type checking and code generation.                                                                                 |
 | **MIR**             | `src/mir/`      | Mid-level Intermediate Representation. Flattened, SSA-like form suitable for optimization passes and lowering to LLVM IR.                                                                                                   |
-| **MIR Passes**      | `src/mir/transform/` | MIR optimization passes: dead code elimination and constant folding. Managed by a `PassManager` that runs passes based on optimization level.                                                                         |
+| **MIR Passes**      | `src/mir/transform/` | MIR optimization passes managed by a `PassManager`. At `-O1`: dead code elimination + constant folding. At `-O2`: also combinator floating, tensor fusion, function inlining, and auto-parallelization.  |
 | **Name Interner**   | `src/interner.rs` | Global string interning for O(1) name comparisons. Deduplicates identifier strings via `NameInterner` and lightweight `Name` handles.                                                                                    |
 | **Diagnostics**     | `src/error.rs`  | Accumulative diagnostic system with categories, severity configuration (--deny/--allow/--warn), error limits, and grouped display.                                                                                          |
 | **Codegen**         | `src/codegen/`  | LLVM IR generation and native compilation.                                                                                                                                                                                  |
@@ -156,5 +156,36 @@ and an error limit (`--error-limit N`) that stops compilation after N errors.
 7. **Stack safety** — Recursive descent functions are wrapped with `stacker::maybe_grow`
    to dynamically grow the stack for deeply nested input, preventing stack overflows.
 8. **MIR optimization passes** — Pluggable pass architecture (`MirPass` trait + `PassManager`)
-   enables incremental addition of optimization passes. Dead code elimination and constant
-   folding are built-in at `-O1` and above.
+   enables incremental addition of optimization passes. The full pass pipeline at `-O2`:
+   - Dead code elimination (unreachable function/block removal)
+   - Constant folding (compile-time scalar evaluation)
+   - Combinator floating (extract closed tensor subexpressions)
+   - Tensor fusion (fuse matmul+add, sub+square for MSE, element-wise chains)
+   - Graph rewriting (algebraic simplification + CSE for tensor ops)
+   - Quantization (int8 matmul quantize/dequantize insertion)
+   - Function inlining (inline trivial/single-use functions and combinators)
+   - Auto-parallelization (DAG analysis of tensor ops, parallel region annotation)
+9. **List comprehensions** — Python-style `[expr for x in iter if pred]` syntax desugared
+   to loop patterns in MIR lowering.
+10. **Closure syntax** — `|params| body` with optional type annotations, lowered through
+    the standard function mechanism.
+11. **Thread pool runtime** — Cross-platform thread pool (Win32 threads / pthreads) with
+    work queue, barrier synchronization, and lazy initialization. Parallel regions from the
+    auto-parallelization pass dispatch tensor ops to the thread pool for concurrent execution.
+12. **Memory pool** — Slab-based allocator with 32 power-of-2 size buckets (64B to 128GB).
+    Caches freed allocations for reuse, reducing malloc overhead in training loops. Thread-safe
+    with mutex protection.
+13. **GPU dispatch stubs** — Compile-time GPU support detection via `AXON_USE_CUDA` /
+    `AXON_USE_ROCM` defines. Provides init/shutdown, device counting, memory allocation,
+    and tensor transfer functions. CPU-only builds return graceful error codes.
+14. **Complete autograd backward pass** — Thread-local tape with 23 gradient operations
+    (add, sub, mul, div, matmul, relu, sum, mean, sigmoid, tanh, log, exp, pow, neg, abs,
+    sqrt, sin, cos, gelu, silu, leaky_relu). Reverse-mode autodiff with topological sort.
+    Adam optimizer with first/second moment tracking and bias correction.
+15. **Graph rewriting MIR pass** — Algebraic simplification: self-cancellation (x-x→0),
+    double transpose elimination, reshape collapse, and common subexpression elimination
+    (CSE) for pure tensor operations. Runs at `-O2` between fusion and inlining.
+16. **Quantization** — Post-training int8 quantization via MIR pass. MatMul operations are
+    automatically rewritten to quantize→qmatmul→dequantize at `-O2`. C runtime provides
+    affine and symmetric quantization, int8 matmul with int32 accumulation, dynamic
+    quantization, calibration, and mixed-precision dtype casting. BFloat16 type support added.

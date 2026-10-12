@@ -139,6 +139,15 @@ axonc build <FILE> [OPTIONS]
 | `--allow <CATEGORIES>` | Suppress diagnostic categories (comma-separated) | — |
 | `--warn <CATEGORIES>` | Override diagnostic categories to warnings (comma-separated) | — |
 | `--error-limit <N>` | Stop compilation after N errors | — |
+| `--threads <N>` | Thread pool size for parallel regions (0 = auto-detect) | `0` |
+
+**Runtime Features:**
+
+| Feature | Description |
+|---------|-------------|
+| Thread pool | Auto-initialized on first parallel region. Cross-platform (Win32/pthreads). |
+| Memory pool | Slab allocator with 32 size buckets. Lazy init. Reduces malloc overhead. |
+| GPU support | Compile with `AXON_USE_CUDA` or `AXON_USE_ROCM` for GPU dispatch. |
 
 **Examples:**
 
@@ -167,8 +176,18 @@ axonc build model.axon --emit-obj -o model.o
 |-------|-------------|
 | `-O 0` | No optimization — fastest compile, easiest to debug |
 | `-O 1` | Basic MIR optimizations: dead code elimination, constant folding |
-| `-O 2` | Standard optimizations (includes O1 + inlining, loop unrolling, vectorization) |
+| `-O 2` | Full MIR pipeline: O1 + combinator floating, tensor fusion, function inlining, auto-parallelization |
 | `-O 3` | Aggressive optimizations (includes O2 + LTO, auto-vectorization, FMA) |
+
+**MIR passes at `-O 2` and above:**
+| Pass | Description |
+|------|-------------|
+| Dead code elimination | Removes unreachable functions and basic blocks via call graph analysis |
+| Constant folding | Evaluates constant expressions at compile time |
+| Combinator floating | Extracts closed tensor subexpressions into top-level functions |
+| Tensor fusion | Fuses matmul+add (linear), sub+square (MSE), element-wise chains |
+| Function inlining | Inlines trivial/single-use functions and extracted combinators |
+| Auto-parallelization | Builds tensor op DAG, identifies independent ops, inserts parallel regions |
 
 ---
 

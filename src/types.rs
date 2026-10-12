@@ -16,6 +16,7 @@ pub enum PrimKind {
     UInt32,
     UInt64,
     Float16,
+    BFloat16,
     Float32,
     Float64,
     Bool,
@@ -36,6 +37,7 @@ impl PrimKind {
                 | PrimKind::UInt32
                 | PrimKind::UInt64
                 | PrimKind::Float16
+                | PrimKind::BFloat16
                 | PrimKind::Float32
                 | PrimKind::Float64
         )
@@ -58,7 +60,7 @@ impl PrimKind {
     pub fn is_float(&self) -> bool {
         matches!(
             self,
-            PrimKind::Float16 | PrimKind::Float32 | PrimKind::Float64
+            PrimKind::Float16 | PrimKind::BFloat16 | PrimKind::Float32 | PrimKind::Float64
         )
     }
 
@@ -79,6 +81,7 @@ impl fmt::Display for PrimKind {
             PrimKind::UInt32 => write!(f, "u32"),
             PrimKind::UInt64 => write!(f, "u64"),
             PrimKind::Float16 => write!(f, "f16"),
+            PrimKind::BFloat16 => write!(f, "bf16"),
             PrimKind::Float32 => write!(f, "f32"),
             PrimKind::Float64 => write!(f, "f64"),
             PrimKind::Bool => write!(f, "bool"),

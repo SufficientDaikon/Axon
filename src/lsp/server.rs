@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::io::{self, BufRead, Read, Write};
 
 use super::protocol::*;
+use crate::cache::CompilationCache;
 
 // ═══════════════════════════════════════════════════════════════
 // Document state
@@ -24,6 +25,7 @@ pub struct LspServer {
     pub(crate) documents: HashMap<String, DocumentState>,
     pub(crate) initialized: bool,
     pub(crate) shutdown_requested: bool,
+    pub(crate) cache: CompilationCache,
 }
 
 impl LspServer {
@@ -32,6 +34,7 @@ impl LspServer {
             documents: HashMap::new(),
             initialized: false,
             shutdown_requested: false,
+            cache: CompilationCache::new(),
         }
     }
 
@@ -87,11 +90,24 @@ impl LspServer {
 
     /// Write a JSON-RPC message to stdout with Content-Length header.
     pub(crate) fn send_message(&self, msg: &Message) {
-        let json = serde_json::to_string(msg).unwrap();
+        let json = match serde_json::to_string(msg) {
+            Ok(j) => j,
+            Err(e) => {
+                eprintln!("axon-lsp: failed to serialize message: {}", e);
+                return;
+            }
+        };
         let stdout = io::stdout();
         let mut out = stdout.lock();
         let _ = write!(out, "Content-Length: {}\r\n\r\n{}", json.len(), json);
         let _ = out.flush();
+    }
+
+    /// Send a response to a request, serializing the result value.
+    /// Falls back to a null result if serialization fails.
+    pub(crate) fn send_response_value<T: serde::Serialize>(&self, id: serde_json::Value, result: &T) {
+        let value = serde_json::to_value(result).unwrap_or(serde_json::json!(null));
+        self.send_response(id, value);
     }
 
     /// Send a response to a request.
